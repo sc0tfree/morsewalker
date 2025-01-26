@@ -59,6 +59,16 @@ let totalContacts = 0;
 let yourStation = null;
 let lastRespondingStations = null;
 
+// Tooltips
+const modeTooltips = {
+  'modeSingle': 'Basic QSO practice with one station at a time. Perfect for beginners learning callsign copying and basic exchanges.',
+  'modeContest': 'Simulates contest-style exchanges with multiple stations and serial numbers. Great for building contest skills and speed.',
+  'modePota': 'Parks On The Air (POTA) simulation. Practice handling pileups and state-based exchanges as an activator station.',
+  'modeCwt': 'CW Ops Tests training mode. Practice with name and CWOps number exchanges in a fast-paced mini-contest format.',
+  'modeSst': 'Slow Speed Training nets practice. Focus on slower-paced exchanges with name and state, perfect for building confidence.',
+  'modeKoch': 'Learn Morse code using the Koch method, starting with a few characters and gradually adding more as you improve.'
+};
+
 /**
  * Event listener setup.
  *
@@ -83,6 +93,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const yourSidetone = document.getElementById("yourSidetone");
   const yourVolume = document.getElementById("yourVolume");
 
+  // Add info icons and tooltips to each mode button
+  Object.entries(modeTooltips).forEach(([modeId, tooltip]) => {
+    const label = document.querySelector(`label[for="${modeId}"]`);
+    if (label) {
+      // Create info icon
+      const infoIcon = document.createElement('i');
+      infoIcon.className = 'fa-regular fa-circle-question ms-2';
+      infoIcon.style.fontSize = '0.9em';
+
+      // Add tooltip using Bootstrap's data attributes
+      infoIcon.setAttribute('data-bs-toggle', 'tooltip');
+      infoIcon.setAttribute('data-bs-placement', 'top');
+      infoIcon.setAttribute('title', tooltip);
+
+      // Add icon to label
+      label.appendChild(infoIcon);
+    }
+  });
+  // Initialize Bootstrap tooltips
+  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+
   // Event Listeners
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
@@ -106,9 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Farnsworth elements
   const enableFarnsworthCheckbox = document.getElementById('enableFarnsworth');
   const farnsworthSpeedInput = document.getElementById('farnsworthSpeed');
-// Set initial state based on whether Farnsworth is enabled
+  // Set initial state based on whether Farnsworth is enabled
   farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
-// Toggle the Farnsworth speed input when the checkbox changes
+  // Toggle the Farnsworth speed input when the checkbox changes
   enableFarnsworthCheckbox.addEventListener('change', () => {
     farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
   });
