@@ -20,11 +20,16 @@ export function createMorsePlayer(station, volumeOverride = null) {
   const inputs = getInputs();
   if (inputs === null) return;
 
-  const enableFarnsworth = inputs.enableFarnsworth;
-  const farnsworthSpeed = inputs.farnsworthSpeed || station.wpm; // fallback if not set
+  const enableFarnsworth = station.enableFarnsworth;
+  const farnsworthSpeed = station.farnsworthSpeed || station.wpm; // fallback if not set
 
-  let qsbInfo = station.qsb ? ` (QSB:${station.qsbDepth.toFixed(2)}A@${station.qsbFrequency.toFixed(2)}Hz)` : '';
-  console.log(`/ Initializing ${station.callsign}: ${station.frequency}Hz@${station.wpm}wpm - Normalized Vol: ${volume.toFixed(2)}${qsbInfo}`);
+  console.log(
+    `/ Initializing ${station.callsign}: ${station.frequency}Hz@${station.wpm}wpm` +
+    `${enableFarnsworth ? `/${station.farnsworthSpeed}wpm` : ''}` +
+    ` vol: ${volume.toFixed(2)}` +
+    `${station.qsb ? ` (QSB:${station.qsbDepth.toFixed(2)}A@${station.qsbFrequency.toFixed(2)}Hz)` : ''}`
+  );
+
 
   let context = audioContext;
 

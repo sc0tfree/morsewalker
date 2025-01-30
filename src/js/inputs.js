@@ -45,6 +45,8 @@ function getDOMInputs() {
     // convert volumes to a float between 0 and 1
     minVolume: parseFloat(document.getElementById('minVolume').value) / 100,
     maxVolume: parseFloat(document.getElementById('maxVolume').value) / 100,
+    minWait: parseFloat(document.getElementById('minWait').value),
+    maxWait: parseFloat(document.getElementById('maxWait').value),
 
     // Checkboxes & Radio
     usOnly: document.getElementById('usOnly')

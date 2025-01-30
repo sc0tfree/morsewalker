@@ -31,7 +31,7 @@ import {
 } from "./util.js";
 import {getYourStation, getCallingStation} from "./stationGenerator.js";
 import {updateStaticIntensity} from "./audio.js";
-import {modeLogicConfig, modeUIConfig} from "./modes";
+import {modeLogicConfig, modeUIConfig} from "./modes.js";
 
 /**
  * Application state variables.
@@ -46,17 +46,21 @@ import {modeLogicConfig, modeUIConfig} from "./modes";
  * - `currentStationStartTime`: Timestamp for when the current station interaction started.
  * - `totalContacts`: Counter for the total number of completed contacts.
  * - `yourStation`: Stores the user's station configuration.
+ * - `lastRespondingStations`: An array of stations that last responded to the user's call.
+ * - `farnsworthLowerBy`: The amount to increase the Farnsworth spacing when using QRS.
  */
 let currentMode;
 let inputs = null;
 let currentStations = [];
 let currentStation = null;
 let activeStationIndex = null;
-let readyForTU = false;
+let readyForTU = false; // This means that the last send was a perfect match
 let currentStationAttempts = 0;
 let currentStationStartTime = null;
 let totalContacts = 0;
 let yourStation = null;
+let lastRespondingStations = null;
+const farnsworthLowerBy = 6;
 
 /**
  * Event listener setup.
@@ -111,6 +115,19 @@ document.addEventListener('DOMContentLoaded', () => {
   enableFarnsworthCheckbox.addEventListener('change', () => {
     farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
   });
+
+// Add hotkey for CQ (Ctrl + Shift + C)
+// Add an event listener for keydown events
+document.addEventListener('keydown', (event) => {
+  // Check if Ctrl and Shift are pressed and the key is 'C'
+  if (event.ctrlKey && event.shiftKey && event.key === 'C') {
+    // Prevent default behavior to avoid browser conflicts
+    event.preventDefault();
+
+    // Call the CQ function
+    cq();
+  }
+});
 
   responseField.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -359,6 +376,7 @@ function cq() {
     // Contest-like modes: CQ adds more stations
     addStations(currentStations, inputs);
     respondWithAllStations(currentStations, yourResponseTimer);
+    lastRespondingStations = currentStations;
   } else {
     // Single mode: Just get one station
     cqButton.disabled = true;
@@ -384,6 +402,10 @@ function send() {
 
   // Prevent sending if responseField text box is empty
   if (responseFieldText === "") {
+    // If the response field is empty and there are no active stations, call CQ
+    if (currentStations.length === 0) {
+      cq();
+    }
     return;
   }
 
@@ -399,6 +421,25 @@ function send() {
     // Handling repeats
     if (responseFieldText === '?' || responseFieldText === 'AGN' || responseFieldText === 'AGN?') {
       respondWithAllStations(currentStations, yourResponseTimer);
+      lastRespondingStations = currentStations;
+      currentStationAttempts++;
+      return;
+    }
+
+    // Handle QRS
+    if (responseFieldText === 'QRS') {
+      // For each lastRespondingStations,
+      // if Farensworth is already enabled, lower it by farnsworthLowerBy, but not less than 5
+      lastRespondingStations.forEach(stn => {
+        if (stn.enableFarnsworth) {
+          stn.farnsworthSpeed = Math.max(5, stn.farnsworthSpeed - farnsworthLowerBy);
+        } else {
+          stn.enableFarnsworth = true;
+          stn.farnsworthSpeed = stn.wpm - farnsworthLowerBy;
+        }
+      });
+
+      respondWithAllStations(lastRespondingStations, yourResponseTimer);
       currentStationAttempts++;
       return;
     }
@@ -444,6 +485,7 @@ function send() {
       // Partial matches: repeat them
       let partialMatchStations = currentStations.filter((_, index) => results[index] === "partial");
       respondWithAllStations(partialMatchStations, yourResponseTimer);
+      lastRespondingStations = partialMatchStations;
       currentStationAttempts++;
       return;
     }
@@ -458,6 +500,23 @@ function send() {
     updateAudioLock(yourResponseTimer);
 
     if (responseFieldText === '?' || responseFieldText === 'AGN' || responseFieldText === 'AGN?') {
+      let theirResponseTimer = currentStation.player.playSentence(currentStation.callsign, yourResponseTimer + Math.random() + 0.25);
+      updateAudioLock(theirResponseTimer);
+      currentStationAttempts++;
+      return;
+    }
+
+    if (responseFieldText === 'QRS') {
+      // If Farensworth is already enabled, lower it by farnsworthLowerBy, but not less than 5
+      if (currentStation.enableFarnsworth) {
+        currentStation.farnsworthSpeed = Math.max(5, currentStation.farnsworthSpeed - farnsworthLowerBy);
+      }
+      else {
+        currentStation.enableFarnsworth = true;
+        currentStation.farnsworthSpeed = currentStation.wpm - farnsworthLowerBy;
+      }
+      // Create a new player
+      currentStation.player = createMorsePlayer(currentStation)
       let theirResponseTimer = currentStation.player.playSentence(currentStation.callsign, yourResponseTimer + Math.random() + 0.25);
       updateAudioLock(theirResponseTimer);
       currentStationAttempts++;
@@ -491,10 +550,13 @@ function send() {
       updateAudioLock(theirResponseTimer2);
 
       totalContacts++;
+      const wpmString = `${currentStation.wpm}` +
+          (currentStation.enableFarnsworth ? ` / ${currentStation.farnsworthSpeed}` : '');
       addTableRow(
         "resultsTable",
         totalContacts,
         currentStation.callsign,
+        wpmString,
         currentStationAttempts,
         (audioContext.currentTime - currentStationStartTime),
         "" // No additional info in single mode
@@ -569,12 +631,15 @@ function tu() {
     // The QSO ends here after yourSignoff.
   }
 
+  const wpmString = `${currentStation.wpm}` +
+      (currentStation.enableFarnsworth ? ` / ${currentStation.farnsworthSpeed}` : '');
 
   // Add the QSO result to the table
   addTableRow(
     'resultsTable',
     totalContacts,
     currentStation.callsign,
+    wpmString,
     currentStationAttempts,
     (audioContext.currentTime - currentStationStartTime),
     extraInfo
@@ -599,6 +664,7 @@ function tu() {
   }
 
   respondWithAllStations(currentStations, responseTimerToUse);
+  lastRespondingStations = currentStations;
   currentStationStartTime = audioContext.currentTime;
 }
 

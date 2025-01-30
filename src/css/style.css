@@ -1,4 +1,11 @@
+/* Default: do NOT transform text */
+input[type="text"] {
+  text-transform: uppercase;
+}
+
+/* Override the placeholder color or styling as needed */
 input[type="text"]::placeholder {
   color: #aaa; /* Lighter gray or your preferred color */
   opacity: 1; /* Ensures uniform appearance across different browsers */
+  text-transform: none; /* Reset the text-transform */
 }

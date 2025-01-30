@@ -106,18 +106,45 @@
           <div class="row g-3">
             <div class="col-6 col-md-4 col-lg-2">
               <label for="yourCallsign" class="form-label">Callsign</label>
-              <input type="text" id="yourCallsign" name="callsign" class="form-control" required>
+              <input type="text"
+                     id="yourCallsign"
+                     name="callsign"
+                     class="form-control"
+                     required
+                     autocomplete="off"
+                     autocapitalize="characters"
+                     spellcheck="false"
+                     autocorrect="off"
+              >
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
               <label for="yourName" class="form-label">First Name</label>
-              <input type="text" id="yourName" name="name" class="form-control" required>
+              <input type="text"
+                     id="yourName"
+                     name="name"
+                     class="form-control"
+                     required
+                     autocomplete="off"
+                     autocapitalize="characters"
+                     spellcheck="false"
+                     autocorrect="off"
+              >
               <div class="invalid-feedback"></div>
             </div>
             <div class="col-6 col-md-4 col-lg-2">
               <label for="yourState" class="form-label">State</label>
-              <input type="text" id="yourState" name="state" class="form-control" maxlength="2"
-                     placeholder="(e.g., CA, TX)">
+              <input type="text"
+                     id="yourState"
+                     name="state"
+                     class="form-control"
+                     maxlength="2"
+                     placeholder="(e.g., CA, TX)"
+                     autocomplete="off"
+                     autocapitalize="characters"
+                     spellcheck="false"
+                     autocorrect="off"
+              >
               <div class="invalid-feedback"></div>
             </div>
 
@@ -206,30 +233,47 @@
           </div>
 
           <!-- Tone and Volume Row -->
-          <div class="row g-3 mt-3">
-            <div class="col-12 col-md-3">
+          <div class="row g-3 mt-3 align-items-end">
+            <div class="col-12 col-md-6 col-lg-2">
               <label for="minTone" class="form-label">Min Tone (Hz)</label>
-              <input type="number" id="minTone" name="minTone" class="form-control" value="400" min="1"
-                     max="9999" step="1" required>
+              <input type="number" id="minTone" name="minTone" class="form-control"
+                     value="400" min="1" max="9999" step="1" required>
               <div class="invalid-feedback"></div>
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-6 col-lg-2">
               <label for="maxTone" class="form-label">Max Tone (Hz)</label>
-              <input type="number" id="maxTone" name="maxTone" class="form-control" value="900" min="1"
-                     max="9999" step="1" required>
+              <input type="number" id="maxTone" name="maxTone" class="form-control"
+                     value="900" min="1" max="9999" step="1" required>
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-6 col-lg-2">
               <label for="minVolume" class="form-label">Min Volume</label>
-              <input type="number" id="minVolume" name="minVolume" class="form-control" value="30" min="0"
-                     max="100" step="1" required>
+              <input type="number" id="minVolume" name="minVolume" class="form-control"
+                     value="30" min="0" max="100" step="1" required>
               <div class="invalid-feedback"></div>
             </div>
-            <div class="col-12 col-md-3">
+            <div class="col-12 col-md-6 col-lg-2">
               <label for="maxVolume" class="form-label">Max Volume</label>
-              <input type="number" id="maxVolume" name="maxVolume" class="form-control" value="100"
-                     min="0" max="100" step="1" required>
+              <input type="number" id="maxVolume" name="maxVolume" class="form-control"
+                     value="100" min="0" max="100" step="1" required>
+            </div>
+            <div class="col-12 col-md-6 col-lg-2">
+              <label for="minWait" class="form-label">
+                <span class="badge bg-success me-2">NEW!</span>
+                <br class="d-none d-lg-block d-xl-none" />
+                Min Wait (s)</label>
+              <input type="number" id="minWait" name="minWait" class="form-control"
+                     value="0.25" min="0" max="2" step="0.25" required>
+            </div>
+            <div class="col-12 col-md-6 col-lg-2">
+              <label for="maxWait" class="form-label">
+                <span class="badge bg-success me-2">NEW!</span>
+                <br class="d-none d-lg-block d-xl-none" />
+                Max Wait (s)</label>
+              <input type="number" id="maxWait" name="maxWait" class="form-control"
+                     value="1.75" min="0" max="5" step="0.25" required>
             </div>
           </div>
+
 
           <!-- US Only and Callsign Format Row -->
           <div class="row g-3 mt-3 align-items-end">
@@ -375,18 +419,42 @@
     <div class="col-12 col-lg-9 d-flex flex-wrap align-items-center">
       <!-- First row on small: CQ, Response Text Box, Send -->
       <button id="cqButton" class="btn btn-success me-2 mb-2">CQ</button>
-      <input type="text" id="responseField" class="form-control me-2 mb-2" style="max-width:150px;"
-             placeholder="Response">
+      <input type="text"
+             id="responseField"
+             class="form-control me-2 mb-2"
+             style="max-width:150px;"
+             placeholder="Response"
+             autocomplete="off"
+             autocapitalize="characters"
+             spellcheck="false"
+             autocorrect="off"
+      >
       <button id="sendButton" class="btn btn-primary me-2 mb-2">Send</button>
 
       <!-- Force a new line after sendButton on small screens -->
       <div class="w-100 d-sm-block d-md-none"></div>
 
       <!-- Second row on small: infoField, infoField2, TU -->
-      <input type="text" id="infoField" class="form-control me-2 mb-2" style="display:none; max-width:150px;"
-             placeholder="">
-      <input type="text" id="infoField2" class="form-control me-2 mb-2" style="display:none; max-width:150px;"
-             placeholder="">
+      <input type="text"
+             id="infoField"
+             class="form-control me-2 mb-2"
+             style="display:none; max-width:150px;"
+             placeholder=""
+             autocomplete="off"
+             autocapitalize="characters"
+             spellcheck="false"
+             autocorrect="off"
+      >
+      <input type="text"
+             id="infoField2"
+             class="form-control me-2 mb-2"
+             style="display:none; max-width:150px;"
+             placeholder=""
+             autocomplete="off"
+             autocapitalize="characters"
+             spellcheck="false"
+             autocorrect="off"
+      >
       <button id="tuButton" class="btn btn-info mb-2" style="display:none;">TU</button>
     </div>
 
@@ -429,21 +497,30 @@
           </div>
 
           <!-- CQ Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-success h-100">
-              <div class="card-header">
-                <button class="btn btn-success">CQ</button>
+              <div class="card-header d-flex align-items-center justify-content-between">
+                <div>
+                  <button class="btn btn-success">CQ</button>
+                </div>
+                <div class="d-flex align-items-center flex-nowrap">
+                  <span class="badge bg-success me-2">NEW!</span>
+                  <kbd>Ctrl</kbd>
+                  <span class="mx-1">+</span>
+                  <kbd>Shift</kbd>
+                  <span class="mx-1">+</span>
+                  <kbd>C</kbd>
+                </div>
               </div>
               <div class="card-body">
-                <p class="card-text">Click "CQ" to start calling. Up to your "Max Stations" will
-                  respond. It may start slowly, often with just one or two stations initially.</p>
+                <p class="card-text">Click "CQ" to start calling. Up to your "Max Stations" will respond. It may start slowly, often with just one or two stations initially.</p>
                 <p><i>If you want more stations, just call CQ again!</i></p>
               </div>
             </div>
           </div>
 
           <!-- Call Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-primary h-100">
               <div class="card-header"><input type="text" class="form-control" style="max-width:150px;"
                                               placeholder="Response"></div>
@@ -453,17 +530,21 @@
                   <li class="mb-3">Send 'AGN', 'AGN?', or '?' to request all stations to repeat
                     themselves.
                   </li>
-                  <li><strong>Use partial matches to single out stations</strong> in a pileup. E.g.,
+                  <li class="mb-3"><strong>Use partial matches to single out stations</strong> in a pileup. E.g.,
                     for W6NYC, all of the following will get a reply back: 'W?', 'W6?', 'W6NC',
                     'NYC'.<br><br><i>Note that more than one station may reply if they match your
                       partial pattern!</i></li>
+                  <li><span class="badge bg-success">NEW!</span>
+                    Send "QRS" to have the last responding stations slow down by adding 4 WPM to their
+                    Farnsworth spacing.</i>
+                  </li>
                 </ul>
               </div>
             </div>
           </div>
 
           <!-- Send Button Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-primary h-100">
               <div class="card-header">
                 <button class="btn btn-primary">Send</button>
@@ -476,7 +557,7 @@
           </div>
 
           <!-- Info Fields Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-info h-100">
               <div class="card-header"><input type="text" class="form-control me-2"
                                               style="max-width:200px;" placeholder="Mode-Specific Info">
@@ -490,7 +571,7 @@
           </div>
 
           <!-- TU Button Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-info h-100">
               <div class="card-header">
                 <button class="btn btn-info">TU</button>
@@ -505,7 +586,7 @@
           </div>
 
           <!-- Stop and Reset Card -->
-          <div class="col-12 col-md-6 col-xl-4">
+          <div class="col-12 col-xl-4">
             <div class="card border-danger h-100">
               <div class="card-header">
                 <button class="btn btn-danger me-2">Stop</button>
@@ -542,6 +623,7 @@
   <tr>
     <th>#</th>
     <th>Callsign</th>
+    <th>WPM</th>
     <th>Attempts</th>
     <th>Total Time</th>
     <th class="mode-specific-column">Additional Info</th>
