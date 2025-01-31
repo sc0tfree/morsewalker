@@ -116,18 +116,6 @@ export class Keyer {
         }
     }
 
-    oscillate() {
-        if (this.mode === 2) {
-            this.oscillatev2();
-        } else if (this.mode === 3) {
-            this.oscillatev3();
-        } else if (this.mode === 4) {
-            this.oscillatev4();
-        } else {
-            this.oscillatev1();
-        }
-    }
-
     oscillatev1() {
         if (!this.ditKeyState && !this.dahKeyState) {
             this.queue = [];
@@ -227,21 +215,37 @@ export class Keyer {
         }
     }
 
-    oscillatev4() {
-        if (!this.ditKeyState && !this.dahKeyState) {
-            this.queue = [];
+    oscillate() {
+        if (this.mode == 2 && !this.ditKeyState && !this.dahKeyState && this.queue.length) {
+            if (this.queue[0] == 1) { // Dit is in the queue
+                if (this.ditStart < this.dahStart || this.ditStop - this.ditStart > this.unit * 4) {
+                    this.queue.pop();
+                }
+            } else { // Dah is in the queue
+                if (this.dahStart < this.ditStart || this.dahStop - this.dahStart > this.unit * 2) {
+                    this.queue.pop();
+                }
+            }
         }
         if (this.ditKeyState) {
             if (this.queue.length == 0) {
-                if (!this.sending || this.lastKey == 2) {
+                if ((!this.dahKeyState && !this.sending) || this.lastKey == 2) {
                     this.queue.push(1);
+                }
+            } else { // dah key was lifted and is still in queue
+                if (this.mode == 2 && !this.dahKeyState && this.dahStart < this.ditStart && this.queue[0] == 2) {
+                    this.queue.pop();
                 }
             }
         }
         if (this.dahKeyState) {
             if (this.queue.length == 0) {
-                if (!this.sending || this.lastKey == 1) {
+                if ((!this.ditKeyState && !this.sending) || this.lastKey == 1) {
                     this.queue.push(2);
+                }
+            } else { // dit key was lifted and is still in queue
+                if (this.mode == 2 && !this.ditKeyState && this.ditStart < this.dahStart && this.queue[0] == 1) {
+                    this.queue.pop();
                 }
             }
         }
