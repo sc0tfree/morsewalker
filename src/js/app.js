@@ -32,6 +32,7 @@ import {
 import {getYourStation, getCallingStation} from "./stationGenerator.js";
 import {updateStaticIntensity} from "./audio.js";
 import {modeLogicConfig, modeUIConfig} from "./modes.js";
+import { morseInput } from './morse-input/morse-input.js'; // Import morse input functionality
 
 /**
  * Application state variables.
@@ -82,12 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeRadios = document.querySelectorAll('input[name="mode"]');
   const yourCallsign = document.getElementById("yourCallsign");
   const yourName = document.getElementById("yourName");
+  const yourState = document.getElementById("yourState"); // Added yourState
   const yourSpeed = document.getElementById("yourSpeed");
   const yourSidetone = document.getElementById("yourSidetone");
   const yourVolume = document.getElementById("yourVolume");
+  const keyerMode = document.getElementById("keyerMode");
 
   // Event Listeners
-  cqButton.addEventListener('click', cq);
+  cqButton.addEventListener('click', () => {
+    // Initialize morse input when user starts using MorseWalker
+    morseInput.initialize();
+    cq();
+  });
   sendButton.addEventListener('click', send);
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
@@ -114,6 +121,15 @@ document.addEventListener('DOMContentLoaded', () => {
 // Toggle the Farnsworth speed input when the checkbox changes
   enableFarnsworthCheckbox.addEventListener('change', () => {
     farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
+    if (enableFarnsworthCheckbox.checked) {
+      morseInput.updateSettings({ farnsworth: parseInt(farnsworthSpeedInput.value) });
+    }
+  });
+
+  farnsworthSpeedInput.addEventListener('input', () => {
+    if (enableFarnsworthCheckbox.checked) {
+      morseInput.updateSettings({ farnsworth: parseInt(farnsworthSpeedInput.value) });
+    }
   });
 
 // Add hotkey for CQ (Ctrl + Shift + C)
@@ -161,7 +177,8 @@ document.addEventListener('keydown', (event) => {
     yourState: "yourState", // Added yourState
     yourSpeed: "yourSpeed",
     yourSidetone: "yourSidetone",
-    yourVolume: "yourVolume"
+    yourVolume: "yourVolume",
+    keyerMode: "keyerMode"
   };
 
   /**
@@ -177,6 +194,7 @@ document.addEventListener('keydown', (event) => {
   yourSpeed.value = localStorage.getItem(keys.yourSpeed) || yourSpeed.value;
   yourSidetone.value = localStorage.getItem(keys.yourSidetone) || yourSidetone.value;
   yourVolume.value = localStorage.getItem(keys.yourVolume) || yourVolume.value;
+  keyerMode.value = localStorage.getItem(keys.keyerMode) || keyerMode.value;
 
   // Save user settings to localStorage on input change
   yourCallsign.addEventListener("input", () => {
@@ -190,12 +208,19 @@ document.addEventListener('keydown', (event) => {
   });
   yourSpeed.addEventListener("input", () => {
     localStorage.setItem(keys.yourSpeed, yourSpeed.value);
+    // Update morse input speed when changed
+    morseInput.updateSettings({ wpm: parseInt(yourSpeed.value) });
   });
   yourSidetone.addEventListener("input", () => {
     localStorage.setItem(keys.yourSidetone, yourSidetone.value);
+    // Update morse input tone when changed
+    morseInput.updateSettings({ tone: parseInt(yourSidetone.value) });
   });
   yourVolume.addEventListener("input", () => {
     localStorage.setItem(keys.yourVolume, yourVolume.value);
+  });
+  keyerMode.addEventListener("change", () => {
+    localStorage.setItem(keys.keyerMode, keyerMode.value);
   });
 
   // Handle QRN intensity changes
