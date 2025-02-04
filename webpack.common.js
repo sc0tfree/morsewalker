@@ -36,7 +36,14 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: 'src/audio', to: 'audio' }, // Ensure all files in 'audio' are copied to 'dist/audio'
-      ],
+        { from: 'src/img', to: 'img' },
+        { from: 'src/favicon.ico', to: 'favicon.ico' },
+        { from: 'src/robots.txt', to: 'robots.txt' },
+        { from: 'src/site.webmanifest', to: 'site.webmanifest' },
+        { from: 'src/js/morse-input/sounder.js', to: 'js/morse-input/sounder.js' },
+        { from: 'src/js/morse-input/decoder.js', to: 'js/morse-input/decoder.js' },
+        { from: 'src/js/morse-input/keyer.js', to: 'js/morse-input/keyer.js' }
+      ]
     }),
   ],
 };
