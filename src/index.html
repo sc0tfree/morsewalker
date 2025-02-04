@@ -152,18 +152,34 @@
               <label for="yourSpeed" class="form-label">Speed (WPM)</label>
               <input type="number" id="yourSpeed" name="yourSpeed" class="form-control" value="20" min="1"
                      max="100" step="1" required>
+              <div class="invalid-feedback"></div>
             </div>
+
             <div class="col-6 col-md-4 col-lg-2">
               <label for="yourSidetone" class="form-label">Sidetone (Hz)</label>
-              <input type="number" id="yourSidetone" name="yourSidetone" class="form-control" value="600"
-                     min="50" max="9999" step="1" required>
+              <input type="number" id="yourSidetone" name="yourSidetone" class="form-control" value="550" min="100"
+                     max="2000" step="1" required>
+              <div class="invalid-feedback"></div>
             </div>
+
             <div class="col-6 col-md-4 col-lg-2">
-              <label for="yourVolume" class="form-label">Sidetone Volume</label>
-              <input type="number" id="yourVolume" name="yourVolume" class="form-control" value="70"
-                     min="0"
+              <label for="yourVolume" class="form-label">Sidetone Volume (%)</label>
+              <input type="number" id="yourVolume" name="yourVolume" class="form-control" value="50" min="0"
                      max="100" step="1" required>
+              <div class="invalid-feedback"></div>
             </div>
+
+            <div class="col-6 col-md-4 col-lg-2">
+              <label for="keyerMode" class="form-label">Keyer Mode (optional for USB adapters)</label>
+              <select id="keyerMode" class="form-select">
+                <option value="1">Straight Key</option>
+                <option value="2">Iambic A</option>
+                <option value="3" selected>Iambic B</option>
+                <option value="4">Ultimatic</option>
+              </select>
+              <div class="invalid-feedback"></div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -374,9 +390,8 @@
         </div>
       </div>
     </div>
-
-
   </div>
+
 
   <!-- Effects -->
   <!-- Effects -->
@@ -637,7 +652,7 @@
                 <p class="card-text">After completing an exchange, click "TU" to send a wrap-up, thank
                   you message. Each mode has a slightly different way of completing.</p>
                 <p class="card-text">After clicking TU, new stations sometimes hop in! But, in case they
-                  don't, you can always go back and click CQ.</p>
+                  don’t, you can always go back and click CQ.</p>
               </div>
             </div>
           </div>

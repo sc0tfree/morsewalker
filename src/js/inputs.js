@@ -33,6 +33,7 @@ function getDOMInputs() {
     yourCallsign: document.getElementById('yourCallsign').value.trim().toUpperCase(),
     yourName: document.getElementById('yourName').value.trim(),
     yourState: document.getElementById('yourState').value.trim().toUpperCase(), // Convert to uppercase for consistency
+    keyerMode: parseInt(document.getElementById('keyerMode').value, 10),
     yourSpeed: parseInt(document.getElementById('yourSpeed').value, 10),
     yourSidetone: parseInt(document.getElementById('yourSidetone').value, 10),
     // convert volume to a float between 0 and 1
