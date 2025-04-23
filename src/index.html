@@ -127,6 +127,7 @@
             value="single"
             autocomplete="off"
             checked
+            data-persist="true"
           />
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
@@ -141,6 +142,7 @@
             id="modeContest"
             value="contest"
             autocomplete="off"
+            data-persist="true"
           />
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
@@ -155,6 +157,7 @@
             id="modePota"
             value="pota"
             autocomplete="off"
+            data-persist="true"
           />
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
@@ -169,6 +172,7 @@
             id="modeCwt"
             value="cwt"
             autocomplete="off"
+            data-persist="true"
           />
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
@@ -183,6 +187,7 @@
             id="modeSst"
             value="sst"
             autocomplete="off"
+            data-persist="true"
           />
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
@@ -190,6 +195,13 @@
             >K1USN SST</label
           >
         </div>
+      </div>
+      <div
+        class="col-12 col-lg-3 d-flex justify-content-lg-end align-items-center"
+      >
+        <button id="resetSettingsButton" class="btn btn-secondary mb-2">
+          Reset Settings
+        </button>
       </div>
     </div>
 
@@ -232,6 +244,7 @@
                     autocapitalize="characters"
                     spellcheck="false"
                     autocorrect="off"
+                    data-persist="true"
                   />
                   <div class="invalid-feedback"></div>
                 </div>
@@ -247,6 +260,7 @@
                     autocapitalize="characters"
                     spellcheck="false"
                     autocorrect="off"
+                    data-persist="true"
                   />
                   <div class="invalid-feedback"></div>
                 </div>
@@ -263,6 +277,7 @@
                     autocapitalize="characters"
                     spellcheck="false"
                     autocorrect="off"
+                    data-persist="true"
                   />
                   <div class="invalid-feedback"></div>
                 </div>
@@ -279,6 +294,7 @@
                     max="100"
                     step="1"
                     required
+                    data-persist="true"
                   />
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
@@ -295,6 +311,7 @@
                     max="9999"
                     step="1"
                     required
+                    data-persist="true"
                   />
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
@@ -311,6 +328,7 @@
                     max="100"
                     step="1"
                     required
+                    data-persist="true"
                   />
                 </div>
               </div>
@@ -358,7 +376,31 @@
                     max="100"
                     step="1"
                     required
+                    data-persist="true"
                   />
+                </div>
+
+                <!-- Enable Continuous respons -->
+                <div class="col-12 col-md-6 col-lg">
+                  <input
+                    type="checkbox"
+                    class="btn-check"
+                    id="enableContinuous"
+                    autocomplete="off"
+                    data-persist="true"
+                    onchange="
+                    document.getElementById('enableContinuousLabel').innerHTML =
+                      `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>Continuous Mode`;
+                      "
+                  />
+                  <label
+                    class="btn btn-outline-primary w-100"
+                    for="enableContinuous"
+                    id="enableContinuousLabel"
+                  >
+                    <i class="fa-regular fa-circle-xmark me-2"></i>Continuous
+                    Mode
+                  </label>
                 </div>
 
                 <!-- Min Speed -->
@@ -373,6 +415,7 @@
                     min="1"
                     max="100"
                     step="1"
+                    data-persist="true"
                     required
                   />
                   <div class="invalid-feedback"></div>
@@ -390,6 +433,7 @@
                     min="1"
                     max="100"
                     step="1"
+                    data-persist="true"
                     required
                   />
                 </div>
@@ -401,6 +445,7 @@
                     class="btn-check"
                     id="enableFarnsworth"
                     autocomplete="off"
+                    data-persist="true"
                     onchange="
                    document.getElementById('enableFarnsworthLabel').innerHTML =
                      `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>Farnsworth`;
@@ -430,6 +475,7 @@
                     min="1"
                     max="100"
                     step="1"
+                    data-persist="true"
                     required
                     disabled
                   />
@@ -449,6 +495,7 @@
                     min="1"
                     max="9999"
                     step="1"
+                    data-persist="true"
                     required
                   />
                   <div class="invalid-feedback"></div>
@@ -464,6 +511,7 @@
                     min="1"
                     max="9999"
                     step="1"
+                    data-persist="true"
                     required
                   />
                 </div>
@@ -478,6 +526,7 @@
                     min="0"
                     max="100"
                     step="1"
+                    data-persist="true"
                     required
                   />
                   <div class="invalid-feedback"></div>
@@ -493,6 +542,7 @@
                     min="0"
                     max="100"
                     step="1"
+                    data-persist="true"
                     required
                   />
                 </div>
@@ -511,6 +561,7 @@
                     min="0"
                     max="2"
                     step="0.25"
+                    data-persist="true"
                     required
                   />
                 </div>
@@ -529,6 +580,7 @@
                     min="0"
                     max="5"
                     step="0.25"
+                    data-persist="true"
                     required
                   />
                 </div>
@@ -544,6 +596,7 @@
                     autocomplete="off"
                     id="usOnly"
                     checked
+                    data-persist="true"
                     onchange="
                    document.getElementById('usOnlyLabel').innerHTML =
                      `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>US Only Callsigns`;
@@ -572,6 +625,7 @@
                       class="btn-check"
                       id="1x1"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label class="btn btn-outline-primary" for="1x1">1x1</label>
 
@@ -580,6 +634,7 @@
                       class="btn-check"
                       id="1x2"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="1x2">1x2</label>
@@ -589,6 +644,7 @@
                       class="btn-check"
                       id="2x1"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="2x1">2x1</label>
@@ -598,6 +654,7 @@
                       class="btn-check"
                       id="2x2"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="2x2">2x2</label>
@@ -607,6 +664,7 @@
                       class="btn-check"
                       id="1x3"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="1x3">1x3</label>
@@ -616,6 +674,7 @@
                       class="btn-check"
                       id="2x3"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="2x3">2x3</label>
@@ -634,6 +693,7 @@
                     type="checkbox"
                     class="btn-check"
                     autocomplete="off"
+                    data-persist="true"
                     id="enableCutNumbers"
                     onchange="document.getElementById('enableCutNumbersLabel').innerHTML =
                             `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>Enable Cut Numbers`;
@@ -663,6 +723,7 @@
                       class="btn-check"
                       id="cutT"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label
@@ -677,6 +738,7 @@
                       class="btn-check"
                       id="cutA"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -690,6 +752,7 @@
                       class="btn-check"
                       id="cutU"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -703,6 +766,7 @@
                       class="btn-check"
                       id="cutV"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -716,6 +780,7 @@
                       class="btn-check"
                       id="cutE"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -729,6 +794,7 @@
                       class="btn-check"
                       id="cutG"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -742,6 +808,7 @@
                       class="btn-check"
                       id="cutD"
                       autocomplete="off"
+                      data-persist="true"
                     />
                     <label
                       class="btn btn-responsive btn-outline-primary"
@@ -755,6 +822,7 @@
                       class="btn-check"
                       id="cutN"
                       autocomplete="off"
+                      data-persist="true"
                       checked
                     />
                     <label
@@ -806,6 +874,7 @@
                       name="qrn"
                       id="qrnOff"
                       value="off"
+                      data-persist="true"
                     />
                     <label class="btn btn-outline-primary" for="qrnOff"
                       >Off</label
@@ -817,6 +886,7 @@
                       name="qrn"
                       id="qrnNormal"
                       value="normal"
+                      data-persist="true"
                       checked
                     />
                     <label class="btn btn-outline-primary" for="qrnNormal"
@@ -829,6 +899,7 @@
                       name="qrn"
                       id="qrnModerate"
                       value="moderate"
+                      data-persist="true"
                     />
                     <label class="btn btn-outline-primary" for="qrnModerate"
                       >Moderate</label
@@ -840,6 +911,7 @@
                       name="qrn"
                       id="qrnHeavy"
                       value="heavy"
+                      data-persist="true"
                     />
                     <label class="btn btn-outline-primary" for="qrnHeavy"
                       >Heavy</label
@@ -857,6 +929,7 @@
                         class="btn-check"
                         id="qsb"
                         autocomplete="off"
+                        data-persist="true"
                         onchange="
                          document.getElementById('qsbLabel').innerHTML =
                            `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>QSB (Fading)`;
@@ -885,6 +958,7 @@
                         min="0"
                         max="100"
                         value="50"
+                        data-persist="true"
                         disabled
                         oninput="document.getElementById('qsbValue').textContent = this.value + '%';"
                       />

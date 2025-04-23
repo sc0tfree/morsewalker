@@ -85,64 +85,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const yourSpeed = document.getElementById('yourSpeed');
   const yourSidetone = document.getElementById('yourSidetone');
   const yourVolume = document.getElementById('yourVolume');
+  const resetSettingsButton = document.getElementById('resetSettingsButton');
 
-  // Event Listeners
+  // Event Listeners for game actions
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
   stopButton.addEventListener('click', stop);
+
   modeRadios.forEach((radio) => {
     radio.addEventListener('change', changeMode);
   });
 
-  // QSB
-  const qsbCheckbox = document.getElementById('qsb');
-  const qsbPercentage = document.getElementById('qsbPercentage');
-  // Initially set the slider state based on the checkbox
-  qsbPercentage.disabled = !qsbCheckbox.checked;
-  // Add event listener to update the slider state when checkbox changes
-  qsbCheckbox.addEventListener('change', () => {
-    qsbPercentage.disabled = !qsbCheckbox.checked;
-  });
-
-  // Farnsworth elements
-  const enableFarnsworthCheckbox = document.getElementById('enableFarnsworth');
-  const farnsworthSpeedInput = document.getElementById('farnsworthSpeed');
-  // Set initial state based on whether Farnsworth is enabled
-  farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
-  // Toggle the Farnsworth speed input when the checkbox changes
-  enableFarnsworthCheckbox.addEventListener('change', () => {
-    farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
-  });
-
-  // Cut Number elements
-  const enableCutNumbersCheckbox = document.getElementById('enableCutNumbers');
-  const cutNumberIds = [
-    'cutT',
-    'cutA',
-    'cutU',
-    'cutV',
-    'cutE',
-    'cutG',
-    'cutD',
-    'cutN',
-  ];
-
-  // Set initial state based on whether Cut Numbers is enabled
-  cutNumberIds.forEach((id) => {
-    const checkbox = document.getElementById(id);
-    checkbox.disabled = !enableCutNumbersCheckbox.checked;
-  });
-
-  // Toggle the cut-number checkboxes when "Enable Cut Numbers" changes
-  enableCutNumbersCheckbox.addEventListener('change', () => {
-    cutNumberIds.forEach((id) => {
-      const checkbox = document.getElementById(id);
-      checkbox.disabled = !enableCutNumbersCheckbox.checked;
-    });
-  });
-
+  // Responsive button size handler
   function updateResponsiveButtons() {
     const responsiveButtons = document.querySelectorAll('.btn-responsive');
     responsiveButtons.forEach((button) => {
@@ -153,25 +109,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
-  // Run on initial load
   updateResponsiveButtons();
-  // Run on every window resize
   window.addEventListener('resize', updateResponsiveButtons);
 
-  // Add hotkey for CQ (Ctrl + Shift + C)
-  // Add an event listener for keydown events
+  // Hotkey: Ctrl + Shift + C to trigger CQ
   document.addEventListener('keydown', (event) => {
-    // Check if Ctrl and Shift are pressed and the key is 'C'
     if (event.ctrlKey && event.shiftKey && event.key === 'C') {
-      // Prevent default behavior to avoid browser conflicts
       event.preventDefault();
-
-      // Call the CQ function
       cq();
     }
   });
 
+  // Send on Enter key
   responseField.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -193,77 +142,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Focus response field after CQ
   cqButton.addEventListener('click', () => {
     responseField.focus();
   });
 
-  // Local Storage keys for user settings
-  const keys = {
-    yourCallsign: 'yourCallsign',
-    yourName: 'yourName',
-    yourState: 'yourState', // Added yourState
-    yourSpeed: 'yourSpeed',
-    yourSidetone: 'yourSidetone',
-    yourVolume: 'yourVolume',
-  };
+  // Setup persistence and toggles
+  setupDynamicPersistence();
+  setupTogglesAndLabels();
+  setupQRNGroup();
 
-  /**
-   * Local storage handling for user settings.
-   *
-   * - Loads saved values from local storage into input fields during initialization.
-   * - Saves updated input field values to local storage whenever they change.
-   * - Ensures persistence of user preferences across sessions.
-   */
-  yourCallsign.value =
-    localStorage.getItem(keys.yourCallsign) || yourCallsign.value;
-  yourName.value = localStorage.getItem(keys.yourName) || yourName.value;
-  yourState.value = localStorage.getItem(keys.yourState) || yourState.value; // Load yourState
-  yourSpeed.value = localStorage.getItem(keys.yourSpeed) || yourSpeed.value;
-  yourSidetone.value =
-    localStorage.getItem(keys.yourSidetone) || yourSidetone.value;
-  yourVolume.value = localStorage.getItem(keys.yourVolume) || yourVolume.value;
+  // Reset settings button
+  if (resetSettingsButton) {
+    resetSettingsButton.addEventListener('click', () => {
+      if (confirm('Are you sure you want to reset all settings?')) {
+        resetDynamicPersistence();
+        setupTogglesAndLabels();
+        setupQRNGroup();
+      }
+    });
+  }
 
-  // Save user settings to localStorage on input change
-  yourCallsign.addEventListener('input', () => {
-    localStorage.setItem(keys.yourCallsign, yourCallsign.value);
-  });
-  yourName.addEventListener('input', () => {
-    localStorage.setItem(keys.yourName, yourName.value);
-  });
-  yourState.addEventListener('input', () => {
-    // Save yourState
-    localStorage.setItem(keys.yourState, yourState.value);
-  });
-  yourSpeed.addEventListener('input', () => {
-    localStorage.setItem(keys.yourSpeed, yourSpeed.value);
-  });
-  yourSidetone.addEventListener('input', () => {
-    localStorage.setItem(keys.yourSidetone, yourSidetone.value);
-  });
-  yourVolume.addEventListener('input', () => {
-    localStorage.setItem(keys.yourVolume, yourVolume.value);
-  });
-
-  // Handle QRN intensity changes
+  // QRN intensity updating
   const qrnRadioButtons = document.querySelectorAll('input[name="qrn"]');
   qrnRadioButtons.forEach((radio) => {
     radio.addEventListener('change', updateStaticIntensity);
   });
 
-  // Determine mode from local storage or default to single
+  // Load saved mode
   const savedMode = localStorage.getItem('mode') || 'single';
-  // Check the corresponding radio button based on savedMode
   const savedModeRadio = document.querySelector(
     `input[name="mode"][value="${savedMode}"]`
   );
   if (savedModeRadio) {
     savedModeRadio.checked = true;
   }
-
-  // Set currentMode to the saved or default mode
   currentMode = savedMode;
 
-  // Update basic stats on page load
+  // Submit initial stats if callsign is present
   if (yourCallsign.value !== '') {
     fetch(`https://stats.${window.location.hostname}/api/submit`, {
       method: 'POST',
@@ -274,12 +190,178 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Reset state to ensure no leftover stations when loading
+  // Initialize game
   resetGameState();
-
-  // Apply mode settings now that currentMode matches the dropdown and local storage
   applyModeSettings(currentMode);
 });
+
+/**
+ * Handles loading and saving of all fields marked with data-persist="true"
+ * Automatically binds based on their ID as the storage key.
+ */
+
+function setupDynamicPersistence() {
+  const persistElements = document.querySelectorAll('[data-persist="true"]');
+
+  persistElements.forEach((el) => {
+    const key = el.id;
+    if (!key) return; // Skip if no ID (cannot persist)
+
+    // Load saved value
+    const savedValue = localStorage.getItem(key);
+    if (savedValue !== null) {
+      if (el.type === 'checkbox' || el.type === 'radio') {
+        el.checked = savedValue === 'true';
+      } else {
+        el.value = savedValue;
+      }
+    }
+
+    // Save on change/input
+    const eventType =
+      el.type === 'checkbox' || el.type === 'radio' ? 'change' : 'input';
+    el.addEventListener(eventType, () => {
+      const valueToStore =
+        el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value;
+      localStorage.setItem(key, valueToStore);
+    });
+  });
+}
+
+/**
+ * Clears all persisted fields and resets them to default values.
+ */
+function resetDynamicPersistence() {
+  const persistElements = document.querySelectorAll('[data-persist="true"]');
+
+  persistElements.forEach((el) => {
+    const key = el.id;
+    if (!key) return;
+
+    localStorage.removeItem(key);
+
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      el.checked = el.defaultChecked;
+    } else {
+      el.value = el.defaultValue || '';
+    }
+
+    // Dispatch event to trigger any UI updates
+    el.dispatchEvent(new Event('change'));
+  });
+}
+
+/**
+ * Automatically updates button labels and toggles dependent elements
+ * based on checkbox or radio states.
+ */
+function setupTogglesAndLabels() {
+  // Map each main toggle to its label ID and optional dependent fields
+  const toggleConfig = [
+    {
+      controlId: 'enableContinuous',
+      labelId: 'enableContinuousLabel',
+      labelText: 'Continuous Mode',
+      dependents: [], // no dependent fields
+    },
+    {
+      controlId: 'enableFarnsworth',
+      labelId: 'enableFarnsworthLabel',
+      labelText: 'Farnsworth',
+      dependents: ['farnsworthSpeed'],
+    },
+    {
+      controlId: 'usOnly',
+      labelId: 'usOnlyLabel',
+      labelText: 'US Only Callsigns',
+      dependents: [],
+    },
+    {
+      controlId: 'qsb',
+      labelId: 'qsbLabel',
+      labelText: 'QSB (Fading)',
+      dependents: ['qsbPercentage'],
+    },
+    {
+      controlId: 'enableCutNumbers',
+      labelId: 'enableCutNumbersLabel',
+      labelText: 'Enable Cut Numbers',
+      dependents: [
+        'cutT',
+        'cutA',
+        'cutU',
+        'cutV',
+        'cutE',
+        'cutG',
+        'cutD',
+        'cutN',
+      ],
+    },
+  ];
+
+  toggleConfig.forEach(({ controlId, labelId, labelText, dependents }) => {
+    const control = document.getElementById(controlId);
+    const label = document.getElementById(labelId);
+
+    if (!control) return;
+
+    function updateUI() {
+      const enabled = control.checked;
+
+      // Update label icon
+      if (label) {
+        label.innerHTML = `<i class='${enabled ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>${labelText}`;
+      }
+
+      // Enable or disable dependent fields
+      dependents.forEach((dependentId) => {
+        const dependent = document.getElementById(dependentId);
+        if (dependent) {
+          dependent.disabled = !enabled;
+        }
+      });
+
+      // Special: if qsbPercentage (range), also update value display
+      if (controlId === 'qsb') {
+        const qsbValue = document.getElementById('qsbValue');
+        const qsbPercentage = document.getElementById('qsbPercentage');
+        if (qsbValue && qsbPercentage) {
+          qsbValue.textContent = qsbPercentage.value + '%';
+        }
+      }
+    }
+
+    // Update once on load
+    updateUI();
+
+    // Update when user interacts
+    control.addEventListener('change', updateUI);
+  });
+}
+
+/**
+ * Handle QRN button states after settings loading
+ */
+function setupQRNGroup() {
+  const savedQrn = localStorage.getItem('qrn');
+  if (savedQrn) {
+    const qrnRadio = document.querySelector(
+      `input[name="qrn"][value="${savedQrn}"]`
+    );
+    if (qrnRadio) {
+      qrnRadio.checked = true;
+    }
+  }
+
+  const qrnRadios = document.querySelectorAll('input[name="qrn"]');
+  qrnRadios.forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (radio.checked) {
+        localStorage.setItem('qrn', radio.value);
+      }
+    });
+  });
+}
 
 /**
  * Retrieves the logic configuration for the current mode.
@@ -831,7 +913,10 @@ function tu() {
   responseField.focus();
 
   // Chance of a new station joining
-  if (Math.random() < 0.4) {
+  if (
+    Math.random() < 0.4 ||
+    document.getElementById('enableContinuous').checked
+  ) {
     addStations(currentStations, inputs);
   }
 

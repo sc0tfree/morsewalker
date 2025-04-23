@@ -41,6 +41,9 @@ function getDOMInputs() {
     // convert volume to a float between 0 and 1
     yourVolume: parseFloat(document.getElementById('yourVolume').value) / 100,
     maxStations: parseInt(document.getElementById('maxStations').value, 10),
+    enableContinuous: document.getElementById('enableContinuous')
+      ? document.getElementById('enableContinuous').checked
+      : false,
     minSpeed: parseInt(document.getElementById('minSpeed').value, 10),
     maxSpeed: parseInt(document.getElementById('maxSpeed').value, 10),
     minTone: parseInt(document.getElementById('minTone').value, 10),
