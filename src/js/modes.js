@@ -27,11 +27,11 @@ export const modeUIConfig = {
   pota: {
     showTuButton: true,
     showInfoField: true,
-    infoFieldPlaceholder: 'State',
-    showInfoField2: false,
-    infoField2Placeholder: '',
+    infoFieldPlaceholder: 'RST',
+    showInfoField2: true,
+    infoField2Placeholder: 'State',
     tableExtraColumn: true,
-    extraColumnHeader: 'State',
+    extraColumnHeader: 'RST / State',
     resultsHeader: 'POTA Mode Results',
   },
   sst: {
@@ -92,11 +92,11 @@ export const modeLogicConfig = {
       `<BK> TU ${arbitrary} 73 EE`,
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
     requiresInfoField: true,
-    requiresInfoField2: false,
+    requiresInfoField2: true,
     showTuStep: true,
     modeName: 'POTA',
-    extraInfoFieldKey: 'state',
-    extraInfoFieldKey2: null,
+    extraInfoFieldKey: 'rst',
+    extraInfoFieldKey2: 'state',
   },
   contest: {
     cqMessage: (yourStation, theirStation, arbitrary) =>

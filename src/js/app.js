@@ -765,7 +765,7 @@ function tu() {
   if (currentMode === 'sst') {
     arbitrary = infoValue1; // name
   } else if (currentMode === 'pota') {
-    arbitrary = infoValue1; //state
+    arbitrary = infoValue2; // state (now second field)
   }
 
   let yourSignoffMessage = modeConfig.yourSignoff(

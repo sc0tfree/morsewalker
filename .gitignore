@@ -6,6 +6,7 @@ dist
 .cache
 build
 coverage
+todolist.md
 
 ### MacOS ###
 # General
