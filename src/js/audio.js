@@ -320,7 +320,7 @@ export function createMorsePlayer(station, volumeOverride = null) {
     // console.log(`/ Playing sentence: ${sentence}`);
 
     let time = startTime;
-    const tokens = tokenize(sentence);
+    const tokens = tokenize(sentence.replace(/\s\s+/g, ' '));
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
       time = playToken(token, time);
