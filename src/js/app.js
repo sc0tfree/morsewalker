@@ -75,6 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const responseField = document.getElementById('responseField');
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
+  const infoField3 = document.getElementById('infoField3');
   const sendButton = document.getElementById('sendButton');
   const tuButton = document.getElementById('tuButton');
   const resetButton = document.getElementById('resetButton');
@@ -187,6 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   infoField2.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && tuButton.style.display !== 'none') {
+      event.preventDefault();
+      tuButton.click();
+    }
+  });
+
+  infoField3.addEventListener('keydown', (event) => {
     if (event.key === 'Enter' && tuButton.style.display !== 'none') {
       event.preventDefault();
       tuButton.click();
@@ -307,6 +315,7 @@ function applyModeSettings(mode) {
   const tuButton = document.getElementById('tuButton');
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
+  const infoField3 = document.getElementById('infoField3');
   const resultsTable = document.getElementById('resultsTable');
   const modeResultsHeader = document.getElementById('modeResultsHeader');
 
@@ -329,6 +338,15 @@ function applyModeSettings(mode) {
   } else {
     infoField2.style.display = 'none';
     infoField2.value = '';
+  }
+
+  // Info field 3 visibility & placeholder
+  if (config.showInfoField3) {
+    infoField3.style.display = 'inline-block';
+    infoField3.placeholder = config.infoField3Placeholder;
+  } else {
+    infoField3.style.display = 'none';
+    infoField3.value = '';
   }
 
   // Update results header text
@@ -369,6 +387,7 @@ function resetGameState() {
   document.getElementById('responseField').value = '';
   document.getElementById('infoField').value = '';
   document.getElementById('infoField2').value = '';
+  document.getElementById('infoField3').value = '';
   document.getElementById('cqButton').disabled = false;
   stopAllAudio();
   updateAudioLock(0);
@@ -452,6 +471,7 @@ function send() {
   const responseField = document.getElementById('responseField');
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
+  const infoField3 = document.getElementById('infoField3');
 
   let responseFieldText = responseField.value.trim().toUpperCase();
 
@@ -739,8 +759,10 @@ function tu() {
 
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
+  const infoField3 = document.getElementById('infoField3');
   let infoValue1 = infoField.value.trim();
   let infoValue2 = infoField2.value.trim();
+  let infoValue3 = infoField3.value.trim();
 
   let currentStation = currentStations[activeStationIndex];
   totalContacts++;
@@ -757,6 +779,14 @@ function tu() {
     extraInfo += compareExtraInfo(
       modeConfig.extraInfoFieldKey2,
       infoValue2,
+      currentStation
+    );
+  }
+  if (modeConfig.requiresInfoField3 && modeConfig.extraInfoFieldKey3) {
+    if (extraInfo.length > 0) extraInfo += ' / ';
+    extraInfo += compareExtraInfo(
+      modeConfig.extraInfoFieldKey3,
+      infoValue3,
       currentStation
     );
   }
@@ -828,6 +858,7 @@ function tu() {
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  infoField3.value = '';
   responseField.focus();
 
   // Chance of a new station joining
@@ -859,7 +890,11 @@ function compareExtraInfo(fieldKey, userInput, callingStation) {
   let expectedValue = callingStation[fieldKey];
 
   // Handle numeric fields separately:
-  if (fieldKey === 'serialNumber' || fieldKey === 'cwopsNumber') {
+  if (
+    fieldKey === 'serialNumber' ||
+    fieldKey === 'cwopsNumber' ||
+    fieldKey === 'licwNumber'
+  ) {
     let userValInt = parseInt(userInput, 10);
 
     // Handle NaN (i.e., empty or non-numeric input)
@@ -976,9 +1011,11 @@ function reset() {
   const responseField = document.getElementById('responseField');
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
+  const infoField3 = document.getElementById('infoField3');
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  infoField3.value = '';
   responseField.focus();
 
   const modeConfig = getModeConfig();

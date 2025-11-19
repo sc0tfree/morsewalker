@@ -54,6 +54,18 @@ export const modeUIConfig = {
     extraColumnHeader: 'Additional Info',
     resultsHeader: 'CWT Mode Results',
   },
+  licw: {
+    showTuButton: true,
+    showInfoField: true,
+    infoFieldPlaceholder: 'State',
+    showInfoField2: true,
+    infoField2Placeholder: 'Name',
+    showInfoField3: true,
+    infoField3Placeholder: 'LICW Number',
+    tableExtraColumn: true,
+    extraColumnHeader: 'Additional Info',
+    resultsHeader: 'LICW Mode Results',
+  },
 };
 
 /**
@@ -77,6 +89,7 @@ export const modeLogicConfig = {
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
     requiresInfoField: false,
     requiresInfoField2: false,
+    requiresInfoField3: false,
     showTuStep: false,
     modeName: 'Single',
     extraInfoFieldKey: null,
@@ -93,6 +106,7 @@ export const modeLogicConfig = {
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
     requiresInfoField: true,
     requiresInfoField2: false,
+    requiresInfoField3: false,
     showTuStep: true,
     modeName: 'POTA',
     extraInfoFieldKey: 'state',
@@ -109,6 +123,7 @@ export const modeLogicConfig = {
     theirSignoff: null,
     requiresInfoField: true,
     requiresInfoField2: false,
+    requiresInfoField3: false,
     showTuStep: true,
     modeName: 'Contest',
     extraInfoFieldKey: 'serialNumber',
@@ -126,6 +141,7 @@ export const modeLogicConfig = {
     theirSignoff: null,
     requiresInfoField: true,
     requiresInfoField2: true,
+    requiresInfoField3: false,
     showTuStep: true,
     modeName: 'SST',
     extraInfoFieldKey: 'name',
@@ -143,9 +159,30 @@ export const modeLogicConfig = {
     theirSignoff: null,
     requiresInfoField: true,
     requiresInfoField2: true,
+    requiresInfoField3: false,
     showTuStep: true,
     modeName: 'CWT',
     extraInfoFieldKey: 'name',
     extraInfoFieldKey2: 'cwopsNumber',
+  },
+  licw: {
+    cqMessage: (yourStation, theirStation, arbitrary) =>
+      `CQ LICW DE ${yourStation.callsign} K`,
+    yourExchange: (yourStation, theirStation, arbitrary) =>
+      `UR 5NN QTH ${yourStation.state} NAME ${yourStation.name} LICW NR 555 HW? <BK>`,
+    theirExchange: (yourStation, theirStation, arbitrary) =>
+      `<BK> UR 5NN QTH ${theirStation.state} NAME ${theirStation.name} LICW NR ${theirStation.licwNumber} HW? <BK>`,
+    yourSignoff: (yourStation, theirStation, arbitrary) =>
+      `<BK> RR TU ${theirStation.name} ES GL 73 <AR> ${theirStation.callsign} DE ${yourStation.callsign} <SK>`,
+    theirSignoff: (yourStation, theirStation, arbitrary) =>
+      `<BK> TU ${yourStation.name} ES GL 73 <AR> ${yourStation.callsign} DE ${theirStation.callsign} <SK> EE`,
+    requiresInfoField: true,
+    requiresInfoField2: true,
+    requiresInfoField3: true,
+    showTuStep: true,
+    modeName: 'LICW',
+    extraInfoFieldKey: 'state',
+    extraInfoFieldKey2: 'name',
+    extraInfoFieldKey3: 'licwNumber',
   },
 };

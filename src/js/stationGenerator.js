@@ -282,6 +282,7 @@ export function getCallingStation() {
       .toString()
       .padStart(2, '0'),
     cwopsNumber: Math.floor(Math.random() * 4000) + 1,
+    licwNumber: Math.floor(Math.random() * 9999) + 1,
     player: null,
     qsb: inputs.qsb ? Math.random() < inputs.qsbPercentage / 100 : false,
     // QSB frequency range: 0.05 to 0.5
