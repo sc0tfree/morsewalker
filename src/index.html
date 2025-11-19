@@ -189,6 +189,20 @@
             for="modeSst"
             >K1USN SST</label
           >
+
+          <input
+            type="radio"
+            class="btn-check"
+            name="mode"
+            id="modeLicw"
+            value="licw"
+            autocomplete="off"
+          />
+          <label
+            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            for="modeLicw"
+            >LICW</label
+          >
         </div>
       </div>
     </div>
@@ -951,7 +965,7 @@
           <!-- Force a new line after sendButton on small screens -->
           <div class="w-100 d-sm-block d-md-none"></div>
 
-          <!-- Second row on small: infoField, infoField2, TU -->
+          <!-- Second row on small: infoField, infoField2, infoField3, TU -->
           <input
             type="text"
             id="infoField"
@@ -966,6 +980,17 @@
           <input
             type="text"
             id="infoField2"
+            class="form-control me-2 mb-2"
+            style="display: none; max-width: 150px"
+            placeholder=""
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            autocorrect="off"
+          />
+          <input
+            type="text"
+            id="infoField3"
             class="form-control me-2 mb-2"
             style="display: none; max-width: 150px"
             placeholder=""
