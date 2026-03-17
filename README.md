@@ -53,6 +53,22 @@ View the JSDocs at https://morsewalker.com/docs.
 
 This will open the application in your default browser.
 
+### With Docker Compose (recommended)
+
+```bash
+docker-compose up --build
+```
+
+Then open http://localhost:8080
+
+### With Docker directly
+
+```bash
+docker build -t morsewalker .
+docker run -p 8080:8080 morsewalker
+```
+
+
 #### Building for Production
 
 To build the project for production, run: `npm run build`
