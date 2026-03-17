@@ -1,0 +1,8 @@
+services:
+  morsewalker:
+    image: morsewalker:latest
+    container_name: morsewalker
+    build: .
+    ports:
+      - "8081:80"
+    restart: unless-stopped
