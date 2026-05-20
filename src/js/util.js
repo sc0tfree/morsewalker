@@ -304,10 +304,11 @@ export function compareStrings(source, query) {
  * Generates a weighted random number based on the number of stations.
  * Lower-numbered stations have higher probabilities.
  *
- * @param {number} maxStations - The total number of stations.
- * @returns {number} - A station number (1 to maxStations) based on weighted probability.
+ * @param {number} minStations - The minimum number of additional stations.
+ * @param {number} maxStations - The maximum number of additional stations.
+ * @returns {number} - A station count (1 to maxStations) based on weighted probability.
  */
-export function weightedRandom(maxStations) {
+export function weightedRandom(minStations, maxStations) {
   // Step 1: Create weights inversely proportional to the station number
   let weights = [];
   for (let i = 1; i <= maxStations; i++) {
@@ -328,7 +329,7 @@ export function weightedRandom(maxStations) {
   // Step 4: Generate a random number and find which station it corresponds to
   let rand = Math.random(); // Random number between 0 and 1
   for (let i = 0; i < cumulative.length; i++) {
-    if (rand < cumulative[i]) return i + 1; // Return 1-indexed station number
+    if (rand < cumulative[i]) return Math.max(minStations, i + 1); // Return 1-indexed station number, at least minStations
   }
 
   // Fallback in case no station is selected (shouldn't happen)
@@ -342,7 +343,7 @@ export function weightedRandom(maxStations) {
 //
 //   // Collect results by running weightedRandom multiple times
 //   for (let i = 0; i < iterations; i++) {
-//     let station = weightedRandom(maxStations);
+//     let station = weightedRandom(1, maxStations);
 //     results[station - 1]++; // Increment the count for the returned station
 //   }
 //
@@ -453,14 +454,18 @@ export function respondWithAllStations(stations, audioLock) {
  * and returns the updated array.
  *
  * @param {Array<Object>} stations - Current list of stations.
- * @param {Object} inputs - Configuration object containing `maxStations`.
+ * @param {Object} inputs - Configuration object containing `minStations` and `maxStations`.
+ * @param {Number} chance - (0.0-1.0] chance of adding a new station joining if > minStations
  * @returns {Array<Object>} The updated list of stations.
  */
-export function addStations(stations, inputs) {
-  // If currentStations is empty, then add a weighted random between 1 and inputs.maxStations
+export function addStations(stations, inputs, chance) {
+  if (stations.length >= inputs.minStations && chance < 1.0 && Math.random() > chance) {
+    return stations
+  }
+  // If currentStations is too short, then add a weighted random between 1 and inputs.maxStations
   if (stations.length < inputs.maxStations) {
     // Use weightedRandom to determine the number of stations to add
-    let numStations = weightedRandom(inputs.maxStations - stations.length);
+    let numStations = weightedRandom(inputs.minStations - stations.length, inputs.maxStations - stations.length);
     console.log(`+ Adding ${numStations} stations...`);
     for (let i = 0; i < numStations; i++) {
       let callingStation = getCallingStation();

@@ -40,6 +40,7 @@ function getDOMInputs() {
     yourSidetone: parseInt(document.getElementById('yourSidetone').value, 10),
     // convert volume to a float between 0 and 1
     yourVolume: parseFloat(document.getElementById('yourVolume').value) / 100,
+    minStations: parseInt(document.getElementById('minStations').value, 10),
     maxStations: parseInt(document.getElementById('maxStations').value, 10),
     minSpeed: parseInt(document.getElementById('minSpeed').value, 10),
     maxSpeed: parseInt(document.getElementById('maxSpeed').value, 10),

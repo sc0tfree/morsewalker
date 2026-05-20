@@ -343,6 +343,24 @@
             <div class="container">
               <!-- Farnsworth Row -->
               <div class="row g-3 align-items-end">
+                <!-- Min Stations -->
+                <div class="col-12 col-md-4 col-lg">
+                  <label for="minStations" class="form-label"
+                    >Minimum Stations</label
+                  >
+                  <input
+                    type="number"
+                    id="minStations"
+                    name="minStations"
+                    class="form-control"
+                    value="0"
+                    min="0"
+                    max="100"
+                    step="1"
+                    required
+                  />
+                </div>
+
                 <!-- Max Stations -->
                 <div class="col-12 col-md-4 col-lg">
                   <label for="maxStations" class="form-label"
