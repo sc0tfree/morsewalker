@@ -14,9 +14,10 @@ import sst from './sst.js';
  * - `label`: the text shown on the mode's radio button.
  * - `ui`: which controls and info fields are visible, their placeholders, and
  *   the results table headers. Consumed by `./view.js`.
- * - `logic`: the messages each side sends, whether the info fields are
- *   required, whether the QSO has a TU step, and which calling-station
- *   attributes the info fields are scored against. Consumed by
+ * - `logic`: the messages each side sends, which of the operator's info-field
+ *   values the sign-off message quotes back (`signoffArg`), whether the info
+ *   fields are required, whether the QSO has a TU step, and which
+ *   calling-station attributes the info fields are scored against. Consumed by
  *   `../session/index.js`.
  *
  * The array order is the order the modes appear in the UI.

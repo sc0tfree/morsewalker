@@ -26,6 +26,7 @@ export default {
     yourSignoff: (yourStation, theirStation, arbitrary) =>
       `<BK> TU ${arbitrary} 73 EE`,
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
+    signoffArg: ({ infoValue1 }) => infoValue1,
     requiresInfoField: true,
     requiresInfoField2: false,
     showTuStep: true,

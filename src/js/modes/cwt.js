@@ -27,6 +27,7 @@ export default {
     yourSignoff: (yourStation, theirStation, arbitrary) =>
       `TU ${yourStation.callsign}`,
     theirSignoff: null,
+    signoffArg: () => null,
     requiresInfoField: true,
     requiresInfoField2: true,
     showTuStep: true,

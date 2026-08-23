@@ -24,6 +24,7 @@ export default {
     theirExchange: (yourStation, theirStation, arbitrary) => `R 5NN TU`,
     yourSignoff: (yourStation, theirStation, arbitrary) => `TU EE`,
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
+    signoffArg: () => null,
     requiresInfoField: false,
     requiresInfoField2: false,
     showTuStep: false,

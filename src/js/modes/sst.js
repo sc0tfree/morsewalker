@@ -27,6 +27,7 @@ export default {
     yourSignoff: (yourStation, theirStation, arbitrary) =>
       `GL ${arbitrary} TU ${yourStation.callsign} SST`,
     theirSignoff: null,
+    signoffArg: ({ infoValue1 }) => infoValue1,
     requiresInfoField: true,
     requiresInfoField2: true,
     showTuStep: true,
