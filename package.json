@@ -21,7 +21,7 @@
     "verify": "npm run format:check && npm run lint && npm run test:coverage && npm run build",
     "start": "webpack serve --open --config webpack.config.dev.js",
     "build": "webpack --config webpack.config.prod.js && jsdoc -c jsdoc.json",
-    "format": "prettier --write \"src/**/*.{js,css,html}\"",
+    "format": "prettier --write \"src/**/*.{js,css,html}\" \"tests/**/*.{js,mjs}\" \".github/**/*.yml\" \"*.md\" \"*.config.mjs\"",
     "prepare": "husky"
   },
   "devDependencies": {
