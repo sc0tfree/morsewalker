@@ -42,3 +42,6 @@ Temporary Items
 
 # VSCode
 .vscode
+
+# Cursor
+.cursor/
