@@ -3,11 +3,12 @@ name: CI
 on:
   pull_request:
     branches:
+      - main
       - v1
   push:
     branches:
+      - main
       - v1
-      - v1-reorganization-and-testing
 
 permissions:
   contents: read
