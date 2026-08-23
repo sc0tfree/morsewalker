@@ -6,21 +6,23 @@ This report consolidates defects and documentation mismatches confirmed while
 writing characterization tests. None were fixed on
 `v1-reorganization-and-testing`.
 
-## QSB frequency does not affect fading
+## 1. QSB frequency does not affect fading
+
+Status: Fixed on `v1-defect-1-qsb-frequency`
 
 Severity: Medium
 
-Stations receive a `qsbFrequency`, and the player documentation describes using
-it in the sine calculation. The current amplitude calculation omits that
-frequency, so stations configured at 0.1 Hz and 9 Hz produce the same fade at
-the same time and phase.
+The baseline player omitted `qsbFrequency` from its documented sine calculation,
+so every station faded at an effective 1 Hz. The fix applies each station's
+frequency to the calculation and generates frequencies uniformly in the
+`[0.25, 2)` Hz range.
 
 Evidence:
 
 - `src/js/audio/player.js`, `qsbAmplitude`
 - `tests/unit/audio/morse-player.test.js`
 
-## Maximum wait acts as an additional spread
+## 2. Maximum wait acts as an additional spread
 
 Severity: Medium
 
@@ -34,7 +36,7 @@ Evidence:
 - `src/js/audio/stationMix.js`, `respondWithAllStations`
 - `tests/unit/audio/station-mix.test.js`
 
-## Numeric input constraints are not fully enforced
+## 3. Numeric input constraints are not fully enforced
 
 Severity: High
 
@@ -50,7 +52,7 @@ Evidence:
 - `src/js/settings/validation.js`
 - `tests/unit/settings/inputs.test.js`
 
-## Maximum tone is exclusive
+## 4. Maximum tone is exclusive
 
 Severity: Low
 
@@ -63,7 +65,7 @@ Evidence:
 - `src/js/stations/generator.js`, `getCallingStation`
 - `tests/unit/stations/stationGenerator.test.js`
 
-## Documented callsign-matching examples disagree with behavior
+## 5. Documented callsign-matching examples disagree with behavior
 
 Severity: Low
 
@@ -76,7 +78,7 @@ Evidence:
 - `src/js/stations/matching.js`
 - `tests/unit/stations/util.test.js`
 
-## Result-summary documentation disagrees with behavior
+## 6. Result-summary documentation disagrees with behavior
 
 Severity: Low
 
@@ -89,7 +91,7 @@ Evidence:
 - `src/js/results/table.js`, `updateSummaryRow`
 - `tests/unit/results/util-results.test.js`
 
-## Resetting active QRN re-locks the replacement audio context
+## 7. Resetting active QRN re-locks the replacement audio context
 
 Severity: Medium
 
@@ -103,7 +105,7 @@ Evidence:
 - `src/js/audio/background-static.js`, `stopBackgroundStatic`
 - `tests/unit/audio/background-static.test.js`
 
-## State persistence relies on a browser-created global
+## 8. State persistence relies on a browser-created global
 
 Severity: Medium
 
@@ -116,7 +118,7 @@ Evidence:
 - `src/js/settings/storage.js`
 - `tests/integration/session/session.test.js`
 
-## An unrecognized stored mode prevents startup
+## 9. An unrecognized stored mode prevents startup
 
 Severity: Medium
 

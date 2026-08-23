@@ -220,7 +220,7 @@ describe('calling-station attributes', () => {
       cwopsNumber: 1,
       player: null,
       qsb: false,
-      qsbFrequency: 0.05,
+      qsbFrequency: 0.25,
       qsbDepth: 0.6,
     });
     expect(sequence.calls).toBe(13);
@@ -249,8 +249,8 @@ describe('calling-station attributes', () => {
     });
     expect(station.volume).toBeLessThan(1);
     expect(station.volume).toBeCloseTo(1, 12);
-    expect(station.qsbFrequency).toBeLessThan(0.5);
-    expect(station.qsbFrequency).toBeCloseTo(0.5, 12);
+    expect(station.qsbFrequency).toBeLessThan(2);
+    expect(station.qsbFrequency).toBeCloseTo(2, 12);
     expect(station.qsbDepth).toBeLessThan(1);
     expect(station.qsbDepth).toBeCloseTo(1, 12);
   });
@@ -285,7 +285,7 @@ describe('calling-station attributes', () => {
       const station = getCallingStation();
 
       expect(station.qsb).toBe(expected);
-      expect(station.qsbFrequency).toBe(0.05);
+      expect(station.qsbFrequency).toBe(0.25);
       expect(station.qsbDepth).toBe(0.6);
       expect(sequence.calls).toBe(14);
     }
@@ -301,8 +301,8 @@ describe('calling-station attributes', () => {
     const station = getCallingStation();
 
     expect(station.qsb).toBe(false);
-    expect(station.qsbFrequency).toBeLessThan(0.5);
-    expect(station.qsbFrequency).toBeCloseTo(0.5, 12);
+    expect(station.qsbFrequency).toBeLessThan(2);
+    expect(station.qsbFrequency).toBeCloseTo(2, 12);
     expect(station.qsbDepth).toBeLessThan(1);
     expect(station.qsbDepth).toBeCloseTo(1, 12);
   });

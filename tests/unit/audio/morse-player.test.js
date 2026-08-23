@@ -194,14 +194,14 @@ describe('createMorsePlayer v1 characterization', () => {
     expect(round(endTime)).toBe(0.48);
   });
 
-  it('currently produces identical QSB gain for different QSB frequencies', () => {
-    const random = vi.spyOn(Math, 'random').mockReturnValue(0.25);
+  it("uses each station's QSB frequency when calculating symbol gain", () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0);
     const slowPlayer = audio.createMorsePlayer(
       buildStation({
         callsign: 'SLOW',
         qsb: true,
         qsbDepth: 0.8,
-        qsbFrequency: 0.1,
+        qsbFrequency: 0.25,
       })
     );
     const fastPlayer = audio.createMorsePlayer(
@@ -209,18 +209,31 @@ describe('createMorsePlayer v1 characterization', () => {
         callsign: 'FAST',
         qsb: true,
         qsbDepth: 0.8,
-        qsbFrequency: 9,
+        qsbFrequency: 0.75,
       })
     );
 
-    slowPlayer.playSentence('E');
-    fastPlayer.playSentence('E');
+    slowPlayer.playSentence('E', 1);
+    fastPlayer.playSentence('E', 1);
 
-    const slowPeak = slowPlayer.context.gains[0].gain.events[1].value;
-    const fastPeak = fastPlayer.context.gains[1].gain.events[1].value;
+    const slowEvents = slowPlayer.context.gains[0].gain.events;
+    const fastEvents = fastPlayer.context.gains[1].gain.events;
+    const slowPeak = slowEvents[1].value;
+    const fastPeak = fastEvents[1].value;
+
     expect(random).toHaveBeenCalledTimes(2);
-    expect(slowPeak).toBeCloseTo(0.1401989477, 8);
-    expect(fastPeak).toBe(slowPeak);
+    expect(slowEvents.slice(1, 4).map(({ value }) => value)).toEqual([
+      slowPeak,
+      slowPeak,
+      slowPeak,
+    ]);
+    expect(fastEvents.slice(1, 4).map(({ value }) => value)).toEqual([
+      fastPeak,
+      fastPeak,
+      fastPeak,
+    ]);
+    expect(slowPeak).toBeCloseTo(0.140012435609, 10);
+    expect(fastPeak).toBeCloseTo(0.699888086142, 10);
     expect(RecordingAudioContext.instances).toHaveLength(2);
   });
 });

@@ -71,8 +71,8 @@ export function getCallingStation() {
     cwopsNumber: Math.floor(Math.random() * 4000) + 1,
     player: null,
     qsb: inputs.qsb ? Math.random() < inputs.qsbPercentage / 100 : false,
-    // QSB frequency range: 0.05 to 0.5
-    qsbFrequency: Math.random() * 0.45 + 0.05,
+    // QSB frequency range: [0.25, 2) Hz
+    qsbFrequency: Math.random() * 1.75 + 0.25,
     // QSB depth range: 0.6 to 1.0
     qsbDepth: Math.random() * 0.4 + 0.6,
   };
