@@ -115,3 +115,22 @@ Evidence:
 
 - `src/js/settings/storage.js`
 - `tests/integration/session/session.test.js`
+
+## An unrecognized stored mode prevents startup
+
+Severity: Medium
+
+The saved mode is read from local storage and used without checking that it is
+a mode the application knows about. An unrecognized value matches no radio
+button, so no mode is selected, and it then reaches `applyModeSettings`, which
+looks the value up and reads properties off the result. The lookup misses, the
+property read throws, and the rest of the `DOMContentLoaded` handler never
+runs, leaving the page unconfigured until local storage is cleared.
+
+Any operator who used a build with a mode that was later renamed or removed
+would hit this on their next visit.
+
+Evidence:
+
+- `src/js/session/index.js`, mode initialization on `DOMContentLoaded`
+- `src/js/modes/view.js`, `applyModeSettings`

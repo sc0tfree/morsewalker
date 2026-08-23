@@ -649,12 +649,7 @@ function tu() {
     );
   }
 
-  let arbitrary = null;
-  if (currentMode === 'sst') {
-    arbitrary = infoValue1; // name
-  } else if (currentMode === 'pota') {
-    arbitrary = infoValue1; //state
-  }
+  let arbitrary = modeConfig.signoffArg({ infoValue1, infoValue2 });
 
   let yourSignoffMessage = modeConfig.yourSignoff(
     yourStation,
@@ -772,8 +767,8 @@ function stop() {
   const cqButton = document.getElementById('cqButton');
   cqButton.disabled = false;
 
-  // If the mode is single, reset the current station as well
-  if (currentMode === 'single') {
+  // Modes without a TU step track a single station, which must be cleared too
+  if (!getModeConfig().showTuStep) {
     currentStation = null;
     currentStationAttempts = 0;
     currentStationStartTime = null;

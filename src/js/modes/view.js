@@ -1,4 +1,4 @@
-import { modeUIConfig } from './config.js';
+import { modeUIConfig } from './index.js';
 
 /**
  * Updates the UI to reflect the current mode's configuration.

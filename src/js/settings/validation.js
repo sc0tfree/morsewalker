@@ -1,5 +1,7 @@
 import * as bootstrap from 'bootstrap';
 
+import { getMode } from '../modes/index.js';
+
 /**
  * Validates the collected form inputs and ensures their logical consistency.
  *
@@ -20,20 +22,15 @@ export function validateInputs(inputs) {
     openAccordionSection('collapseYourStationSettings');
     isValid = false;
   }
-  if (!inputs.yourName && inputs.mode === 'sst') {
-    markFieldInvalid('yourName', 'Your name is required for SST mode.');
-    openAccordionSection('collapseYourStationSettings');
-    isValid = false;
-  }
-  if (!inputs.yourState && inputs.mode === 'sst') {
-    markFieldInvalid('yourState', 'Your state is required for SST mode.');
-    openAccordionSection('collapseYourStationSettings');
-    isValid = false;
-  }
-  if (!inputs.yourName && inputs.mode === 'cwt') {
-    markFieldInvalid('yourName', 'Your name is required for CWT mode.');
-    openAccordionSection('collapseYourStationSettings');
-    isValid = false;
+
+  const requiredOperatorFields =
+    getMode(inputs.mode)?.requiredOperatorFields ?? [];
+  for (const field of requiredOperatorFields) {
+    if (!inputs[field.id]) {
+      markFieldInvalid(field.id, field.message);
+      openAccordionSection('collapseYourStationSettings');
+      isValid = false;
+    }
   }
 
   if (inputs.minSpeed > inputs.maxSpeed) {
