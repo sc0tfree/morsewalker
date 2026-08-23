@@ -1,0 +1,57 @@
+import { modeUIConfig } from './config.js';
+
+/**
+ * Updates the UI to reflect the current mode's configuration.
+ *
+ * Adjusts visibility, placeholders, and content of various UI elements like the
+ * "TU" button, input fields, and results table. Also modifies extra columns in the
+ * results table based on mode-specific requirements.
+ *
+ * @param {string} mode - The mode to apply settings for.
+ */
+export function applyModeSettings(mode) {
+  const config = modeUIConfig[mode];
+  const tuButton = document.getElementById('tuButton');
+  const infoField = document.getElementById('infoField');
+  const infoField2 = document.getElementById('infoField2');
+  const resultsTable = document.getElementById('resultsTable');
+  const modeResultsHeader = document.getElementById('modeResultsHeader');
+
+  // TU button visibility
+  tuButton.style.display = config.showTuButton ? 'inline-block' : 'none';
+
+  // Info field visibility & placeholder
+  if (config.showInfoField) {
+    infoField.style.display = 'inline-block';
+    infoField.placeholder = config.infoFieldPlaceholder;
+  } else {
+    infoField.style.display = 'none';
+    infoField.value = '';
+  }
+
+  // Info field 2 visibility & placeholder
+  if (config.showInfoField2) {
+    infoField2.style.display = 'inline-block';
+    infoField2.placeholder = config.infoField2Placeholder;
+  } else {
+    infoField2.style.display = 'none';
+    infoField2.value = '';
+  }
+
+  // Update results header text
+  modeResultsHeader.textContent = config.resultsHeader;
+
+  // Show/hide the extra column in the results table
+  const extraColumns = resultsTable.querySelectorAll('.mode-specific-column');
+  extraColumns.forEach((col) => {
+    col.style.display = config.tableExtraColumn ? 'table-cell' : 'none';
+  });
+
+  // Update extra column header text
+  const extraColumnHeaders = resultsTable.querySelectorAll(
+    'thead .mode-specific-column'
+  );
+  extraColumnHeaders.forEach((header) => {
+    header.textContent = config.extraColumnHeader || 'Additional Info';
+  });
+}
