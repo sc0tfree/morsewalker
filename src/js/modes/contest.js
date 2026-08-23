@@ -34,4 +34,5 @@ export default {
     extraInfoFieldKey: 'serialNumber',
     extraInfoFieldKey2: null,
   },
+  requiredOperatorFields: [],
 };

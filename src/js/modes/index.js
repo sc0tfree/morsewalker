@@ -19,6 +19,10 @@ import sst from './sst.js';
  *   fields are required, whether the QSO has a TU step, and which
  *   calling-station attributes the info fields are scored against. Consumed by
  *   `../session/index.js`.
+ * - `requiredOperatorFields`: the operator's own settings the mode cannot run
+ *   without, each an `{ id, message }` pair where `id` is both the input's DOM
+ *   element id and its key on the collected inputs. Consumed by
+ *   `../settings/validation.js`.
  *
  * The array order is the order the modes appear in the UI.
  *

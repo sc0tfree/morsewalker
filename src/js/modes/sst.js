@@ -35,4 +35,8 @@ export default {
     extraInfoFieldKey: 'name',
     extraInfoFieldKey2: 'state',
   },
+  requiredOperatorFields: [
+    { id: 'yourName', message: 'Your name is required for SST mode.' },
+    { id: 'yourState', message: 'Your state is required for SST mode.' },
+  ],
 };

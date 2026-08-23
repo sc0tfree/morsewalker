@@ -35,4 +35,7 @@ export default {
     extraInfoFieldKey: 'name',
     extraInfoFieldKey2: 'cwopsNumber',
   },
+  requiredOperatorFields: [
+    { id: 'yourName', message: 'Your name is required for CWT mode.' },
+  ],
 };

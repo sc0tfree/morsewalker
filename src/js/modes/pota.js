@@ -34,4 +34,5 @@ export default {
     extraInfoFieldKey: 'state',
     extraInfoFieldKey2: null,
   },
+  requiredOperatorFields: [],
 };

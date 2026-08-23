@@ -32,4 +32,5 @@ export default {
     extraInfoFieldKey: null,
     extraInfoFieldKey2: null,
   },
+  requiredOperatorFields: [],
 };
