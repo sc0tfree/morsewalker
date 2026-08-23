@@ -6,6 +6,8 @@ dist
 .cache
 build
 coverage
+playwright-report
+test-results
 
 ### MacOS ###
 # General
