@@ -16,7 +16,17 @@ async function settlePromiseChain() {
   }
 }
 
-describe('background static v1 characterization', () => {
+function createDeferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, reject, resolve };
+}
+
+describe('background static lifecycle', () => {
   let audio;
 
   beforeEach(async () => {
@@ -44,8 +54,7 @@ describe('background static v1 characterization', () => {
     return { arrayBuffer, fetchMock, response };
   }
 
-  it('fetches, loops, fades, and disconnects representative moderate QRN', async () => {
-    vi.useFakeTimers();
+  it('fetches one track and fades it only on the background clock', async () => {
     document.getElementById('qrnModerate').checked = true;
     const { arrayBuffer, fetchMock, response } = mockStaticFetch();
     const staticContext = RecordingAudioContext.instances[1];
@@ -71,6 +80,7 @@ describe('background static v1 characterization', () => {
     audio.createBackgroundStatic();
     expect(fetchMock).toHaveBeenCalledOnce();
 
+    audio.updateAudioLock(20);
     audio.audioContext.currentTime = 4;
     staticContext.currentTime = 12;
     audio.stopBackgroundStatic();
@@ -79,15 +89,14 @@ describe('background static v1 characterization', () => {
       { type: 'set', value: 1.5, time: 12 },
       { type: 'linearRamp', value: 0, time: 13 },
     ]);
-    expect(audio.audioLockUntil).toBe(5);
-    expect(source.stopped).toEqual([]);
-    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+    expect(audio.audioLockUntil).toBe(20);
+    expect(source.stopped).toEqual([13]);
+    expect(audio.isBackgroundStaticPlaying()).toBe(false);
+    expect(source.disconnected).toBe(false);
+    expect(gain.disconnected).toBe(false);
 
-    vi.advanceTimersByTime(999);
-    expect(source.stopped).toEqual([]);
+    source.emitEnded();
 
-    vi.advanceTimersByTime(1);
-    expect(source.stopped).toEqual([undefined]);
     expect(source.disconnected).toBe(true);
     expect(gain.disconnected).toBe(true);
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
@@ -105,23 +114,134 @@ describe('background static v1 characterization', () => {
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
   });
 
-  it('currently leaves the replacement context locked while active QRN fades', async () => {
-    vi.useFakeTimers();
+  it('does not start QRN when intensity changes before a session starts', async () => {
+    document.getElementById('qrnHeavy').checked = true;
+    const { fetchMock } = mockStaticFetch();
+
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(audio.isBackgroundStaticPlaying()).toBe(false);
+  });
+
+  it('replaces every active QRN level and can transition through Off to On', async () => {
+    const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    const normalSource = staticContext.bufferSources[0];
+    expect(staticContext.gains[0].gain.value).toBe(0.75);
+
+    document.getElementById('qrnModerate').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(normalSource.stopped).toEqual([0]);
+    expect(normalSource.disconnected).toBe(true);
+    expect(staticContext.gains[1].gain.value).toBe(1.5);
+
+    document.getElementById('qrnHeavy').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources[1].stopped).toEqual([0]);
+    expect(staticContext.gains[2].gain.value).toBe(3);
+
+    document.getElementById('qrnOff').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources[2].stopped).toEqual([0]);
+    expect(staticContext.bufferSources[2].disconnected).toBe(true);
+    expect(audio.isBackgroundStaticPlaying()).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    document.getElementById('qrnNormal').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(staticContext.bufferSources).toHaveLength(4);
+    expect(staticContext.gains[3].gain.value).toBe(0.75);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+  });
+
+  it('invalidates a duplicate pending load before it can decode or start', async () => {
+    const pendingArrayBuffer = createDeferred();
+    const response = {
+      arrayBuffer: vi.fn(() => pendingArrayBuffer.promise),
+    };
+    const fetchMock = vi.fn().mockResolvedValue(response);
+    vi.stubGlobal('fetch', fetchMock);
+    const staticContext = RecordingAudioContext.instances[1];
+    const decode = vi.spyOn(staticContext, 'decodeAudioData');
+
+    audio.createBackgroundStatic();
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(response.arrayBuffer).toHaveBeenCalledOnce();
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+
+    audio.stopBackgroundStatic(true);
+    expect(audio.isBackgroundStaticPlaying()).toBe(false);
+
+    pendingArrayBuffer.resolve(new ArrayBuffer(4));
+    await settlePromiseChain();
+
+    expect(decode).not.toHaveBeenCalled();
+    expect(staticContext.bufferSources).toHaveLength(0);
+  });
+
+  it('keeps an immediate replacement independent from retiring cleanup', async () => {
+    const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+    const firstSource = staticContext.bufferSources[0];
+    const firstGain = staticContext.gains[0];
+
+    staticContext.currentTime = 12;
+    audio.stopBackgroundStatic();
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    const secondSource = staticContext.bufferSources[1];
+    const secondGain = staticContext.gains[1];
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(firstSource.stopped).toEqual([13]);
+    expect(secondSource.started).toEqual([13]);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+
+    firstSource.emitEnded();
+
+    expect(firstSource.disconnected).toBe(true);
+    expect(firstGain.disconnected).toBe(true);
+    expect(secondSource.disconnected).toBe(false);
+    expect(secondGain.disconnected).toBe(false);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+  });
+
+  it('leaves the replacement foreground context unlocked while QRN fades', async () => {
     mockStaticFetch();
     audio.createBackgroundStatic();
     await settlePromiseChain();
     const firstContext = audio.audioContext;
+    const staticSource = RecordingAudioContext.instances[1].bufferSources[0];
 
     audio.updateAudioLock(20);
     audio.stopAllAudio();
 
     expect(firstContext.closed).toBe(true);
     expect(audio.audioContext).toBe(RecordingAudioContext.instances[2]);
-    expect(audio.audioLockUntil).toBe(1);
-    expect(audio.getAudioLock()).toBe(true);
-    expect(audio.isBackgroundStaticPlaying()).toBe(true);
-
-    vi.advanceTimersByTime(1000);
+    expect(audio.audioLockUntil).toBe(0);
+    expect(audio.getAudioLock()).toBe(false);
+    expect(staticSource.stopped).toEqual([1]);
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
   });
 });

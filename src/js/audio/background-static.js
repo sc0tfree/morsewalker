@@ -1,9 +1,140 @@
 import { getInputs } from '../inputs.js';
-import { audioContext, updateAudioLock } from './runtime.js';
 
-let backgroundStaticSource = null;
-let backgroundStaticContext = new AudioContext();
-let staticGain = null;
+const backgroundStaticContext = new AudioContext();
+const staticUrl = '../audio/static.mp3';
+const fadeSeconds = 1;
+const staticGainValues = {
+  normal: 0.75,
+  moderate: 1.5,
+  heavy: 3.0,
+};
+
+let backgroundStaticSessionActive = false;
+let currentTrack = null;
+let nextTrackStartTime = 0;
+
+/**
+ * Disconnects the nodes owned by one QRN track.
+ *
+ * @param {object} track - The QRN track to disconnect.
+ */
+function disconnectTrack(track) {
+  if (track.disconnected) return;
+
+  if (track.source) {
+    track.source.disconnect();
+  }
+  if (track.gain) {
+    track.gain.disconnect();
+  }
+  track.disconnected = true;
+}
+
+/**
+ * Loads and starts one QRN track if it is still the current request.
+ *
+ * @param {object} track - The QRN track request being loaded.
+ * @returns {Promise<void>}
+ */
+async function loadTrack(track) {
+  try {
+    const response = await fetch(staticUrl);
+    const arrayBuffer = await response.arrayBuffer();
+
+    if (currentTrack !== track) return;
+
+    const audioBuffer =
+      await backgroundStaticContext.decodeAudioData(arrayBuffer);
+
+    if (currentTrack !== track || !backgroundStaticSessionActive) return;
+
+    const source = backgroundStaticContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.loop = true;
+
+    const gain = backgroundStaticContext.createGain();
+    gain.gain.value = track.gainValue;
+
+    source.connect(gain);
+    gain.connect(backgroundStaticContext.destination);
+
+    const currentTime = backgroundStaticContext.currentTime;
+    const startTime = Math.max(currentTime, nextTrackStartTime);
+    track.source = source;
+    track.gain = gain;
+    track.startTime = startTime;
+
+    if (startTime > currentTime) {
+      source.start(startTime);
+    } else {
+      source.start();
+    }
+  } catch (error) {
+    if (currentTrack !== track) return;
+
+    currentTrack = null;
+    disconnectTrack(track);
+    console.error('Error loading static audio file:', error);
+  }
+}
+
+/**
+ * Starts a QRN track for the selected level when the session wants QRN.
+ */
+function startSelectedTrack() {
+  if (!backgroundStaticSessionActive || currentTrack) return;
+
+  const inputs = getInputs();
+  if (inputs === null || inputs.qrn === 'off') return;
+
+  const selectedQRN = inputs.qrn;
+  const track = {
+    disconnected: false,
+    gain: null,
+    gainValue: staticGainValues[selectedQRN] || 1.0,
+    source: null,
+    startTime: null,
+  };
+  currentTrack = track;
+
+  console.log(`/ Initializing background static for QRN level ${selectedQRN}`);
+  void loadTrack(track);
+}
+
+/**
+ * Retires the current track without changing session intent.
+ *
+ * A pending load is invalidated by detaching its token. A started track either
+ * stops immediately or fades on the background context's own timeline.
+ *
+ * @param {boolean} noFade - If true, stops the current track immediately.
+ */
+function retireCurrentTrack(noFade) {
+  const track = currentTrack;
+  currentTrack = null;
+
+  if (!track?.source || !track.gain) return;
+
+  console.log('Stopping background static');
+
+  const currentTime = backgroundStaticContext.currentTime;
+  const hasNotStarted = track.startTime > currentTime;
+  const fadeTime = noFade || hasNotStarted ? 0 : fadeSeconds;
+  const fadeEnd = currentTime + fadeTime;
+  nextTrackStartTime = Math.max(nextTrackStartTime, fadeEnd);
+
+  track.gain.gain.setValueAtTime(track.gain.gain.value, currentTime);
+  track.gain.gain.linearRampToValueAtTime(0, fadeEnd);
+
+  if (fadeTime === 0) {
+    track.source.stop(currentTime);
+    disconnectTrack(track);
+    return;
+  }
+
+  track.source.onended = () => disconnectTrack(track);
+  track.source.stop(fadeEnd);
+}
 
 /**
  * Creates a background static noise track for QRN simulation.
@@ -14,47 +145,8 @@ let staticGain = null;
  * Ensures only one static track is active at a time.
  */
 export function createBackgroundStatic() {
-  if (backgroundStaticSource) return; // Ensure only one static track is playing
-
-  const inputs = getInputs();
-  if (inputs === null) return; // Do not create static if inputs are invalid
-  const selectedQRN = inputs.qrn;
-
-  if (selectedQRN === 'off') {
-    return; // Do not create static if "off" is selected
-  }
-
-  let staticGainValues = {
-    normal: 0.75,
-    moderate: 1.5,
-    heavy: 3.0,
-  };
-
-  console.log(`/ Initializing background static for QRN level ${selectedQRN}`);
-
-  const context = backgroundStaticContext;
-  const staticUrl = '../audio/static.mp3';
-
-  // Fetch and decode the audio file
-  fetch(staticUrl)
-    .then((response) => response.arrayBuffer())
-    .then((arrayBuffer) => context.decodeAudioData(arrayBuffer))
-    .then((audioBuffer) => {
-      backgroundStaticSource = context.createBufferSource();
-      backgroundStaticSource.buffer = audioBuffer;
-      backgroundStaticSource.loop = true;
-
-      staticGain = context.createGain();
-      staticGain.gain.value = staticGainValues[selectedQRN] || 1.0;
-
-      backgroundStaticSource.connect(staticGain);
-      staticGain.connect(context.destination);
-
-      backgroundStaticSource.start();
-    })
-    .catch((error) => {
-      console.error('Error loading static audio file:', error);
-    });
+  backgroundStaticSessionActive = true;
+  startSelectedTrack();
 }
 
 /**
@@ -66,48 +158,19 @@ export function createBackgroundStatic() {
  * @param {boolean} noFade - If true, stops the static immediately without fading.
  */
 export function stopBackgroundStatic(noFade = false) {
-  if (backgroundStaticSource) {
-    console.log('Stopping background static');
-
-    if (staticGain) {
-      const fadeTime = noFade ? 0 : 1; // Fade out over 1 second
-      const currentTime = backgroundStaticContext.currentTime;
-      staticGain.gain.setValueAtTime(staticGain.gain.value, currentTime);
-      staticGain.gain.linearRampToValueAtTime(0, currentTime + fadeTime);
-      updateAudioLock(audioContext.currentTime + fadeTime);
-    }
-
-    if (noFade) {
-      // Stop and clean up immediately
-      backgroundStaticSource.stop();
-      backgroundStaticSource.disconnect();
-      staticGain.disconnect();
-      backgroundStaticSource = null;
-      staticGain = null;
-    } else {
-      // Stop after fade-out
-      setTimeout(() => {
-        if (backgroundStaticSource) {
-          backgroundStaticSource.stop();
-          backgroundStaticSource.disconnect();
-        }
-        if (staticGain) {
-          staticGain.disconnect();
-        }
-        backgroundStaticSource = null;
-        staticGain = null;
-      }, 1000);
-    }
-  }
+  backgroundStaticSessionActive = false;
+  retireCurrentTrack(noFade);
 }
 
 /**
- * Checks whether the background static noise is currently playing.
+ * Checks whether a current background static track is loading or playing.
  *
- * @returns {boolean} True if the static noise source is active, false otherwise.
+ * A retired track that is only finishing its fade is not current.
+ *
+ * @returns {boolean} True if a current static track exists, false otherwise.
  */
 export function isBackgroundStaticPlaying() {
-  return backgroundStaticSource !== null;
+  return currentTrack !== null;
 }
 
 /**
@@ -117,10 +180,8 @@ export function isBackgroundStaticPlaying() {
  * with the updated QRN settings.
  */
 export function updateStaticIntensity() {
-  if (isBackgroundStaticPlaying()) {
-    // Always stop any existing background static
-    stopBackgroundStatic(true);
-    // Attempt to create new background static
-    createBackgroundStatic();
-  }
+  if (!backgroundStaticSessionActive) return;
+
+  retireCurrentTrack(true);
+  startSelectedTrack();
 }

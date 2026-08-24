@@ -161,6 +161,12 @@ async function bootSession({ stored = {} } = {}) {
   };
 }
 
+async function settlePromiseChain() {
+  for (let index = 0; index < 8; index += 1) {
+    await Promise.resolve();
+  }
+}
+
 function configureValidInputs() {
   document.getElementById('yourCallsign').value = 'N0ME';
   document.getElementById('yourName').value = 'HENRY';
@@ -191,6 +197,18 @@ function configureValidInputs() {
 
 function selectMode(mode) {
   const radio = document.querySelector(`input[name="mode"][value="${mode}"]`);
+  radio.checked = true;
+  radio.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function selectQrn(level) {
+  const ids = {
+    heavy: 'qrnHeavy',
+    moderate: 'qrnModerate',
+    normal: 'qrnNormal',
+    off: 'qrnOff',
+  };
+  const radio = document.getElementById(ids[level]);
   radio.checked = true;
   radio.dispatchEvent(new Event('change', { bubbles: true }));
 }
@@ -964,6 +982,46 @@ describe('session controls and message flows', () => {
       }
     }
   );
+
+  it('accepts immediate CQ while active QRN fades after Reset', async () => {
+    const { fetchMock } = await bootSession();
+    configureValidInputs();
+    selectQrn('normal');
+
+    document.getElementById('cqButton').click();
+    await settlePromiseChain();
+
+    const firstTranscriptLength = transcript().length;
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    document.getElementById('resetButton').click();
+    document.getElementById('cqButton').click();
+    await settlePromiseChain();
+
+    expect(transcript()).toHaveLength(firstTranscriptLength + 2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('re-enables QRN after selecting Off during an active session', async () => {
+    const { fetchMock } = await bootSession();
+    configureValidInputs();
+    selectQrn('normal');
+
+    document.getElementById('cqButton').click();
+    await settlePromiseChain();
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    selectQrn('off');
+    await settlePromiseChain();
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    selectQrn('heavy');
+    await settlePromiseChain();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 
   it('applies enabled cut numbers to scheduled contest exchanges', async () => {
     const { releaseAudio } = await bootSession();

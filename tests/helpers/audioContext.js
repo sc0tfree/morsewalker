@@ -27,6 +27,7 @@ class RecordingNode {
     this.started = [];
     this.stopped = [];
     this.disconnected = false;
+    this.onended = null;
   }
 
   connect(node) {
@@ -44,6 +45,12 @@ class RecordingNode {
 
   stop(time) {
     this.stopped.push(time);
+  }
+
+  emitEnded() {
+    if (typeof this.onended === 'function') {
+      this.onended({ target: this, type: 'ended' });
+    }
   }
 }
 

@@ -48,8 +48,8 @@ mode-specific inputs, result fields, and completion path.
 - TU is ignored until the current pileup exchange is ready, then records the
   selected caller, clears fields, removes that caller, optionally adds callers,
   and restarts the pileup.
-- Stop, Reset, mode changes, repeated actions, and actions attempted while the
-  audio lock is active are characterized in their current states.
+- Stop, Reset, mode changes, repeated actions, actions attempted while the
+  audio lock is active, and immediate active-QRN restarts are characterized.
 
 ### Settings and generated stations
 
@@ -88,8 +88,12 @@ browser, output device, volume, and settings.
 - Cut-number exchanges sound unchanged.
 - QSB fade rates follow each station's generated frequency; non-QSB audio and
   each QRN level sound unchanged.
-- Stop, Reset, mode changes, and restarting after Stop introduce no new audible
-  behavior.
+- During an active session, Normal, Moderate, Heavy, Off, and back to an audible
+  QRN level follow every selection without a click, gain surge, or stuck-Off
+  state. The same changes before CQ remain silent.
+- With QRN active, Stop, Reset, mode changes, and an immediate restart preserve
+  the one-second fade, accept the next action, and introduce no stale or
+  overlapping QRN.
 
 Subjective audio quality is intentionally a manual release gate. Automated
 audio tests protect deterministic schedules and Web Audio API interactions, not
