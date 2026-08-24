@@ -6,7 +6,7 @@ This report consolidates defects and documentation mismatches confirmed while
 writing characterization tests. None were fixed on
 `v1-reorganization-and-testing`.
 
-## 1. QSB frequency does not affect fading
+## 1. FIXED: QSB frequency does not affect fading
 
 Status: Fixed on `v1-defect-1-qsb-frequency`
 
