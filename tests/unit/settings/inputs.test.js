@@ -77,6 +77,11 @@ beforeEach(async () => {
 });
 
 describe('settings form parsing and normalization', () => {
+  it('uses wait defaults that preserve the existing response timing', () => {
+    expect(element('minWait')).toHaveValue(0.25);
+    expect(element('maxWait')).toHaveValue(2);
+  });
+
   it('normalizes text and numeric values while preserving current field semantics', () => {
     element('yourCallsign').value = '  k1abc/p  ';
     element('yourName').value = '  Ada Lovelace  ';

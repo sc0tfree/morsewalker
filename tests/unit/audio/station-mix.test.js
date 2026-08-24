@@ -27,7 +27,7 @@ describe('station mix v1 characterization', () => {
       playSentence: vi.fn((_sentence, startTime) => startTime),
     }));
     updateAudioLock = vi.fn((time) => runtime.updateAudioLock(time));
-    getInputs = vi.fn(() => ({ minWait: 0.25, maxWait: 1.75 }));
+    getInputs = vi.fn(() => ({ minWait: 0.25, maxWait: 2 }));
 
     vi.doMock(AUDIO_MODULE, () => ({
       createMorsePlayer,
@@ -135,7 +135,7 @@ describe('station mix v1 characterization', () => {
   describe('respondWithAllStations', () => {
     it.each([
       ['lower min and upper max', { minWait: -4, maxWait: 20 }, 0.5, 2.5],
-      ['upper min and lower max', { minWait: 8, maxWait: -3 }, 0.5, 2],
+      ['upper min', { minWait: 8, maxWait: 4 }, 0.5, 3],
     ])('clamps %s wait inputs', (_label, inputs, randomValue, delay) => {
       getInputs.mockReturnValue(inputs);
       const [player] = arrangePlayers([150]);
@@ -147,8 +147,8 @@ describe('station mix v1 characterization', () => {
       expect(player.playSentence).toHaveBeenCalledWith('CLAMP', 100 + delay);
     });
 
-    it('uses min plus random times max at both random boundaries', () => {
-      getInputs.mockReturnValue({ minWait: 0.5, maxWait: 2 });
+    it('uses the default minimum and maximum as delay boundaries', () => {
+      getInputs.mockReturnValue({ minWait: 0.25, maxWait: 2 });
       const players = arrangePlayers([20, 30]);
       const sequence = createSequenceRandom([0, 1]);
       vi.spyOn(Math, 'random').mockImplementation(() => sequence.next());
@@ -159,13 +159,45 @@ describe('station mix v1 characterization', () => {
 
       stationMix.respondWithAllStations(stations, 10);
 
-      expect(players[0].playSentence).toHaveBeenCalledWith('ZERO', 10.5);
-      expect(players[1].playSentence).toHaveBeenCalledWith('ONE', 12.5);
+      expect(players[0].playSentence).toHaveBeenCalledWith('ZERO', 10.25);
+      expect(players[1].playSentence).toHaveBeenCalledWith('ONE', 12);
       expect(sequence.calls).toBe(2);
     });
 
+    it('uses equal wait values as a fixed delay', () => {
+      getInputs.mockReturnValue({ minWait: 1.25, maxWait: 1.25 });
+      const players = arrangePlayers([20, 30, 40]);
+      const sequence = createSequenceRandom([0, 0.5, 1]);
+      vi.spyOn(Math, 'random').mockImplementation(() => sequence.next());
+      const stations = [
+        buildStation({ callsign: 'LOW' }),
+        buildStation({ callsign: 'MID' }),
+        buildStation({ callsign: 'HIGH' }),
+      ];
+
+      stationMix.respondWithAllStations(stations, 10);
+
+      expect(
+        players.map((player) => player.playSentence.mock.calls[0][1])
+      ).toEqual([11.25, 11.25, 11.25]);
+      expect(sequence.calls).toBe(3);
+    });
+
+    it('uses the minimum as a fixed delay for a reversed range', () => {
+      getInputs.mockReturnValue({ minWait: 1.5, maxWait: 0.5 });
+      const [player] = arrangePlayers([20]);
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+
+      stationMix.respondWithAllStations(
+        [buildStation({ callsign: 'REVERSED' })],
+        10
+      );
+
+      expect(player.playSentence).toHaveBeenCalledWith('REVERSED', 11.5);
+    });
+
     it('schedules every response relative to the supplied audio lock', () => {
-      getInputs.mockReturnValue({ minWait: 0.25, maxWait: 1 });
+      getInputs.mockReturnValue({ minWait: 0.25, maxWait: 1.25 });
       const [player] = arrangePlayers([90]);
       vi.spyOn(Math, 'random').mockReturnValue(0.75);
 

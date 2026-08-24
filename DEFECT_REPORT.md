@@ -22,19 +22,24 @@ Evidence:
 - `src/js/audio/player.js`, `qsbAmplitude`
 - `tests/unit/audio/morse-player.test.js`
 
-## 2. Maximum wait acts as an additional spread
+## 2. FIXED: Maximum wait acts as an additional spread
+
+Status: Fixed on `v1-defect-2-max-wait`
 
 Severity: Medium
 
-The controls are labeled Min Wait and Max Wait, but response delay is calculated
-as `min + random * max`. The upper bound is therefore `min + max`, rather than
-the configured maximum. Equal minimum and maximum values do not produce a fixed
-delay.
+The baseline calculated response delay as `min + random * max`, making Max Wait
+an additional spread rather than the upper endpoint. The fix samples between
+the configured bounds, so equal values produce a fixed delay. The default Max
+Wait increases from 1.75 to 2 seconds, preserving the existing `[0.25, 2)`
+second response timing.
 
 Evidence:
 
 - `src/js/audio/stationMix.js`, `respondWithAllStations`
+- `src/index.html`, Min Wait and Max Wait defaults
 - `tests/unit/audio/station-mix.test.js`
+- `tests/unit/settings/inputs.test.js`
 
 ## 3. Numeric input constraints are not fully enforced
 
