@@ -1139,22 +1139,41 @@
 
               <!-- Info Fields Card -->
               <div class="col-12 col-xl-4">
-                <div class="card border-info h-100">
-                  <div class="card-header">
+                <div id="modeInfoHelpCard" class="card border-info h-100">
+                  <div class="card-header d-flex align-items-center">
                     <input
                       type="text"
                       class="form-control me-2"
                       style="max-width: 200px"
                       placeholder="Mode-Specific Info"
                     />
+                    <button class="btn btn-outline-info">AGN</button>
                   </div>
                   <div class="card-body">
                     <p class="card-text">
                       These mode-specific fields appear when you need to enter
                       extra details, such as a name, state, or a contest serial
-                      number. Filling these in are completely optional before
-                      clicking "TU".
+                      number.
                     </p>
+                    <p class="card-text">
+                      After selecting a caller, click "AGN" to repeat every
+                      field that is blank, contains "AGN", or contains a
+                      question mark.
+                    </p>
+                    <ul class="mb-0">
+                      <li>
+                        One missing field sends its specific request, such as
+                        "NAME?", "STATE?", or "NR?".
+                      </li>
+                      <li>
+                        If every field is missing, Morse Walker sends "AGN?" and
+                        repeats all mode-specific fields.
+                      </li>
+                      <li>
+                        AGN does not log or advance the QSO. The results show
+                        each field’s request count, such as "(2 AGN)".
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>

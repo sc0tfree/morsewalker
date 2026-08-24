@@ -299,6 +299,21 @@ describe('session initialization and mode UI', () => {
     expect(RecordingAudioContext.instances.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('keeps AGN guidance in the mode-specific card and six-card Help grid', async () => {
+    await bootSession();
+
+    expect(document.querySelectorAll('#helpModal .col-xl-4')).toHaveLength(6);
+
+    const infoCard = document.getElementById('modeInfoHelpCard');
+    expect(infoCard.closest('.col-xl-4')).not.toBeNull();
+    expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
+    expect(infoCard).toHaveTextContent(
+      'click "AGN" to repeat every field that is blank'
+    );
+    expect(infoCard).toHaveTextContent('AGN does not log or advance the QSO');
+    expect(infoCard).toHaveTextContent('(2 AGN)');
+  });
+
   it('restores saved mode and station settings and submits startup stats', async () => {
     const { fetchMock, storage } = await bootSession({
       stored: {
