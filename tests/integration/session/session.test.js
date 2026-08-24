@@ -309,6 +309,9 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('agnButton')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
+    expect(infoCard).toHaveTextContent(
+      'Enter the exchange details you copy, such as a name, state, or serial number.'
+    );
     expect(infoCard).toHaveTextContent('Need a repeat?');
     expect(infoCard).toHaveTextContent(
       'Leave a field blank, enter AGN, or add ? anywhere in it.'
