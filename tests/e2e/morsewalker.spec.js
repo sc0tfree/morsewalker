@@ -238,7 +238,7 @@ test('AGN controls and Help retain their responsive layout', async ({
   await expect(page.locator('#helpModal .col-xl-4')).toHaveCount(6);
   await expect(page.locator('#modeInfoHelpCard button')).toHaveText('AGN');
   await expect(page.locator('#modeInfoHelpCard')).toContainText(
-    'AGN does not log or advance the QSO'
+    'Only those fields repeat. The QSO stays open.'
   );
 
   const desktopHelpColumns = await page

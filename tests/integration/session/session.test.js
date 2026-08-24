@@ -309,14 +309,16 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('agnButton')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
+    expect(infoCard).toHaveTextContent('Need a repeat?');
     expect(infoCard).toHaveTextContent(
-      'click "AGN" to repeat every field that is blank'
+      'Leave a field blank, enter AGN, or add ? anywhere in it.'
     );
     expect(infoCard).toHaveTextContent(
-      'Press Enter while one of those fields is focused'
+      'Click AGN or press Enter in that field.'
     );
-    expect(infoCard).toHaveTextContent('AGN does not log or advance the QSO');
-    expect(infoCard).toHaveTextContent('(2 AGN)');
+    expect(infoCard).toHaveTextContent(
+      'Only those fields repeat. The QSO stays open.'
+    );
   });
 
   it('restores saved mode and station settings and submits startup stats', async () => {
