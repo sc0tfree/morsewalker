@@ -261,19 +261,37 @@ describe('settings validation and invalid-state behavior', () => {
     {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
-      message: 'Minimum Speed cannot be greater than Maximum Speed!',
+      low: '10',
+      high: '50',
+      message: 'Must be ≤ Max Speed',
     },
     {
       minId: 'minVolume',
       maxId: 'maxVolume',
-      message: 'Minimum Volume cannot be greater than Maximum Volume!',
+      low: '10',
+      high: '90',
+      message: 'Must be ≤ Max Volume',
+    },
+    {
+      minId: 'minTone',
+      maxId: 'maxTone',
+      low: '300',
+      high: '1200',
+      message: 'Must be ≤ Max Tone',
+    },
+    {
+      minId: 'minWait',
+      maxId: 'maxWait',
+      low: '0.25',
+      high: '1.5',
+      message: 'Must be ≤ Max Wait',
     },
   ])(
     'rejects reversed $minId and $maxId values',
-    ({ minId, maxId, message }) => {
+    ({ minId, maxId, low, high, message }) => {
       setCallsign();
-      element(minId).value = '90';
-      element(maxId).value = '10';
+      element(minId).value = high;
+      element(maxId).value = low;
 
       expect(getInputs()).toBeNull();
       expect(element(minId)).toHaveClass('is-invalid');
@@ -284,35 +302,41 @@ describe('settings validation and invalid-state behavior', () => {
     }
   );
 
-  it('does not enforce HTML numeric bounds or tone and wait ordering', () => {
+  it.each([
+    { id: 'yourSpeed', value: '0', message: 'Must be ≥ 5' },
+    { id: 'yourSidetone', value: '10000', message: 'Must be ≤ 1500' },
+    { id: 'yourVolume', value: '120', message: 'Must be ≤ 100' },
+    { id: 'maxStations', value: '0', message: 'Must be ≥ 1' },
+    { id: 'minSpeed', value: '-5', message: 'Must be ≥ 5' },
+    { id: 'maxSpeed', value: '101', message: 'Must be ≤ 60' },
+    { id: 'minTone', value: '150', message: 'Must be ≥ 200' },
+    { id: 'maxTone', value: '9999', message: 'Must be ≤ 1500' },
+    { id: 'minVolume', value: '-10', message: 'Must be ≥ 0' },
+    { id: 'maxVolume', value: '120', message: 'Must be ≤ 100' },
+    { id: 'minWait', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'maxWait', value: '6', message: 'Must be ≤ 5' },
+    { id: 'yourSpeed', value: '', message: 'Required' },
+  ])('rejects $id of "$value" with "$message"', ({ id, value, message }) => {
     setCallsign();
-    element('yourSpeed').value = '0';
-    element('yourSidetone').value = '10000';
-    element('yourVolume').value = '120';
-    element('maxStations').value = '0';
-    element('minSpeed').value = '-5';
-    element('maxSpeed').value = '101';
-    element('minTone').value = '950';
-    element('maxTone').value = '300';
-    element('minVolume').value = '-10';
-    element('maxVolume').value = '120';
-    element('minWait').value = '4';
-    element('maxWait').value = '1';
+    element(id).value = value;
 
-    expect(getInputs()).toMatchObject({
-      yourSpeed: 0,
-      yourSidetone: 10000,
-      yourVolume: 1.2,
-      maxStations: 0,
-      minSpeed: -5,
-      maxSpeed: 101,
-      minTone: 950,
-      maxTone: 300,
-      minVolume: -0.1,
-      maxVolume: 1.2,
-      minWait: 4,
-      maxWait: 1,
-    });
+    expect(getInputs()).toBeNull();
+    expect(element(id)).toHaveClass('is-invalid');
+    expect(element(id).nextElementSibling).toHaveTextContent(message);
+  });
+
+  it('ignores the bounds of a disabled Farnsworth speed', () => {
+    setCallsign();
+    element('farnsworthSpeed').value = '0';
+
+    expect(getInputs()).not.toBeNull();
+
+    element('farnsworthSpeed').disabled = false;
+
+    expect(getInputs()).toBeNull();
+    expect(element('farnsworthSpeed').nextElementSibling).toHaveTextContent(
+      'Must be ≥ 5'
+    );
   });
 
   it('opens invalid sections and clears classes on input without clearing feedback', () => {

@@ -479,15 +479,13 @@ describe('CQ validation', () => {
       document
         .getElementById('minSpeed')
         .parentElement.querySelector('.invalid-feedback')
-    ).toHaveTextContent('Minimum Speed cannot be greater than Maximum Speed!');
+    ).toHaveTextContent('Must be ≤ Max Speed');
     expect(document.getElementById('minVolume')).toHaveClass('is-invalid');
     expect(
       document
         .getElementById('minVolume')
         .parentElement.querySelector('.invalid-feedback')
-    ).toHaveTextContent(
-      'Minimum Volume cannot be greater than Maximum Volume!'
-    );
+    ).toHaveTextContent('Must be ≤ Max Volume');
     expect(transcript()).toEqual([]);
   });
 });

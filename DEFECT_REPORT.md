@@ -41,21 +41,32 @@ Evidence:
 - `tests/unit/audio/station-mix.test.js`
 - `tests/unit/settings/inputs.test.js`
 
-## 3. Numeric input constraints are not fully enforced
+## 3. FIXED: Numeric input constraints are not fully enforced
+
+Status: Fixed on `v1-defect-3-input-ranges`
 
 Severity: High
 
-The HTML declares numeric minima, maxima, and steps, but the application does
+The HTML declared numeric minima, maxima, and steps, but the application does
 not submit a form or otherwise apply all native constraints. Values such as
 zero WPM, out-of-range volume, reversed tone ranges, and reversed wait ranges
-can pass the current custom validation. Custom validation currently compares
-only speed and volume ranges.
+passed the previous custom validation, which compared only speed and volume
+ranges. The fix checks every numeric field against the `min` and `max` it
+declares, and orders all four min/max pairs. Bounds are read from the element
+rather than the collected inputs, because collection rescales volumes, and
+disabled fields are exempt.
+
+The declared ranges were also tightened to logical values: speed and
+Farnsworth speed to `5–60` WPM, tone and sidetone to `200–1500` Hz, and
+maximum stations to `1–20`. Volumes stay `0–100`, and the wait bounds stay
+`0–2` and `0–5` seconds to match the clamp in `respondWithAllStations`.
 
 Evidence:
 
-- `src/js/settings/read.js`
 - `src/js/settings/validation.js`
+- `src/index.html`, numeric bounds and `invalid-feedback` elements
 - `tests/unit/settings/inputs.test.js`
+- `tests/integration/session/session.test.js`
 
 ## 4. Maximum tone is exclusive
 
