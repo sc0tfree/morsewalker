@@ -86,7 +86,8 @@ browser, output device, volume, and settings.
 - One caller and overlapping pileups preserve relative timing and volume.
 - Partial replies, repeats, uncertain exact replies, and QRS sound unchanged.
 - Cut-number exchanges sound unchanged.
-- QSB and each QRN level sound unchanged.
+- QSB fade rates follow each station's generated frequency; non-QSB audio and
+  each QRN level sound unchanged.
 - Stop, Reset, mode changes, and restarting after Stop introduce no new audible
   behavior.
 

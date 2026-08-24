@@ -176,7 +176,7 @@ export function createMorsePlayer(station, volumeOverride = null) {
   function qsbAmplitude(t) {
     if (!qsb) return volume;
     const sineValue = Math.sin(
-      2 * Math.PI * (t - stationStartTime) + qsbPhaseOffset
+      2 * Math.PI * qsbFrequency * (t - stationStartTime) + qsbPhaseOffset
     );
     const fadeFactor = (sineValue + 1) / 2; // Maps sin(-1..1) to 0..1
     const qsbFactor = 1 - qsbDepth * fadeFactor;
