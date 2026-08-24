@@ -1,5 +1,9 @@
 /**
  * Compares the source and query strings based on specific fuzzy match criteria.
+ * The criteria are alternatives, so a query that fails one criterion may still
+ * produce a partial match through a later criterion. In session handling, a
+ * partial match asks the matching station to repeat; only a perfect match
+ * advances the contact.
  *
  * @param {string} source - The source string to compare against.
  * @param {string} query - The query string to compare with the source.
@@ -229,6 +233,9 @@ export function compareStrings(source, query) {
 // }
 //
 // const testCases = [
+//   // Expected values describe the aggregate result across every criterion,
+//   // even when an example appears in a criterion-specific section.
+//
 //   // Perfect matches
 //   {source: "ABC", query: "ABC", expected: "perfect"},
 //   {source: "", query: "", expected: "perfect"},
@@ -238,7 +245,7 @@ export function compareStrings(source, query) {
 //   {source: "ABC", query: "A", expected: "partial"},
 //   {source: "ABC", query: "AB", expected: "partial"},
 //   {source: "ABC", query: "AX", expected: "none"},
-//   {source: "ABC", query: "ABX", expected: "none"},
+//   {source: "ABC", query: "ABX", expected: "partial"}, // Criterion 5
 //   {source: "ABC", query: "Z", expected: "none"},
 //   {source: "ABC", query: "", expected: "none"},
 //   {source: "ABCDE", query: "ABC", expected: "partial"},
@@ -248,7 +255,7 @@ export function compareStrings(source, query) {
 //   {source: "ABC", query: "BC", expected: "partial"},
 //   {source: "ABCDE", query: "CD", expected: "partial"},
 //   {source: "ABCDE", query: "DE", expected: "partial"},
-//   {source: "ABCDE", query: "AB", expected: "none"},
+//   {source: "ABCDE", query: "AB", expected: "partial"}, // Criterion 1
 //   {source: "ABCDE", query: "B", expected: "none"},
 //   {source: "ABCDE", query: "E", expected: "none"},
 //   {source: "ABCDE", query: "ABCDE", expected: "perfect"},
@@ -278,7 +285,7 @@ export function compareStrings(source, query) {
 //   {source: "ABC", query: "ABC", expected: "perfect"},
 //
 //   // Edge cases
-//   {source: "ABCDE", query: "ABCDEFX", expected: "none"},
+//   {source: "ABCDE", query: "ABCDEFX", expected: "partial"}, // Criterion 4
 //   {source: "ABCDE", query: "ABCDEF", expected: "partial"},
 //   {source: "ABCD", query: "ABCDE", expected: "partial"},
 //   {source: "ABCCDE", query: "ABXDE", expected: "none"},

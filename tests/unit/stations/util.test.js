@@ -68,7 +68,7 @@ const compareCases = [
   ['criterion 1 two-character prefix', 'ABC', 'AB', 'partial'],
   ['criterion 1 wrong second character', 'ABC', 'AX', 'none'],
   [
-    'criterion 1 documented miss falls through to criterion 5',
+    'criterion 1 mismatch falls through to criterion 5',
     'ABC',
     'ABX',
     'partial',
@@ -83,7 +83,7 @@ const compareCases = [
   ['criterion 2 middle pair', 'ABCDE', 'CD', 'partial'],
   ['criterion 2 ending pair', 'ABCDE', 'DE', 'partial'],
   [
-    'criterion 2 documented miss is accepted earlier as a prefix',
+    'criterion 2 start match is accepted earlier as a prefix',
     'ABCDE',
     'AB',
     'partial',
@@ -119,9 +119,9 @@ const compareCases = [
   // Criterion 5's documented initial-two-character example.
   ['criterion 5 third-character substitution', 'AB6ZZ', 'ABX', 'partial'],
 
-  // Documented edge cases.
+  // Aggregate edge cases.
   [
-    'edge documented miss is accepted as an extended prefix',
+    'edge multi-character extension is an extended prefix',
     'ABCDE',
     'ABCDEFX',
     'partial',
