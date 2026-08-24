@@ -867,6 +867,27 @@ describe('session controls and message flows', () => {
     );
   });
 
+  it('uses the canonical request and cut numbers for a one-field AGN fill', async () => {
+    const { releaseAudio } = await bootSession();
+    configureValidInputs();
+    selectMode('contest');
+
+    const enableCutNumbers = document.getElementById('enableCutNumbers');
+    enableCutNumbers.checked = true;
+    enableCutNumbers.dispatchEvent(new Event('change', { bubbles: true }));
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NR?'],
+      ['K0A', 'T1'],
+    ]);
+  });
+
   it('starts field AGN counts fresh after Reset', async () => {
     const { random, releaseAudio } = await bootSession();
     startSession('cwt');
@@ -1158,7 +1179,7 @@ describe('session controls and message flows', () => {
     }
   );
 
-  it('blocks CQ, Send, and TU during audio and guards repeated actions', async () => {
+  it('blocks CQ, Send, AGN, and TU during audio and guards repeated actions', async () => {
     const { random, releaseAudio } = await bootSession();
     startSession('contest');
     const callingTranscript = transcript();
@@ -1170,6 +1191,7 @@ describe('session controls and message flows', () => {
     releaseAudio();
     sendResponse('K0A');
     const readyTranscript = transcript();
+    document.getElementById('agnButton').click();
     sendResponse('K0A');
     document.getElementById('infoField').value = '01';
     document.getElementById('tuButton').click();
