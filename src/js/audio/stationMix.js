@@ -63,6 +63,8 @@ export function normalizeStationGain(stations) {
  *
  * Logs the callsigns, normalizes their volumes, and then uses each station's player
  * to play their callsign. The `audioLock` parameter controls the start timing of playback.
+ * Each response receives a random delay between the configured minimum and maximum.
+ * If the configured range is reversed, the minimum is used as a fixed safe delay.
  *
  * @param {Array<Object>} stations - Stations to respond to, each with a `callsign` and `volume`.
  * @param {number} audioLock - Base time offset for playback start.
@@ -73,6 +75,7 @@ export function respondWithAllStations(stations, audioLock) {
   // Ensure minWait is between 0 and 2, and maxWait is between 0 and 5
   const minDelay = Math.max(0, Math.min(inputs.minWait, 2));
   const maxDelay = Math.max(0, Math.min(inputs.maxWait, 5));
+  const delayRange = Math.max(0, maxDelay - minDelay);
 
   console.log(
     '<-- Responding with stations: ' +
@@ -80,7 +83,7 @@ export function respondWithAllStations(stations, audioLock) {
   );
   stations = normalizeStationGain(stations);
   for (let i = 0; i < stations.length; i++) {
-    const randomDelay = minDelay + Math.random() * maxDelay;
+    const randomDelay = minDelay + Math.random() * delayRange;
 
     let responseTimer = stations[i].player.playSentence(
       stations[i].callsign,
