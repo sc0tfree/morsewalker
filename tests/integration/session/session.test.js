@@ -306,6 +306,8 @@ describe('session initialization and mode UI', () => {
 
     const infoCard = document.getElementById('modeInfoHelpCard');
     expect(infoCard.closest('.col-xl-4')).not.toBeNull();
+    expect(document.getElementById('agnButton')).toHaveClass('btn-warning');
+    expect(infoCard.querySelector('button')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
     expect(infoCard).toHaveTextContent(
       'click "AGN" to repeat every field that is blank'
