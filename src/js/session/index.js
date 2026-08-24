@@ -24,6 +24,7 @@ import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
+import { applyCutNumbers } from './message-format.js';
 
 /**
  * Application state variables.
@@ -425,22 +426,8 @@ function send() {
           null
         );
 
-        if (inputs.enableCutNumbers) {
-          // inputs.cutNumbers is the object returned by getSelectedCutNumbers()
-          // e.g. { '0': 'T', '9': 'N' } if T/0 and N/9 are selected
-          const cutMap = inputs.cutNumbers;
-
-          // Convert any digits in yourExchange and theirExchange
-          // to their cut-letter equivalent, if found in cutMap
-          yourExchange = yourExchange.replace(
-            /\d/g,
-            (digit) => cutMap[digit] || digit
-          );
-          theirExchange = theirExchange.replace(
-            /\d/g,
-            (digit) => cutMap[digit] || digit
-          );
-        }
+        yourExchange = applyCutNumbers(yourExchange, inputs);
+        theirExchange = applyCutNumbers(theirExchange, inputs);
 
         let yourResponseTimer2 = yourStation.player.playSentence(
           yourExchange,
