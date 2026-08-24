@@ -105,6 +105,7 @@ Evidence:
 
 - `src/js/stations/matching.js`
 - `src/js/session/index.js`, partial-match handling in `send`
+- `tests/integration/session/session.test.js`
 - `tests/unit/stations/util.test.js`
 
 ## 6. Result-summary documentation disagrees with behavior

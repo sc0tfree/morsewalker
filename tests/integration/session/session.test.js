@@ -754,6 +754,50 @@ describe('session controls and message flows', () => {
     }
   );
 
+  it.each([
+    { criterion: 'criterion 1 prefix', response: 'K0' },
+    { criterion: 'criterion 4 extended prefix', response: 'K0AXX' },
+    { criterion: 'criterion 5 substitution', response: 'K0X' },
+  ])(
+    'repeats a contest caller matching $criterion without advancing',
+    async ({ response }) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('contest');
+      releaseAudio();
+
+      sendResponse(response);
+      expect(transcript()).toEqual([
+        ['N0ME', 'CQ TEST DE N0ME'],
+        ['K0A', 'K0A'],
+        ['N0ME', response],
+        ['K0A', 'K0A'],
+      ]);
+      expect(resultsRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+      releaseAudio();
+      const beforeEarlyTu = transcript();
+      document.getElementById('tuButton').click();
+      expect(transcript()).toEqual(beforeEarlyTu);
+      expect(resultsRows()).toHaveLength(0);
+
+      sendResponse('K0A');
+      expect(transcript().slice(-3)).toEqual([
+        ['N0ME', 'K0A'],
+        ['N0ME', ' 5NN'],
+        ['K0A', '5NN 01 TU'],
+      ]);
+
+      releaseAudio();
+      random.mockReturnValue(0.9);
+      document.getElementById('infoField').value = '01';
+      document.getElementById('tuButton').click();
+
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+    }
+  );
+
   it.each(['?', 'AGN', 'AGN?'])(
     'repeats the pileup for the %s request',
     async (repeatRequest) => {
