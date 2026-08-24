@@ -808,6 +808,7 @@ describe('session controls and message flows', () => {
 
     expect(resultsRows()).toHaveLength(1);
     expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent('ADAM / 1 (1 AGN)');
   });
 
   it('uses one AGN? request when every CWT field is blank', async () => {
@@ -846,6 +847,90 @@ describe('session controls and message flows', () => {
 
     expect(resultsRows()).toHaveLength(1);
     expect(resultsRows()[0].cells[3]).toHaveTextContent('3');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (2 AGN) / 1 (2 AGN)'
+    );
+  });
+
+  it('starts field AGN counts fresh after Reset', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    document.getElementById('resetButton').click();
+    expect(document.getElementById('agnButton')).toBeDisabled();
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / 1 (1 AGN)'
+    );
+  });
+
+  it('starts field AGN counts fresh after a mode change', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    selectMode('sst');
+    expect(document.getElementById('agnButton')).toBeDisabled();
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', 'AL');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / AL (1 AGN)'
+    );
+  });
+
+  it('clears field AGN counts when Stop resets active audio', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    document.getElementById('stopButton').click();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / 1 (1 AGN)'
+    );
   });
 
   it.each([

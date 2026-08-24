@@ -282,6 +282,21 @@ function recordExchangeAgn(components) {
 }
 
 /**
+ * Reads the AGN count associated with one mode-specific input.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @param {string} inputId - The mode-specific input id.
+ * @returns {number} The number of accepted fill requests.
+ */
+function getExchangeAgnCount(modeConfig, inputId) {
+  const component = modeConfig.exchangeComponents.find(
+    (candidate) => candidate.inputId === inputId
+  );
+
+  return component ? currentExchangeAgnCounts[component.id] || 0 : 0;
+}
+
+/**
  * Reads the current values for the mode's ordered exchange components.
  *
  * @param {Object} modeConfig - The current mode's logic configuration.
@@ -758,14 +773,16 @@ function tu() {
   extraInfo += compareExtraInfo(
     modeConfig.extraInfoFieldKey,
     infoValue1,
-    currentStation
+    currentStation,
+    getExchangeAgnCount(modeConfig, 'infoField')
   );
   if (modeConfig.requiresInfoField2 && modeConfig.extraInfoFieldKey2) {
     if (extraInfo.length > 0) extraInfo += ' / ';
     extraInfo += compareExtraInfo(
       modeConfig.extraInfoFieldKey2,
       infoValue2,
-      currentStation
+      currentStation,
+      getExchangeAgnCount(modeConfig, 'infoField2')
     );
   }
 
