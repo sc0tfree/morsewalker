@@ -41,21 +41,32 @@ Evidence:
 - `tests/unit/audio/station-mix.test.js`
 - `tests/unit/settings/inputs.test.js`
 
-## 3. Numeric input constraints are not fully enforced
+## 3. FIXED: Numeric input constraints are not fully enforced
+
+Status: Fixed on `v1-defect-3-input-ranges`
 
 Severity: High
 
-The HTML declares numeric minima, maxima, and steps, but the application does
+The HTML declared numeric minima, maxima, and steps, but the application does
 not submit a form or otherwise apply all native constraints. Values such as
 zero WPM, out-of-range volume, reversed tone ranges, and reversed wait ranges
-can pass the current custom validation. Custom validation currently compares
-only speed and volume ranges.
+passed the previous custom validation, which compared only speed and volume
+ranges. The fix checks every numeric field against the `min` and `max` it
+declares, and orders all four min/max pairs. Bounds are read from the element
+rather than the collected inputs, because collection rescales volumes, and
+disabled fields are exempt.
+
+The declared ranges were also tightened to logical values: speed and
+Farnsworth speed to `5–60` WPM, tone and sidetone to `200–1500` Hz, and
+maximum stations to `1–20`. Volumes stay `0–100`, and the wait bounds stay
+`0–2` and `0–5` seconds to match the clamp in `respondWithAllStations`.
 
 Evidence:
 
-- `src/js/settings/read.js`
 - `src/js/settings/validation.js`
+- `src/index.html`, numeric bounds and `invalid-feedback` elements
 - `tests/unit/settings/inputs.test.js`
+- `tests/integration/session/session.test.js`
 
 ## 4. Maximum tone is exclusive
 
@@ -141,3 +152,29 @@ Evidence:
 
 - `src/js/session/index.js`, mode initialization on `DOMContentLoaded`
 - `src/js/modes/view.js`, `applyModeSettings`
+
+## 10. FIXED: Farnsworth above the character speed compresses spacing
+
+Status: Fixed on `v1-defect-3-input-ranges`
+
+Severity: Medium
+
+The player swapped in the Farnsworth unit for letter and word gaps whenever
+Farnsworth was enabled, without checking that the effective speed was slower
+than the station's character speed. A faster effective speed therefore produced
+gaps narrower than standard timing rather than no effect. At 20 WPM with an
+effective speed of 40, `AE E` ran in 0.81 s instead of 1.20 s, with the letter
+gap halved from 0.18 s to 0.09 s while the dot and dash lengths stayed correct.
+
+This was reachable because Effective Speed spans the same range as Min and Max
+Speed, and each calling station draws its own speed from that range. QRS was
+never affected, since both of its branches only lower the value. The fix caps
+the effective speed at the character speed in the player, and stores the capped
+value on generated stations so the results table reports what was sent.
+
+Evidence:
+
+- `src/js/audio/player.js`, `createMorsePlayer`
+- `src/js/stations/generator.js`, `getCallingStation`
+- `tests/unit/audio/morse-player.test.js`
+- `tests/unit/stations/stationGenerator.test.js`

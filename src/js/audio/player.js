@@ -20,11 +20,16 @@ export function createMorsePlayer(station, volumeOverride = null) {
   if (inputs === null) return;
 
   const enableFarnsworth = station.enableFarnsworth;
-  const farnsworthSpeed = station.farnsworthSpeed || station.wpm; // fallback if not set
+  // Farnsworth only widens spacing, so an effective speed at or above the
+  // character speed leaves standard timing untouched.
+  const farnsworthSpeed = Math.min(
+    station.farnsworthSpeed || station.wpm, // fallback if not set
+    station.wpm
+  );
 
   console.log(
     `/ Initializing ${station.callsign}: ${station.frequency}Hz@${station.wpm}wpm` +
-      `${enableFarnsworth ? `/${station.farnsworthSpeed}wpm` : ''}` +
+      `${enableFarnsworth ? `/${farnsworthSpeed}wpm` : ''}` +
       ` vol: ${volume.toFixed(2)}` +
       `${station.qsb ? ` (QSB:${station.qsbDepth.toFixed(2)}A@${station.qsbFrequency.toFixed(2)}Hz)` : ''}`
   );

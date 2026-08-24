@@ -3,6 +3,35 @@ import * as bootstrap from 'bootstrap';
 import { getMode } from '../modes/index.js';
 
 /**
+ * Numeric fields whose declared `min` and `max` attributes are enforced.
+ */
+const NUMERIC_FIELDS = [
+  'yourSpeed',
+  'yourSidetone',
+  'yourVolume',
+  'maxStations',
+  'minSpeed',
+  'maxSpeed',
+  'farnsworthSpeed',
+  'minTone',
+  'maxTone',
+  'minVolume',
+  'maxVolume',
+  'minWait',
+  'maxWait',
+];
+
+/**
+ * Field pairs that describe a range, as `[minId, maxId, message]`.
+ */
+const ORDERED_PAIRS = [
+  ['minSpeed', 'maxSpeed', 'Must be ≤ Max Speed'],
+  ['minTone', 'maxTone', 'Must be ≤ Max Tone'],
+  ['minVolume', 'maxVolume', 'Must be ≤ Max Volume'],
+  ['minWait', 'maxWait', 'Must be ≤ Max Wait'],
+];
+
+/**
  * Validates the collected form inputs and ensures their logical consistency.
  *
  * Performs checks for required fields, numerical range constraints, and mode-specific
@@ -13,66 +42,81 @@ import { getMode } from '../modes/index.js';
  * @returns {boolean} True if all inputs are valid; false otherwise.
  */
 export function validateInputs(inputs) {
-  let isValid = true;
+  const invalid = new Set();
 
   clearAllInvalidStates();
 
+  const reject = (id, message) => {
+    rejectField(id, message);
+    invalid.add(id);
+  };
+
   if (!inputs.yourCallsign) {
-    markFieldInvalid('yourCallsign', 'Your callsign is required.');
-    openAccordionSection('collapseYourStationSettings');
-    isValid = false;
+    reject('yourCallsign', 'Your callsign is required.');
   }
 
   const requiredOperatorFields =
     getMode(inputs.mode)?.requiredOperatorFields ?? [];
   for (const field of requiredOperatorFields) {
     if (!inputs[field.id]) {
-      markFieldInvalid(field.id, field.message);
-      openAccordionSection('collapseYourStationSettings');
-      isValid = false;
+      reject(field.id, field.message);
     }
   }
 
-  if (inputs.minSpeed > inputs.maxSpeed) {
-    markFieldInvalid(
-      'minSpeed',
-      'Minimum Speed cannot be greater than Maximum Speed!'
-    );
-    openAccordionSection('collapseRespondingStationSettings');
-    isValid = false;
+  for (const id of NUMERIC_FIELDS) {
+    const message = getRangeError(document.getElementById(id));
+    if (message) {
+      reject(id, message);
+    }
   }
 
-  if (inputs.minVolume > inputs.maxVolume) {
-    markFieldInvalid(
-      'minVolume',
-      'Minimum Volume cannot be greater than Maximum Volume!'
-    );
-    openAccordionSection('collapseRespondingStationSettings');
-    isValid = false;
+  // A field already outside its own bounds keeps that more specific message.
+  for (const [minId, maxId, message] of ORDERED_PAIRS) {
+    if (inputs[minId] > inputs[maxId] && !invalid.has(minId)) {
+      reject(minId, message);
+    }
   }
 
-  if (inputs.minSpeed > inputs.maxSpeed) {
-    markFieldInvalid(
-      'minSpeed',
-      'Minimum Speed cannot be greater than Maximum Speed!'
-    );
-    openAccordionSection('collapseRespondingStationSettings');
-    isValid = false;
-  }
-
-  return isValid;
+  return invalid.size === 0;
 }
 
 /**
- * Marks a specific input field as invalid and displays an error message.
+ * Checks a numeric input against the `min` and `max` it declares.
  *
- * Adds a CSS class for invalid state and updates the associated error message
- * within a `.invalid-feedback` element if present.
+ * Reads the raw element value rather than the parsed inputs, because collection
+ * rescales some fields, such as volumes, away from the units the bounds use.
+ * Disabled fields are exempt, since their values are not in play, and a bound
+ * the field does not declare is left unenforced rather than coerced to zero.
  *
- * @param {string} inputId - The ID of the input field to mark as invalid.
+ * @param {HTMLInputElement|null} input - The input element to check.
+ * @returns {string|null} An error message, or null when the value is acceptable.
+ */
+function getRangeError(input) {
+  if (!input || input.disabled) return null;
+
+  const value = Number(input.value);
+  if (input.value === '' || Number.isNaN(value)) return 'Required';
+  if (input.min !== '' && value < Number(input.min)) {
+    return `Must be ≥ ${input.min}`;
+  }
+  if (input.max !== '' && value > Number(input.max)) {
+    return `Must be ≤ ${input.max}`;
+  }
+
+  return null;
+}
+
+/**
+ * Marks a field invalid, displays an error message, and reveals the field.
+ *
+ * Adds a CSS class for invalid state, updates the associated error message
+ * within a `.invalid-feedback` element if present, and expands the accordion
+ * section holding the field so the operator can see it.
+ *
+ * @param {string} inputId - The ID of the input field to reject.
  * @param {string} errorMessage - The error message to display.
  */
-function markFieldInvalid(inputId, errorMessage) {
+function rejectField(inputId, errorMessage) {
   const input = document.getElementById(inputId);
   if (!input) return;
 
@@ -83,6 +127,8 @@ function markFieldInvalid(inputId, errorMessage) {
   if (feedback) {
     feedback.textContent = errorMessage;
   }
+
+  openAccordionSection(input.closest('.accordion-collapse'));
 }
 
 /**
@@ -115,19 +161,18 @@ export function clearAllInvalidStates() {
 /**
  * Programmatically opens an accordion section.
  *
- * Ensures that the specified accordion section is visible by checking its current
+ * Ensures that the given accordion section is visible by checking its current
  * state and toggling it if necessary. Leverages Bootstrap's `Collapse` API.
  *
- * @param {string} sectionId - The ID of the accordion section to open.
+ * @param {Element|null} section - The accordion section to open.
  */
-function openAccordionSection(sectionId) {
-  const section = document.getElementById(sectionId);
-  if (section && !section.classList.contains('show')) {
-    // Programmatically toggle the collapse
-    let bsCollapse = bootstrap.Collapse.getInstance(section);
-    if (!bsCollapse) {
-      bsCollapse = new bootstrap.Collapse(section, { toggle: false });
-    }
-    bsCollapse.show();
+function openAccordionSection(section) {
+  if (!section || section.classList.contains('show')) return;
+
+  // Programmatically toggle the collapse
+  let bsCollapse = bootstrap.Collapse.getInstance(section);
+  if (!bsCollapse) {
+    bsCollapse = new bootstrap.Collapse(section, { toggle: false });
   }
+  bsCollapse.show();
 }
