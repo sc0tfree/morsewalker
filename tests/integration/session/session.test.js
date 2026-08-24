@@ -811,13 +811,14 @@ describe('session controls and message flows', () => {
   });
 
   it('uses one AGN? request when every CWT field is blank', async () => {
-    const { releaseAudio } = await bootSession();
+    const { random, releaseAudio } = await bootSession();
     startSession('cwt');
     releaseAudio();
     sendResponse('K0A');
     releaseAudio();
 
-    document.getElementById('agnButton').click();
+    const agnButton = document.getElementById('agnButton');
+    agnButton.click();
 
     expect(transcript().slice(-2)).toEqual([
       ['N0ME', 'AGN?'],
@@ -827,6 +828,24 @@ describe('session controls and message flows', () => {
     expect(document.getElementById('infoField2')).toHaveValue('');
     expect(resultsRows()).toHaveLength(0);
     expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+    releaseAudio();
+    agnButton.click();
+    expect(transcript().slice(-4)).toEqual([
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('3');
   });
 
   it.each([
