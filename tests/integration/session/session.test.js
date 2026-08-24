@@ -468,23 +468,19 @@ describe('CQ validation', () => {
     await bootSession();
     configureValidInputs();
     const invalidValues = {
-      yourSpeed: '0',
-      maxStations: '',
-      maxWait: '0.1',
+      yourSpeed: { value: '4', message: 'Must be ≥ 5' },
+      maxStations: { value: '', message: 'Required' },
+      maxWait: { value: '0.1', message: 'Must use increments of 0.25' },
     };
-    const validationMessages = {};
 
-    for (const [fieldId, value] of Object.entries(invalidValues)) {
-      const field = document.getElementById(fieldId);
-      field.value = value;
-      validationMessages[fieldId] = field.validationMessage;
+    for (const [fieldId, { value }] of Object.entries(invalidValues)) {
+      document.getElementById(fieldId).value = value;
     }
 
     document.getElementById('cqButton').click();
 
-    for (const [fieldId, message] of Object.entries(validationMessages)) {
+    for (const [fieldId, { message }] of Object.entries(invalidValues)) {
       const field = document.getElementById(fieldId);
-      expect(message).not.toBe('');
       expect(field).toHaveClass('is-invalid');
       expect(
         field.parentElement.querySelector('.invalid-feedback')
@@ -509,10 +505,10 @@ describe('CQ validation', () => {
     document.getElementById('cqButton').click();
 
     const feedback = {
-      minSpeed: 'Minimum Speed cannot be greater than Maximum Speed!',
-      minTone: 'Minimum Tone cannot be greater than Maximum Tone!',
-      minVolume: 'Minimum Volume cannot be greater than Maximum Volume!',
-      minWait: 'Minimum Wait cannot be greater than Maximum Wait!',
+      minSpeed: 'Must be ≤ 18',
+      minTone: 'Must be ≤ 400',
+      minVolume: 'Must be ≤ 50',
+      minWait: 'Must be ≤ 0',
     };
     for (const [fieldId, message] of Object.entries(feedback)) {
       const field = document.getElementById(fieldId);

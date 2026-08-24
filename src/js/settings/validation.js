@@ -6,22 +6,18 @@ const orderedNumericRanges = [
   {
     minId: 'minSpeed',
     maxId: 'maxSpeed',
-    message: 'Minimum Speed cannot be greater than Maximum Speed!',
   },
   {
     minId: 'minTone',
     maxId: 'maxTone',
-    message: 'Minimum Tone cannot be greater than Maximum Tone!',
   },
   {
     minId: 'minVolume',
     maxId: 'maxVolume',
-    message: 'Minimum Volume cannot be greater than Maximum Volume!',
   },
   {
     minId: 'minWait',
     maxId: 'maxWait',
-    message: 'Minimum Wait cannot be greater than Maximum Wait!',
   },
 ];
 
@@ -59,27 +55,46 @@ export function validateInputs(inputs) {
   for (const input of document.querySelectorAll('input[type="number"]')) {
     if (!input.willValidate || input.validity.valid) continue;
 
-    markFieldInvalid(
-      input.id,
-      input.validationMessage || 'Enter a valid value.'
-    );
+    markFieldInvalid(input.id, getNumericValidationMessage(input));
     openContainingAccordionSection(input);
     isValid = false;
   }
 
-  for (const { minId, maxId, message } of orderedNumericRanges) {
+  for (const { minId, maxId } of orderedNumericRanges) {
     const minInput = document.getElementById(minId);
     const maxInput = document.getElementById(maxId);
 
     if (!minInput.validity.valid || !maxInput.validity.valid) continue;
     if (inputs[minId] <= inputs[maxId]) continue;
 
-    markFieldInvalid(minId, message);
+    markFieldInvalid(minId, `Must be ≤ ${maxInput.valueAsNumber}`);
     openContainingAccordionSection(minInput);
     isValid = false;
   }
 
   return isValid;
+}
+
+/**
+ * Returns concise, deterministic feedback for an invalid numeric input.
+ *
+ * @param {HTMLInputElement} input - Numeric input to describe.
+ * @returns {string} Application-owned validation message.
+ */
+function getNumericValidationMessage(input) {
+  const { validity } = input;
+
+  if (validity.badInput) return 'Must be a number';
+  if (validity.valueMissing) return 'Required';
+  if (validity.rangeUnderflow) return `Must be ≥ ${input.min}`;
+  if (validity.rangeOverflow) return `Must be ≤ ${input.max}`;
+  if (validity.stepMismatch) {
+    return input.step === '1'
+      ? 'Must be integer'
+      : `Must use increments of ${input.step}`;
+  }
+
+  return 'Invalid value';
 }
 
 /**

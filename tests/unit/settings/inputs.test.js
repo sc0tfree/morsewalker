@@ -277,28 +277,28 @@ describe('settings validation and invalid-state behavior', () => {
       maxId: 'maxSpeed',
       minValue: '90',
       maxValue: '10',
-      message: 'Minimum Speed cannot be greater than Maximum Speed!',
+      message: 'Must be ≤ 10',
     },
     {
       minId: 'minTone',
       maxId: 'maxTone',
       minValue: '950',
       maxValue: '300',
-      message: 'Minimum Tone cannot be greater than Maximum Tone!',
+      message: 'Must be ≤ 300',
     },
     {
       minId: 'minVolume',
       maxId: 'maxVolume',
       minValue: '90',
       maxValue: '10',
-      message: 'Minimum Volume cannot be greater than Maximum Volume!',
+      message: 'Must be ≤ 10',
     },
     {
       minId: 'minWait',
       maxId: 'maxWait',
       minValue: '2',
       maxValue: '1',
-      message: 'Minimum Wait cannot be greater than Maximum Wait!',
+      message: 'Must be ≤ 1',
     },
   ])(
     'rejects reversed $minId and $maxId values',
@@ -319,91 +319,164 @@ describe('settings validation and invalid-state behavior', () => {
   it.each([
     {
       id: 'yourSpeed',
-      value: '0',
+      value: '4',
       validityFlag: 'rangeUnderflow',
+      message: 'Must be ≥ 5',
       sectionId: 'collapseYourStationSettings',
     },
     {
       id: 'yourSidetone',
-      value: '10000',
-      validityFlag: 'rangeOverflow',
+      value: '199',
+      validityFlag: 'rangeUnderflow',
+      message: 'Must be ≥ 200',
       sectionId: 'collapseYourStationSettings',
     },
     {
       id: 'yourVolume',
       value: '37.5',
       validityFlag: 'stepMismatch',
+      message: 'Must be integer',
       sectionId: 'collapseYourStationSettings',
     },
     {
       id: 'maxStations',
       value: '',
       validityFlag: 'valueMissing',
+      message: 'Required',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'minSpeed',
-      value: '-5',
+      value: '4',
       validityFlag: 'rangeUnderflow',
+      message: 'Must be ≥ 5',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'maxSpeed',
       value: '101',
       validityFlag: 'rangeOverflow',
+      message: 'Must be ≤ 100',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'minTone',
-      value: '410.5',
-      validityFlag: 'stepMismatch',
+      value: '199',
+      validityFlag: 'rangeUnderflow',
+      message: 'Must be ≥ 200',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'maxTone',
       value: '10000',
       validityFlag: 'rangeOverflow',
+      message: 'Must be ≤ 9999',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'minVolume',
-      value: '-1',
+      value: '0',
       validityFlag: 'rangeUnderflow',
+      message: 'Must be ≥ 1',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'maxVolume',
       value: '82.5',
       validityFlag: 'stepMismatch',
+      message: 'Must be integer',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'minWait',
       value: '2.25',
       validityFlag: 'rangeOverflow',
+      message: 'Must be ≤ 2',
       sectionId: 'collapseRespondingStationSettings',
     },
     {
       id: 'maxWait',
       value: '1.1',
       validityFlag: 'stepMismatch',
+      message: 'Must use increments of 0.25',
       sectionId: 'collapseRespondingStationSettings',
     },
   ])(
     'rejects $validityFlag violations for $id',
-    ({ id, value, validityFlag, sectionId }) => {
+    ({ id, value, validityFlag, message, sectionId }) => {
       setCallsign();
       const input = element(id);
       input.value = value;
       element(sectionId).classList.remove('show');
-      const validationMessage = input.validationMessage;
 
       expect(input.validity[validityFlag]).toBe(true);
-      expect(validationMessage).not.toBe('');
       expect(getInputs()).toBeNull();
       expect(input).toHaveClass('is-invalid');
-      expect(input.nextElementSibling).toHaveTextContent(validationMessage);
+      expect(input.nextElementSibling).toHaveTextContent(message);
       expect(bootstrapMock.show).toHaveBeenCalledWith(element(sectionId));
+    }
+  );
+
+  it('accepts the logical minimum for every numeric setting', () => {
+    setCallsign();
+    element('yourSpeed').value = '5';
+    element('yourSidetone').value = '200';
+    element('yourVolume').value = '0';
+    element('maxStations').value = '1';
+    element('minSpeed').value = '5';
+    element('maxSpeed').value = '5';
+    element('enableFarnsworth').checked = true;
+    element('farnsworthSpeed').disabled = false;
+    element('farnsworthSpeed').value = '5';
+    element('minTone').value = '200';
+    element('maxTone').value = '200';
+    element('minVolume').value = '1';
+    element('maxVolume').value = '1';
+    element('minWait').value = '0';
+    element('maxWait').value = '0';
+    element('qsbPercentage').value = '0';
+
+    expect(getInputs()).toMatchObject({
+      yourSpeed: 5,
+      yourSidetone: 200,
+      yourVolume: 0,
+      maxStations: 1,
+      minSpeed: 5,
+      maxSpeed: 5,
+      enableFarnsworth: true,
+      farnsworthSpeed: 5,
+      minTone: 200,
+      maxTone: 200,
+      minVolume: 0.01,
+      maxVolume: 0.01,
+      minWait: 0,
+      maxWait: 0,
+      qsbPercentage: 0,
+    });
+  });
+
+  it.each([
+    {
+      validity: { badInput: true, valid: false, valueMissing: true },
+      message: 'Must be a number',
+    },
+    {
+      validity: { valid: false },
+      message: 'Invalid value',
+    },
+  ])(
+    'uses "$message" for synthetic validity states',
+    ({ validity, message }) => {
+      setCallsign();
+      const input = element('yourSpeed');
+      Object.defineProperty(input, 'validity', {
+        configurable: true,
+        value: validity,
+      });
+
+      expect(getInputs()).toBeNull();
+      expect(input).toHaveClass('is-invalid');
+      expect(input.nextElementSibling).toHaveTextContent(message);
     }
   );
 
@@ -411,26 +484,23 @@ describe('settings validation and invalid-state behavior', () => {
     setCallsign();
     const enableFarnsworth = element('enableFarnsworth');
     const farnsworthSpeed = element('farnsworthSpeed');
-    farnsworthSpeed.value = '0';
+    farnsworthSpeed.value = '4';
 
     expect(farnsworthSpeed.willValidate).toBe(false);
     expect(getInputs()).toMatchObject({
       enableFarnsworth: false,
-      farnsworthSpeed: 0,
+      farnsworthSpeed: 4,
     });
 
     enableFarnsworth.checked = true;
     farnsworthSpeed.disabled = false;
     element('collapseRespondingStationSettings').classList.remove('show');
-    const validationMessage = farnsworthSpeed.validationMessage;
 
     expect(farnsworthSpeed.willValidate).toBe(true);
     expect(farnsworthSpeed.validity.rangeUnderflow).toBe(true);
     expect(getInputs()).toBeNull();
     expect(farnsworthSpeed).toHaveClass('is-invalid');
-    expect(farnsworthSpeed.nextElementSibling).toHaveTextContent(
-      validationMessage
-    );
+    expect(farnsworthSpeed.nextElementSibling).toHaveTextContent('Must be ≥ 5');
     expect(bootstrapMock.show).toHaveBeenCalledWith(
       element('collapseRespondingStationSettings')
     );

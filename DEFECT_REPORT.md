@@ -49,10 +49,11 @@ Severity: High
 
 The baseline read numeric values without applying the minima, maxima, steps,
 and required constraints declared in HTML. The fix validates every enabled
-number input with the browser Constraint Validation API, displays its localized
-message in Bootstrap feedback, and reads accepted values with browser number
-semantics. Speed, tone, volume, and wait ranges must also be ordered from
-minimum to maximum.
+number input with the browser Constraint Validation API, displays concise
+application-owned feedback, and reads accepted values with browser number
+semantics. Practical floors enforce at least 5 WPM, 200 Hz tones, and 1% caller
+volume. Speed, tone, volume, and wait ranges must also be ordered from minimum
+to maximum.
 
 Evidence:
 

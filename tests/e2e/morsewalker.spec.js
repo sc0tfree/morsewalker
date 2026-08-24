@@ -209,17 +209,19 @@ test('invalid numeric settings are rejected before a station or audio starts', a
   await openApp(page);
   await configureValidInputs(page);
   const yourSpeed = page.locator('#yourSpeed');
-  await yourSpeed.fill('0');
-  const validationMessage = await yourSpeed.evaluate(
-    (input) => input.validationMessage
-  );
+  const yourVolume = page.locator('#yourVolume');
+  await yourSpeed.fill('4');
+  await yourVolume.fill('37.5');
 
-  expect(validationMessage).not.toBe('');
   await page.locator('#cqButton').click();
 
   await expect(yourSpeed).toHaveClass(/is-invalid/);
   await expect(page.locator('#yourSpeed + .invalid-feedback')).toHaveText(
-    validationMessage
+    'Must be ≥ 5'
+  );
+  await expect(yourVolume).toHaveClass(/is-invalid/);
+  await expect(page.locator('#yourVolume + .invalid-feedback')).toHaveText(
+    'Must be integer'
   );
   await expect(page.locator('#activeStations')).toHaveText('0');
   await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
