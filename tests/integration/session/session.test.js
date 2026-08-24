@@ -310,6 +310,9 @@ describe('session initialization and mode UI', () => {
     expect(infoCard).toHaveTextContent(
       'click "AGN" to repeat every field that is blank'
     );
+    expect(infoCard).toHaveTextContent(
+      'Press Enter while one of those fields is focused'
+    );
     expect(infoCard).toHaveTextContent('AGN does not log or advance the QSO');
     expect(infoCard).toHaveTextContent('(2 AGN)');
   });
@@ -779,6 +782,86 @@ describe('session controls and message flows', () => {
       expect(document.getElementById('infoField')).toHaveValue('');
       expect(document.getElementById('infoField2')).toHaveValue('');
       expect(document.activeElement).toBe(responseField);
+    }
+  );
+
+  it.each([
+    {
+      candidate: '',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      fieldId: 'infoField2',
+      label: 'a blank number',
+    },
+    {
+      candidate: 'AGN',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      fieldId: 'infoField',
+      label: 'AGN in the name',
+    },
+    {
+      candidate: 'AGN?',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      fieldId: 'infoField2',
+      label: 'AGN? in the number',
+    },
+    {
+      candidate: 'AD?M',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      fieldId: 'infoField',
+      label: 'a question-marked name',
+    },
+  ])(
+    'routes Enter through AGN for $label, then allows normal Enter to TU',
+    async ({
+      candidate,
+      expectedExtra,
+      expectedRequest,
+      expectedResponse,
+      fieldId,
+    }) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+
+      setInfoValue('infoField', fieldId === 'infoField' ? candidate : 'Adam');
+      setInfoValue('infoField2', fieldId === 'infoField2' ? candidate : '1');
+      const candidateField = document.getElementById(fieldId);
+      candidateField.focus();
+
+      const enterForAgn = pressEnter(candidateField);
+
+      expect(enterForAgn.defaultPrevented).toBe(true);
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', expectedRequest],
+        ['K0A', expectedResponse],
+      ]);
+      expect(resultsRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(candidateField).toHaveValue(candidate);
+      expect(document.activeElement).toBe(candidateField);
+
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      const finalField = setInfoValue('infoField2', '1');
+      random.mockReturnValue(0.9);
+
+      const enterForTu = pressEnter(finalField);
+
+      expect(enterForTu.defaultPrevented).toBe(true);
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(expectedExtra);
+      expect(document.getElementById('activeStations')).toHaveTextContent('0');
     }
   );
 

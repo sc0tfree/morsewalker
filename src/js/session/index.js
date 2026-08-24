@@ -24,7 +24,7 @@ import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
-import { resolveFill, selectFillComponents } from './fills.js';
+import { isFillCandidate, resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
 import { setAgnButtonEnabled } from './view.js';
 
@@ -180,21 +180,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  infoField.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && tuButton.style.display !== 'none') {
-      event.preventDefault();
-      tuButton.click();
-    }
-  });
-
-  infoField2.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && tuButton.style.display !== 'none') {
-      event.preventDefault();
-      tuButton.click();
-    }
-  });
-
   [infoField, infoField2].forEach((field) => {
+    field.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && tuButton.style.display !== 'none') {
+        event.preventDefault();
+        const actionButton = isFillCandidate(field.value)
+          ? agnButton
+          : tuButton;
+        actionButton.click();
+      }
+    });
     field.addEventListener('input', updateAgnButtonAvailability);
     field.addEventListener('focus', () => {
       lastFocusedInfoFieldId = field.id;
