@@ -56,9 +56,8 @@ export function clearTable(tableName) {
 }
 
 /**
- * Computes totals and averages for the current rows (excluding the very first row),
- * and inserts/updates a summary row at the bottom. If there are fewer than 2 data rows,
- * no summary row is shown.
+ * Computes averages for all current data rows and inserts/updates a summary row
+ * at the bottom. If there are fewer than 2 data rows, no summary row is shown.
  *
  * @param {string} tableName - The ID of the HTML table element.
  * @param {string|null} [extra=null] - Optional additional information to include in a fifth cell.
@@ -76,8 +75,7 @@ function updateSummaryRow(tableName, extra = null) {
   // Gather row data
   let rows = Array.from(tableBody.rows);
 
-  // If fewer than 2 rows, no summary row is meaningful
-  // (we can't compute averages if we skip the first row and end up with nothing)
+  // Show a summary only after at least 2 results
   if (rows.length < 2) {
     return;
   }

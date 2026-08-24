@@ -108,13 +108,20 @@ Evidence:
 - `tests/integration/session/session.test.js`
 - `tests/unit/stations/util.test.js`
 
-## 6. Result-summary documentation disagrees with behavior
+## 6. EXPECTED: Result summaries average all data rows
 
-Severity: Low
+Status: Documentation corrected
 
-The summary documentation says the first result row is excluded, while the
-implementation averages every result row. Characterization tests preserve the
-implemented all-row average.
+Severity: None
+
+The table header is separate from the result data and is not included in the
+summary. After removing the previous summary row, the implementation averages
+every data row, including result number one. The summary intentionally appears
+only after two results have been recorded.
+
+This is expected behavior. The stale comments saying the first result row was
+excluded were corrected, while the implementation and characterization tests
+remain unchanged.
 
 Evidence:
 
