@@ -225,6 +225,13 @@ function sendResponse(value) {
   document.getElementById('sendButton').click();
 }
 
+function setInfoValue(id, value) {
+  const field = document.getElementById(id);
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  return field;
+}
+
 function pressEnter(element) {
   const event = new KeyboardEvent('keydown', {
     bubbles: true,
@@ -269,6 +276,10 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('tuButton')).toHaveStyle({
       display: 'none',
     });
+    expect(document.getElementById('agnButton')).toHaveStyle({
+      display: 'none',
+    });
+    expect(document.getElementById('agnButton')).toBeDisabled();
     expect(document.getElementById('infoField')).toHaveStyle({
       display: 'none',
     });
@@ -385,6 +396,7 @@ describe('session initialization and mode UI', () => {
         info1: null,
         info2: null,
         mode: 'single',
+        showAgn: false,
         showExtra: false,
         showTu: false,
       },
@@ -394,6 +406,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Serial Number',
         info2: null,
         mode: 'contest',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -403,6 +416,7 @@ describe('session initialization and mode UI', () => {
         info1: 'State',
         info2: null,
         mode: 'pota',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -412,6 +426,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Name',
         info2: 'State',
         mode: 'sst',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -421,6 +436,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Name',
         info2: 'CW Ops No.',
         mode: 'cwt',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -446,6 +462,10 @@ describe('session initialization and mode UI', () => {
       expect(document.getElementById('tuButton').style.display).toBe(
         testCase.showTu ? 'inline-block' : 'none'
       );
+      expect(document.getElementById('agnButton').style.display).toBe(
+        testCase.showAgn ? 'inline-block' : 'none'
+      );
+      expect(document.getElementById('agnButton')).toBeDisabled();
       expect(infoField.style.display).toBe(
         testCase.info1 ? 'inline-block' : 'none'
       );
@@ -746,6 +766,68 @@ describe('session controls and message flows', () => {
       expect(document.activeElement).toBe(responseField);
     }
   );
+
+  it('replays only the blank CWT field and preserves the active QSO', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+
+    const agnButton = document.getElementById('agnButton');
+    expect(agnButton).toBeDisabled();
+
+    releaseAudio();
+    sendResponse('K0A');
+    expect(agnButton).toBeEnabled();
+
+    releaseAudio();
+    setInfoValue('infoField', 'Adam');
+    const numberField = document.getElementById('infoField2');
+    numberField.focus();
+    agnButton.click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NR?'],
+      ['K0A', '1'],
+    ]);
+    expect(resultsRows()).toHaveLength(0);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(document.getElementById('infoField')).toHaveValue('Adam');
+    expect(numberField).toHaveValue('');
+    expect(document.activeElement).toBe(numberField);
+    expect(agnButton).toBeEnabled();
+
+    releaseAudio();
+    setInfoValue('infoField2', '1');
+    expect(agnButton).toBeDisabled();
+
+    const completedTranscript = transcript();
+    agnButton.click();
+    expect(transcript()).toEqual(completedTranscript);
+
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+  });
+
+  it('uses one AGN? request when every CWT field is blank', async () => {
+    const { releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+
+    document.getElementById('agnButton').click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+    ]);
+    expect(document.getElementById('infoField')).toHaveValue('');
+    expect(document.getElementById('infoField2')).toHaveValue('');
+    expect(resultsRows()).toHaveLength(0);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+  });
 
   it.each([
     ['single', 'CQ DE N0ME K'],

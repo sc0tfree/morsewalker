@@ -24,7 +24,9 @@ import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
+import { resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
+import { setAgnButtonEnabled } from './view.js';
 
 /**
  * Application state variables.
@@ -53,6 +55,7 @@ let currentStationStartTime = null;
 let totalContacts = 0;
 let yourStation = null;
 let lastRespondingStations = null;
+let lastFocusedInfoFieldId = null;
 const farnsworthLowerBy = 6;
 
 /**
@@ -69,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
   const sendButton = document.getElementById('sendButton');
+  const agnButton = document.getElementById('agnButton');
   const tuButton = document.getElementById('tuButton');
   const resetButton = document.getElementById('resetButton');
   const stopButton = document.getElementById('stopButton');
@@ -83,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event Listeners
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
+  agnButton.addEventListener('click', requestFill);
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
   stopButton.addEventListener('click', stop);
@@ -187,6 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  [infoField, infoField2].forEach((field) => {
+    field.addEventListener('input', updateAgnButtonAvailability);
+    field.addEventListener('focus', () => {
+      lastFocusedInfoFieldId = field.id;
+    });
+  });
+
   cqButton.addEventListener('click', () => {
     responseField.focus();
   });
@@ -239,6 +251,89 @@ function getModeConfig() {
 }
 
 /**
+ * Reads the current values for the mode's ordered exchange components.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @returns {Object<string, string>} Field values keyed by input id.
+ */
+function getExchangeFieldValues(modeConfig) {
+  return Object.fromEntries(
+    modeConfig.exchangeComponents.map(({ inputId }) => [
+      inputId,
+      document.getElementById(inputId).value,
+    ])
+  );
+}
+
+/**
+ * Synchronizes AGN availability with QSO phase and exchange field contents.
+ */
+function updateAgnButtonAvailability() {
+  const modeConfig = getModeConfig();
+  const valuesByInputId = getExchangeFieldValues(modeConfig);
+  const eligibleComponents = selectFillComponents(
+    modeConfig.exchangeComponents,
+    valuesByInputId
+  );
+
+  setAgnButtonEnabled(readyForTU && eligibleComponents.length > 0);
+}
+
+/**
+ * Restores focus to the most recently used mode-specific field.
+ */
+function restoreInfoFieldFocus() {
+  if (lastFocusedInfoFieldId) {
+    document.getElementById(lastFocusedInfoFieldId).focus();
+  }
+}
+
+/**
+ * Requests the missing or uncertain components for the selected station.
+ */
+function requestFill() {
+  if (getAudioLock()) {
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  const modeConfig = getModeConfig();
+  const selectedStation = currentStations[activeStationIndex];
+  if (!readyForTU || !selectedStation) {
+    updateAgnButtonAvailability();
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  const fill = resolveFill(
+    modeConfig.exchangeComponents,
+    getExchangeFieldValues(modeConfig),
+    selectedStation
+  );
+  if (!fill) {
+    updateAgnButtonAvailability();
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  const yourResponseTimer = yourStation.player.playSentence(fill.request);
+  updateAudioLock(yourResponseTimer);
+
+  const response = applyCutNumbers(fill.response, inputs);
+  if (response) {
+    const theirResponseTimer = selectedStation.player.playSentence(
+      response,
+      yourResponseTimer + 0.5
+    );
+    updateAudioLock(theirResponseTimer);
+  }
+
+  currentStationAttempts++;
+  updateAgnButtonAvailability();
+  restoreInfoFieldFocus();
+}
+
+/**
  * Resets the game state and clears all UI elements.
  *
  * Resets variables related to stations, attempts, and contacts. Clears the results
@@ -252,6 +347,7 @@ function resetGameState() {
   currentStationAttempts = 0;
   currentStationStartTime = null;
   totalContacts = 0;
+  lastFocusedInfoFieldId = null;
 
   updateActiveStations(0);
   clearTable('resultsTable');
@@ -259,6 +355,7 @@ function resetGameState() {
   document.getElementById('infoField').value = '';
   document.getElementById('infoField2').value = '';
   document.getElementById('cqButton').disabled = false;
+  updateAgnButtonAvailability();
   stopAllAudio();
   updateAudioLock(0);
 }
@@ -440,11 +537,13 @@ function send() {
         updateAudioLock(theirResponseTimer);
         currentStationAttempts++;
 
+        readyForTU = true;
+        activeStationIndex = matchIndex;
+        updateAgnButtonAvailability();
+
         if (modeConfig.requiresInfoField) {
           infoField.focus();
         }
-        readyForTU = true;
-        activeStationIndex = matchIndex;
         return;
       }
     }
@@ -698,6 +797,8 @@ function tu() {
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  lastFocusedInfoFieldId = null;
+  updateAgnButtonAvailability();
   responseField.focus();
 
   // Chance of a new station joining
@@ -790,6 +891,8 @@ function reset() {
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  lastFocusedInfoFieldId = null;
+  updateAgnButtonAvailability();
   responseField.focus();
 
   const modeConfig = getModeConfig();
