@@ -49,7 +49,7 @@ export function getCallingStation() {
   // determine if it's a US station
   let isUS = inputs.usOnly ? true : Math.random() < 0.4;
 
-  return {
+  const station = {
     callsign: isUS
       ? getRandomUSCallsign(inputs.formats)
       : getRandomNonUSCallsign(inputs.formats),
@@ -76,6 +76,13 @@ export function getCallingStation() {
     // QSB depth range: 0.6 to 1.0
     qsbDepth: Math.random() * 0.4 + 0.6,
   };
+
+  // Keep the reported effective speed in step with the timing the player uses.
+  if (station.farnsworthSpeed) {
+    station.farnsworthSpeed = Math.min(station.farnsworthSpeed, station.wpm);
+  }
+
+  return station;
 }
 
 /**

@@ -128,6 +128,25 @@ describe('createMorsePlayer v1 characterization', () => {
     expect(round(endTime)).toBe(1.98);
   });
 
+  it.each([20, 40])(
+    'leaves standard spacing untouched at a Farnsworth speed of %i',
+    (farnsworthSpeed) => {
+      const player = audio.createMorsePlayer(
+        buildStation({ wpm: 20, enableFarnsworth: true, farnsworthSpeed })
+      );
+
+      const endTime = player.playSentence('AE E');
+
+      expect(symbolWindows(player.context)).toEqual([
+        { start: 0, end: 0.06 },
+        { start: 0.12, end: 0.3 },
+        { start: 0.48, end: 0.54 },
+        { start: 0.96, end: 1.02 },
+      ]);
+      expect(round(endTime)).toBe(1.2);
+    }
+  );
+
   it('falls back to station speed when Farnsworth speed is absent', () => {
     const player = audio.createMorsePlayer(
       buildStation({

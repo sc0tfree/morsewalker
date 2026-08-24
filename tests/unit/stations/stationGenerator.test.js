@@ -267,6 +267,19 @@ describe('calling-station attributes', () => {
     });
   });
 
+  it('caps a Farnsworth speed above the station speed at the station speed', () => {
+    selectOnlyFormat('1x1');
+    setChecked('enableFarnsworth', true);
+    setValue('farnsworthSpeed', 40);
+    installRandomSequence([], 0);
+
+    expect(getCallingStation()).toMatchObject({
+      enableFarnsworth: true,
+      wpm: 18,
+      farnsworthSpeed: 18,
+    });
+  });
+
   it.each([
     [0, 0, false],
     [50, 0.5 - Number.EPSILON, true],

@@ -152,3 +152,29 @@ Evidence:
 
 - `src/js/session/index.js`, mode initialization on `DOMContentLoaded`
 - `src/js/modes/view.js`, `applyModeSettings`
+
+## 10. FIXED: Farnsworth above the character speed compresses spacing
+
+Status: Fixed on `v1-defect-3-input-ranges`
+
+Severity: Medium
+
+The player swapped in the Farnsworth unit for letter and word gaps whenever
+Farnsworth was enabled, without checking that the effective speed was slower
+than the station's character speed. A faster effective speed therefore produced
+gaps narrower than standard timing rather than no effect. At 20 WPM with an
+effective speed of 40, `AE E` ran in 0.81 s instead of 1.20 s, with the letter
+gap halved from 0.18 s to 0.09 s while the dot and dash lengths stayed correct.
+
+This was reachable because Effective Speed spans the same range as Min and Max
+Speed, and each calling station draws its own speed from that range. QRS was
+never affected, since both of its branches only lower the value. The fix caps
+the effective speed at the character speed in the player, and stores the capped
+value on generated stations so the results table reports what was sent.
+
+Evidence:
+
+- `src/js/audio/player.js`, `createMorsePlayer`
+- `src/js/stations/generator.js`, `getCallingStation`
+- `tests/unit/audio/morse-player.test.js`
+- `tests/unit/stations/stationGenerator.test.js`
