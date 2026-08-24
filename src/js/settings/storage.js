@@ -3,6 +3,7 @@
  *
  * @param {HTMLInputElement} yourCallsign - User callsign input.
  * @param {HTMLInputElement} yourName - User name input.
+ * @param {HTMLInputElement} yourState - User state input.
  * @param {HTMLInputElement} yourSpeed - User speed input.
  * @param {HTMLInputElement} yourSidetone - User sidetone input.
  * @param {HTMLInputElement} yourVolume - User volume input.
@@ -10,6 +11,7 @@
 export function wireSettingsStorage(
   yourCallsign,
   yourName,
+  yourState,
   yourSpeed,
   yourSidetone,
   yourVolume
@@ -18,7 +20,7 @@ export function wireSettingsStorage(
   const keys = {
     yourCallsign: 'yourCallsign',
     yourName: 'yourName',
-    yourState: 'yourState', // Added yourState
+    yourState: 'yourState',
     yourSpeed: 'yourSpeed',
     yourSidetone: 'yourSidetone',
     yourVolume: 'yourVolume',
@@ -34,7 +36,7 @@ export function wireSettingsStorage(
   yourCallsign.value =
     localStorage.getItem(keys.yourCallsign) || yourCallsign.value;
   yourName.value = localStorage.getItem(keys.yourName) || yourName.value;
-  yourState.value = localStorage.getItem(keys.yourState) || yourState.value; // Load yourState
+  yourState.value = localStorage.getItem(keys.yourState) || yourState.value;
   yourSpeed.value = localStorage.getItem(keys.yourSpeed) || yourSpeed.value;
   yourSidetone.value =
     localStorage.getItem(keys.yourSidetone) || yourSidetone.value;
@@ -48,7 +50,6 @@ export function wireSettingsStorage(
     localStorage.setItem(keys.yourName, yourName.value);
   });
   yourState.addEventListener('input', () => {
-    // Save yourState
     localStorage.setItem(keys.yourState, yourState.value);
   });
   yourSpeed.addEventListener('input', () => {

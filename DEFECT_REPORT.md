@@ -153,17 +153,26 @@ Evidence:
 - `tests/unit/audio/background-static.test.js`
 - `tests/integration/session/session.test.js`
 
-## 8. State persistence relies on a browser-created global
+## 8. FIXED: State persistence relies on a browser-created global
 
-Severity: Medium
+Status: Fixed on `v1-defect-8-state-persistence`
 
-The persistence code references `yourState` without declaring or querying it,
-relying on the browser exposing the element ID as a global variable. The
-current Chromium behavior supports this, but it is environment-dependent.
+Severity: Low
+
+The persistence code referenced `yourState` without declaring or querying it.
+Named access on `Window` exposes element IDs in modern browsers, so this was not
+a current browser compatibility failure. It nevertheless left initialization
+dependent on an implicit global and required lint and test accommodations.
+
+The fix queries the state input with the other station settings and passes it
+explicitly to the persistence wiring. The implicit-global accommodations were
+removed.
 
 Evidence:
 
+- `src/js/session/index.js`
 - `src/js/settings/storage.js`
+- `eslint.config.mjs`
 - `tests/integration/session/session.test.js`
 
 ## 9. An unrecognized stored mode prevents startup

@@ -10,7 +10,6 @@ const browserGlobals = {
   localStorage: 'readonly',
   setTimeout: 'readonly',
   window: 'readonly',
-  yourState: 'readonly',
 };
 
 const nodeGlobals = {
