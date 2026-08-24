@@ -15,7 +15,7 @@ Severity: Medium
 The baseline player omitted `qsbFrequency` from its documented sine calculation,
 so every station faded at an effective 1 Hz. The fix applies each station's
 frequency to the calculation and generates frequencies uniformly in the
-`[0.25, 2)` Hz range.
+`0.85–1.15` Hz range.
 
 Evidence:
 

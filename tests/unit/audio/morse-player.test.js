@@ -201,7 +201,7 @@ describe('createMorsePlayer v1 characterization', () => {
         callsign: 'SLOW',
         qsb: true,
         qsbDepth: 0.8,
-        qsbFrequency: 0.25,
+        qsbFrequency: 0.875,
       })
     );
     const fastPlayer = audio.createMorsePlayer(
@@ -209,12 +209,12 @@ describe('createMorsePlayer v1 characterization', () => {
         callsign: 'FAST',
         qsb: true,
         qsbDepth: 0.8,
-        qsbFrequency: 0.75,
+        qsbFrequency: 1.125,
       })
     );
 
-    slowPlayer.playSentence('E', 1);
-    fastPlayer.playSentence('E', 1);
+    slowPlayer.playSentence('E', 0.994);
+    fastPlayer.playSentence('E', 0.994);
 
     const slowEvents = slowPlayer.context.gains[0].gain.events;
     const fastEvents = fastPlayer.context.gains[1].gain.events;
@@ -232,8 +232,8 @@ describe('createMorsePlayer v1 characterization', () => {
       fastPeak,
       fastPeak,
     ]);
-    expect(slowPeak).toBeCloseTo(0.140012435609, 10);
-    expect(fastPeak).toBeCloseTo(0.699888086142, 10);
+    expect(slowPeak).toBeCloseTo(0.617989898732, 10);
+    expect(fastPeak).toBeCloseTo(0.222010101268, 10);
     expect(RecordingAudioContext.instances).toHaveLength(2);
   });
 });
