@@ -61,7 +61,7 @@ export function getCallingStation() {
     volume:
       Math.random() * (inputs.maxVolume - inputs.minVolume) + inputs.minVolume,
     frequency: Math.floor(
-      Math.random() * (inputs.maxTone - inputs.minTone) + inputs.minTone
+      Math.random() * (inputs.maxTone - inputs.minTone + 1) + inputs.minTone
     ),
     name: randomElement(names),
     state: isUS ? randomElement(stateAbbreviations) : '',

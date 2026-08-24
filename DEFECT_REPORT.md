@@ -68,13 +68,16 @@ Evidence:
 - `tests/unit/settings/inputs.test.js`
 - `tests/integration/session/session.test.js`
 
-## 4. Maximum tone is exclusive
+## 4. FIXED: Maximum tone is exclusive
+
+Status: Fixed on `v1-defect-4-max-tone`
 
 Severity: Low
 
-Caller tone generation uses `Math.random() * (maxTone - minTone) + minTone`
-before flooring. A configured 400–900 Hz range therefore produces at most
-899 Hz, despite the control being labeled Maximum Tone.
+The baseline caller tone generation omitted the inclusive range adjustment
+before flooring, so a configured 400–900 Hz range produced at most 899 Hz. The
+fix samples uniformly from every integer in the configured range, including
+Maximum Tone.
 
 Evidence:
 
