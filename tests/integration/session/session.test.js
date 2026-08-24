@@ -111,7 +111,6 @@ async function bootSession({ stored = {} } = {}) {
   vi.stubGlobal('AudioContext', RecordingAudioContext);
   vi.stubGlobal('fetch', fetchMock);
   vi.stubGlobal('localStorage', storage);
-  vi.stubGlobal('yourState', document.getElementById('yourState'));
 
   const random = vi.spyOn(Math, 'random').mockReturnValue(0);
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -329,6 +328,11 @@ describe('session initialization and mode UI', () => {
     callsign.value = 'W1AW';
     callsign.dispatchEvent(new Event('input', { bubbles: true }));
     expect(storage.peek('yourCallsign')).toBe('W1AW');
+
+    const state = document.getElementById('yourState');
+    state.value = 'NY';
+    state.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(storage.peek('yourState')).toBe('NY');
   });
 
   it('applies every mode UI contract through radio changes', async () => {

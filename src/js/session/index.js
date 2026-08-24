@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modeRadios = document.querySelectorAll('input[name="mode"]');
   const yourCallsign = document.getElementById('yourCallsign');
   const yourName = document.getElementById('yourName');
+  const yourState = document.getElementById('yourState');
   const yourSpeed = document.getElementById('yourSpeed');
   const yourSidetone = document.getElementById('yourSidetone');
   const yourVolume = document.getElementById('yourVolume');
@@ -192,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
   wireSettingsStorage(
     yourCallsign,
     yourName,
+    yourState,
     yourSpeed,
     yourSidetone,
     yourVolume
