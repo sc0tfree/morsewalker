@@ -302,19 +302,32 @@ describe('settings validation and invalid-state behavior', () => {
     }
   );
 
+  // Both bounds of every field, so a typo in either HTML attribute is caught.
   it.each([
-    { id: 'yourSpeed', value: '0', message: 'Must be ≥ 5' },
-    { id: 'yourSidetone', value: '10000', message: 'Must be ≤ 1500' },
-    { id: 'yourVolume', value: '120', message: 'Must be ≤ 100' },
+    { id: 'yourSpeed', value: '4', message: 'Must be ≥ 5' },
+    { id: 'yourSpeed', value: '61', message: 'Must be ≤ 60' },
+    { id: 'yourSidetone', value: '199', message: 'Must be ≥ 200' },
+    { id: 'yourSidetone', value: '1501', message: 'Must be ≤ 1500' },
+    { id: 'yourVolume', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'yourVolume', value: '101', message: 'Must be ≤ 100' },
     { id: 'maxStations', value: '0', message: 'Must be ≥ 1' },
-    { id: 'minSpeed', value: '-5', message: 'Must be ≥ 5' },
-    { id: 'maxSpeed', value: '101', message: 'Must be ≤ 60' },
-    { id: 'minTone', value: '150', message: 'Must be ≥ 200' },
-    { id: 'maxTone', value: '9999', message: 'Must be ≤ 1500' },
-    { id: 'minVolume', value: '-10', message: 'Must be ≥ 0' },
-    { id: 'maxVolume', value: '120', message: 'Must be ≤ 100' },
-    { id: 'minWait', value: '-1', message: 'Must be ≥ 0' },
-    { id: 'maxWait', value: '6', message: 'Must be ≤ 5' },
+    { id: 'maxStations', value: '21', message: 'Must be ≤ 20' },
+    { id: 'minSpeed', value: '4', message: 'Must be ≥ 5' },
+    { id: 'minSpeed', value: '61', message: 'Must be ≤ 60' },
+    { id: 'maxSpeed', value: '4', message: 'Must be ≥ 5' },
+    { id: 'maxSpeed', value: '61', message: 'Must be ≤ 60' },
+    { id: 'minTone', value: '199', message: 'Must be ≥ 200' },
+    { id: 'minTone', value: '1501', message: 'Must be ≤ 1500' },
+    { id: 'maxTone', value: '199', message: 'Must be ≥ 200' },
+    { id: 'maxTone', value: '1501', message: 'Must be ≤ 1500' },
+    { id: 'minVolume', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'minVolume', value: '101', message: 'Must be ≤ 100' },
+    { id: 'maxVolume', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'maxVolume', value: '101', message: 'Must be ≤ 100' },
+    { id: 'minWait', value: '-0.25', message: 'Must be ≥ 0' },
+    { id: 'minWait', value: '2.25', message: 'Must be ≤ 2' },
+    { id: 'maxWait', value: '-0.25', message: 'Must be ≥ 0' },
+    { id: 'maxWait', value: '5.25', message: 'Must be ≤ 5' },
     { id: 'yourSpeed', value: '', message: 'Required' },
   ])('rejects $id of "$value" with "$message"', ({ id, value, message }) => {
     setCallsign();
@@ -325,19 +338,54 @@ describe('settings validation and invalid-state behavior', () => {
     expect(element(id).nextElementSibling).toHaveTextContent(message);
   });
 
-  it('ignores the bounds of a disabled Farnsworth speed', () => {
+  it.each(['min', 'max'])('accepts every value at its %s bound', (bound) => {
     setCallsign();
-    element('farnsworthSpeed').value = '0';
+    element('farnsworthSpeed').disabled = false;
+    for (const input of document.querySelectorAll('input[type="number"]')) {
+      input.value = input[bound];
+    }
 
     expect(getInputs()).not.toBeNull();
+    expect(document.querySelectorAll('.is-invalid')).toHaveLength(0);
+  });
 
-    element('farnsworthSpeed').disabled = false;
+  it('reports a value outside its own bounds ahead of the pair ordering', () => {
+    setCallsign();
+    element('minWait').value = '4';
 
     expect(getInputs()).toBeNull();
-    expect(element('farnsworthSpeed').nextElementSibling).toHaveTextContent(
-      'Must be ≥ 5'
+    expect(element('minWait').nextElementSibling).toHaveTextContent(
+      'Must be ≤ 2'
     );
   });
+
+  it('leaves a bound the field does not declare unenforced', () => {
+    setCallsign();
+    element('maxStations').removeAttribute('max');
+    element('maxStations').value = '500';
+
+    expect(getInputs()).not.toBeNull();
+  });
+
+  it.each([
+    { value: '4', message: 'Must be ≥ 5' },
+    { value: '61', message: 'Must be ≤ 60' },
+  ])(
+    'ignores a disabled Farnsworth speed of $value, but rejects it once enabled',
+    ({ value, message }) => {
+      setCallsign();
+      element('farnsworthSpeed').value = value;
+
+      expect(getInputs()).not.toBeNull();
+
+      element('farnsworthSpeed').disabled = false;
+
+      expect(getInputs()).toBeNull();
+      expect(element('farnsworthSpeed').nextElementSibling).toHaveTextContent(
+        message
+      );
+    }
+  );
 
   it('opens invalid sections and clears classes on input without clearing feedback', () => {
     element('collapseYourStationSettings').classList.remove('show');

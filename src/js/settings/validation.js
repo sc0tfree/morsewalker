@@ -42,40 +42,42 @@ const ORDERED_PAIRS = [
  * @returns {boolean} True if all inputs are valid; false otherwise.
  */
 export function validateInputs(inputs) {
-  let isValid = true;
+  const invalid = new Set();
 
   clearAllInvalidStates();
 
+  const reject = (id, message) => {
+    rejectField(id, message);
+    invalid.add(id);
+  };
+
   if (!inputs.yourCallsign) {
-    rejectField('yourCallsign', 'Your callsign is required.');
-    isValid = false;
+    reject('yourCallsign', 'Your callsign is required.');
   }
 
   const requiredOperatorFields =
     getMode(inputs.mode)?.requiredOperatorFields ?? [];
   for (const field of requiredOperatorFields) {
     if (!inputs[field.id]) {
-      rejectField(field.id, field.message);
-      isValid = false;
+      reject(field.id, field.message);
     }
   }
 
   for (const id of NUMERIC_FIELDS) {
     const message = getRangeError(document.getElementById(id));
     if (message) {
-      rejectField(id, message);
-      isValid = false;
+      reject(id, message);
     }
   }
 
+  // A field already outside its own bounds keeps that more specific message.
   for (const [minId, maxId, message] of ORDERED_PAIRS) {
-    if (inputs[minId] > inputs[maxId]) {
-      rejectField(minId, message);
-      isValid = false;
+    if (inputs[minId] > inputs[maxId] && !invalid.has(minId)) {
+      reject(minId, message);
     }
   }
 
-  return isValid;
+  return invalid.size === 0;
 }
 
 /**
@@ -83,7 +85,8 @@ export function validateInputs(inputs) {
  *
  * Reads the raw element value rather than the parsed inputs, because collection
  * rescales some fields, such as volumes, away from the units the bounds use.
- * Disabled fields are exempt, since their values are not in play.
+ * Disabled fields are exempt, since their values are not in play, and a bound
+ * the field does not declare is left unenforced rather than coerced to zero.
  *
  * @param {HTMLInputElement|null} input - The input element to check.
  * @returns {string|null} An error message, or null when the value is acceptable.
@@ -93,8 +96,12 @@ function getRangeError(input) {
 
   const value = Number(input.value);
   if (input.value === '' || Number.isNaN(value)) return 'Required';
-  if (value < Number(input.min)) return `Must be ≥ ${input.min}`;
-  if (value > Number(input.max)) return `Must be ≤ ${input.max}`;
+  if (input.min !== '' && value < Number(input.min)) {
+    return `Must be ≥ ${input.min}`;
+  }
+  if (input.max !== '' && value > Number(input.max)) {
+    return `Must be ≤ ${input.max}`;
+  }
 
   return null;
 }
