@@ -330,9 +330,9 @@ describe('session initialization and mode UI', () => {
     expect(storage.peek('yourCallsign')).toBe('W1AW');
 
     const state = document.getElementById('yourState');
-    state.value = 'NY';
+    state.value = 'CT';
     state.dispatchEvent(new Event('input', { bubbles: true }));
-    expect(storage.peek('yourState')).toBe('NY');
+    expect(storage.peek('yourState')).toBe('CT');
   });
 
   it('applies every mode UI contract through radio changes', async () => {
