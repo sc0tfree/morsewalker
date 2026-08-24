@@ -176,9 +176,8 @@ test('Enter and AGN repeat CWT fields and record each count', async ({
   await releaseAudio(page);
 
   await infoField.fill('Adam');
-  await infoField2.focus();
   const oneFieldEvents = (await audioSnapshot(page)).scheduledEvents;
-  await infoField2.press('Enter');
+  await infoField.press('Enter');
 
   await expect(infoField2).toBeFocused();
   await expect(infoField).toHaveValue('Adam');

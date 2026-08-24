@@ -314,7 +314,7 @@ describe('session initialization and mode UI', () => {
       'Leave a field blank, enter AGN, or add ? anywhere in it.'
     );
     expect(infoCard).toHaveTextContent(
-      'Click AGN or press Enter in that field.'
+      'Click AGN or press Enter before all fields are complete.'
     );
     expect(infoCard).toHaveTextContent(
       'Only those fields repeat. The QSO stays open.'
@@ -791,6 +791,69 @@ describe('session controls and message flows', () => {
 
   it.each([
     {
+      completedFieldId: 'infoField',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      label: 'CW Ops number',
+      missingFieldId: 'infoField2',
+    },
+    {
+      completedFieldId: 'infoField2',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      label: 'name',
+      missingFieldId: 'infoField',
+    },
+  ])(
+    'routes Enter from a completed field to the missing CWT $label',
+    async ({
+      completedFieldId,
+      expectedExtra,
+      expectedRequest,
+      expectedResponse,
+      missingFieldId,
+    }) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+
+      setInfoValue('infoField', missingFieldId === 'infoField' ? '' : 'Adam');
+      setInfoValue('infoField2', missingFieldId === 'infoField2' ? '' : '1');
+      const completedField = document.getElementById(completedFieldId);
+      const missingField = document.getElementById(missingFieldId);
+      completedField.focus();
+
+      const enterForAgn = pressEnter(completedField);
+
+      expect(enterForAgn.defaultPrevented).toBe(true);
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', expectedRequest],
+        ['K0A', expectedResponse],
+      ]);
+      expect(resultsRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(missingField).toHaveValue('');
+      expect(document.activeElement).toBe(missingField);
+
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      random.mockReturnValue(0.9);
+
+      const enterForTu = pressEnter(missingField);
+
+      expect(enterForTu.defaultPrevented).toBe(true);
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(expectedExtra);
+    }
+  );
+
+  it.each([
+    {
       candidate: '',
       expectedExtra: 'ADAM / 1 (1 AGN)',
       expectedRequest: 'NR?',
@@ -881,9 +944,9 @@ describe('session controls and message flows', () => {
     expect(agnButton).toBeEnabled();
 
     releaseAudio();
-    setInfoValue('infoField', 'Adam');
+    const nameField = setInfoValue('infoField', 'Adam');
     const numberField = document.getElementById('infoField2');
-    numberField.focus();
+    nameField.focus();
     agnButton.click();
 
     expect(transcript().slice(-2)).toEqual([
@@ -894,7 +957,7 @@ describe('session controls and message flows', () => {
     expect(document.getElementById('activeStations')).toHaveTextContent('1');
     expect(document.getElementById('infoField')).toHaveValue('Adam');
     expect(numberField).toHaveValue('');
-    expect(document.activeElement).toBe(numberField);
+    expect(document.activeElement).toBe(nameField);
     expect(agnButton).toBeEnabled();
 
     releaseAudio();

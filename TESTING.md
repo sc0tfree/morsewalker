@@ -49,8 +49,9 @@ mode-specific inputs, result fields, and completion path.
   mode-specific field is blank, equals `AGN`, or contains `?`. One missing field
   sends its canonical request; all missing fields send `AGN?`. The selected
   station repeats only those fields without logging or advancing the QSO. Enter
-  in a qualifying mode-specific field invokes this AGN action; Enter in a
-  completed field continues to invoke TU.
+  in any mode-specific field invokes this AGN action while a field qualifies,
+  then focuses the first repeated field. Enter invokes TU only after every field
+  is complete.
 - TU is ignored until the current pileup exchange is ready, then records the
   selected caller, clears fields, removes that caller, optionally adds callers,
   and restarts the pileup.

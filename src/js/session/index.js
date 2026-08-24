@@ -24,7 +24,7 @@ import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
-import { isFillCandidate, resolveFill, selectFillComponents } from './fills.js';
+import { resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
 import { setAgnButtonEnabled } from './view.js';
 
@@ -89,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event Listeners
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
-  agnButton.addEventListener('click', requestFill);
+  agnButton.addEventListener('click', () => requestFill());
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
   stopButton.addEventListener('click', stop);
@@ -184,10 +184,13 @@ document.addEventListener('DOMContentLoaded', () => {
     field.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' && tuButton.style.display !== 'none') {
         event.preventDefault();
-        const actionButton = isFillCandidate(field.value)
-          ? agnButton
-          : tuButton;
-        actionButton.click();
+        const eligibleComponents =
+          getEligibleExchangeComponents(getModeConfig());
+        if (readyForTU && eligibleComponents.length > 0) {
+          requestFill({ focusFirstComponent: true });
+        } else {
+          tuButton.click();
+        }
       }
     });
     field.addEventListener('input', updateAgnButtonAvailability);
@@ -307,32 +310,46 @@ function getExchangeFieldValues(modeConfig) {
 }
 
 /**
+ * Selects every exchange component currently marked for a fill.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @returns {Object[]} Eligible components in mode order.
+ */
+function getEligibleExchangeComponents(modeConfig) {
+  return selectFillComponents(
+    modeConfig.exchangeComponents,
+    getExchangeFieldValues(modeConfig)
+  );
+}
+
+/**
  * Synchronizes AGN availability with QSO phase and exchange field contents.
  */
 function updateAgnButtonAvailability() {
   const modeConfig = getModeConfig();
-  const valuesByInputId = getExchangeFieldValues(modeConfig);
-  const eligibleComponents = selectFillComponents(
-    modeConfig.exchangeComponents,
-    valuesByInputId
-  );
+  const eligibleComponents = getEligibleExchangeComponents(modeConfig);
 
   setAgnButtonEnabled(readyForTU && eligibleComponents.length > 0);
 }
 
 /**
- * Restores focus to the most recently used mode-specific field.
+ * Focuses an explicit mode-specific field or restores the most recently used one.
+ *
+ * @param {string|null} inputId - An explicit field to focus.
  */
-function restoreInfoFieldFocus() {
-  if (lastFocusedInfoFieldId) {
-    document.getElementById(lastFocusedInfoFieldId).focus();
+function restoreInfoFieldFocus(inputId = lastFocusedInfoFieldId) {
+  if (inputId) {
+    document.getElementById(inputId).focus();
   }
 }
 
 /**
  * Requests the missing or uncertain components for the selected station.
+ *
+ * @param {Object} options - Focus behavior for the completed request.
+ * @param {boolean} options.focusFirstComponent - Focus the first repeated field.
  */
-function requestFill() {
+function requestFill({ focusFirstComponent = false } = {}) {
   if (getAudioLock()) {
     restoreInfoFieldFocus();
     return;
@@ -372,7 +389,9 @@ function requestFill() {
   recordExchangeAgn(fill.components);
   currentStationAttempts++;
   updateAgnButtonAvailability();
-  restoreInfoFieldFocus();
+  restoreInfoFieldFocus(
+    focusFirstComponent ? fill.components[0].inputId : lastFocusedInfoFieldId
+  );
 }
 
 /**
