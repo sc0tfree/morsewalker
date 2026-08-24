@@ -19,7 +19,7 @@ import {
 } from '../util.js';
 import { getYourStation, getCallingStation } from '../stationGenerator.js';
 import { updateStaticIntensity } from '../audio.js';
-import { modeLogicConfig } from '../modes.js';
+import { modeIds, modeLogicConfig } from '../modes/index.js';
 import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
@@ -205,18 +205,16 @@ document.addEventListener('DOMContentLoaded', () => {
     radio.addEventListener('change', updateStaticIntensity);
   });
 
-  // Determine mode from local storage or default to single
-  const savedMode = localStorage.getItem('mode') || 'single';
-  // Check the corresponding radio button based on savedMode
-  const savedModeRadio = document.querySelector(
-    `input[name="mode"][value="${savedMode}"]`
-  );
-  if (savedModeRadio) {
-    savedModeRadio.checked = true;
+  // Restore a registered mode or recover from stale storage in Single mode
+  const storedMode = localStorage.getItem('mode');
+  currentMode = modeIds.includes(storedMode) ? storedMode : 'single';
+  if (storedMode !== null && storedMode !== currentMode) {
+    localStorage.removeItem('mode');
   }
 
-  // Set currentMode to the saved or default mode
-  currentMode = savedMode;
+  modeRadios.forEach((radio) => {
+    radio.checked = radio.value === currentMode;
+  });
 
   submitStartupStats(currentMode, yourCallsign);
 

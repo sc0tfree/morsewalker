@@ -175,24 +175,30 @@ Evidence:
 - `eslint.config.mjs`
 - `tests/integration/session/session.test.js`
 
-## 9. An unrecognized stored mode prevents startup
+## 9. FIXED: An unrecognized stored mode prevents startup
+
+Status: Fixed on `v1-defect-9-stored-mode`
 
 Severity: Medium
 
-The saved mode is read from local storage and used without checking that it is
-a mode the application knows about. An unrecognized value matches no radio
-button, so no mode is selected, and it then reaches `applyModeSettings`, which
-looks the value up and reads properties off the result. The lookup misses, the
-property read throws, and the rest of the `DOMContentLoaded` handler never
-runs, leaving the page unconfigured until local storage is cleared.
+The baseline read the saved mode from local storage without checking that the
+application still knew it. An unrecognized value matched no radio button,
+leaving the HTML-default Single radio visibly selected while the session kept
+the stale value internally. The UI configuration lookup then missed and threw,
+and later session actions would fail on the same missing mode. Values containing
+selector syntax could throw even earlier while locating the radio.
 
-Any operator who used a build with a mode that was later renamed or removed
-would hit this on their next visit.
+The fix accepts only exact IDs from the mode registry, otherwise falls back to
+Single and removes the stale key. It synchronizes the radio buttons by comparing
+their values directly, so stored text is never treated as a selector. Telemetry,
+UI setup, and session logic now all receive the same validated mode.
 
 Evidence:
 
 - `src/js/session/index.js`, mode initialization on `DOMContentLoaded`
+- `src/js/modes/index.js`, registered mode IDs
 - `src/js/modes/view.js`, `applyModeSettings`
+- `tests/integration/session/session.test.js`
 
 ## 10. FIXED: Farnsworth above the character speed compresses spacing
 

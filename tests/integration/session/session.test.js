@@ -335,6 +335,47 @@ describe('session initialization and mode UI', () => {
     expect(storage.peek('yourState')).toBe('CT');
   });
 
+  it.each(['retired-mode', 'legacy"]', 'constructor'])(
+    'recovers from invalid stored mode "%s" in Single mode',
+    async (storedMode) => {
+      const { fetchMock, storage } = await bootSession({
+        stored: {
+          mode: storedMode,
+          yourCallsign: 'N0ME',
+        },
+      });
+
+      expect(document.getElementById('modeSingle')).toBeChecked();
+      expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+        'Single Mode Results'
+      );
+      expect(document.getElementById('tuButton')).toHaveStyle({
+        display: 'none',
+      });
+      expect(
+        document.querySelector('#resultsTable .mode-specific-column')
+      ).toHaveStyle({ display: 'none' });
+
+      expect(storage.removeItem).toHaveBeenCalledOnce();
+      expect(storage.removeItem).toHaveBeenCalledWith('mode');
+      expect(storage.peek('mode')).toBeNull();
+      expect(storage.peek('yourCallsign')).toBe('N0ME');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [, statsOptions] = fetchMock.mock.calls[0];
+      expect(JSON.parse(statsOptions.body)).toEqual({
+        callsign: 'N0ME',
+        mode: 'single',
+      });
+
+      startSession();
+      expect(transcript()).toEqual([
+        ['N0ME', 'CQ DE N0ME K'],
+        ['K0A', 'K0A'],
+      ]);
+    }
+  );
+
   it('applies every mode UI contract through radio changes', async () => {
     const { storage } = await bootSession();
     const cases = [
