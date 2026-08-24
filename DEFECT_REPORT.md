@@ -84,17 +84,27 @@ Evidence:
 - `src/js/stations/generator.js`, `getCallingStation`
 - `tests/unit/stations/stationGenerator.test.js`
 
-## 5. Documented callsign-matching examples disagree with behavior
+## 5. EXPECTED: Callsign-matching criteria intentionally overlap
 
-Severity: Low
+Status: Documentation corrected on `v1-defect-5-callsign-matching-docs`
 
-Several examples documented as misses are accepted by another matching
-criterion. Current behavior returns `partial` for `ABC`/`ABX`,
-`ABCDE`/`AB`, and `ABCDE`/`ABCDEFX`.
+Severity: None
+
+The matcher evaluates its criteria as alternatives. A query that fails one
+criterion can therefore return `partial` through another: `ABC`/`ABX` matches
+criterion 5, `ABCDE`/`AB` matches criterion 1, and `ABCDE`/`ABCDEFX` matches
+criterion 4.
+
+This is expected behavior. A `partial` result asks the matching station to
+repeat its callsign; it does not accept the callsign as correct or advance the
+contact. The stale commented expectations were corrected to describe the
+aggregate matcher, and the implementation and active test assertions remain
+unchanged.
 
 Evidence:
 
 - `src/js/stations/matching.js`
+- `src/js/session/index.js`, partial-match handling in `send`
 - `tests/unit/stations/util.test.js`
 
 ## 6. Result-summary documentation disagrees with behavior
