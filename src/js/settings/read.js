@@ -19,20 +19,20 @@ export function getDOMInputs() {
       .toUpperCase(),
     yourName: document.getElementById('yourName').value.trim(),
     yourState: document.getElementById('yourState').value.trim().toUpperCase(), // Convert to uppercase for consistency
-    yourSpeed: parseInt(document.getElementById('yourSpeed').value, 10),
-    yourSidetone: parseInt(document.getElementById('yourSidetone').value, 10),
+    yourSpeed: document.getElementById('yourSpeed').valueAsNumber,
+    yourSidetone: document.getElementById('yourSidetone').valueAsNumber,
     // convert volume to a float between 0 and 1
-    yourVolume: parseFloat(document.getElementById('yourVolume').value) / 100,
-    maxStations: parseInt(document.getElementById('maxStations').value, 10),
-    minSpeed: parseInt(document.getElementById('minSpeed').value, 10),
-    maxSpeed: parseInt(document.getElementById('maxSpeed').value, 10),
-    minTone: parseInt(document.getElementById('minTone').value, 10),
-    maxTone: parseInt(document.getElementById('maxTone').value, 10),
+    yourVolume: document.getElementById('yourVolume').valueAsNumber / 100,
+    maxStations: document.getElementById('maxStations').valueAsNumber,
+    minSpeed: document.getElementById('minSpeed').valueAsNumber,
+    maxSpeed: document.getElementById('maxSpeed').valueAsNumber,
+    minTone: document.getElementById('minTone').valueAsNumber,
+    maxTone: document.getElementById('maxTone').valueAsNumber,
     // convert volumes to a float between 0 and 1
-    minVolume: parseFloat(document.getElementById('minVolume').value) / 100,
-    maxVolume: parseFloat(document.getElementById('maxVolume').value) / 100,
-    minWait: parseFloat(document.getElementById('minWait').value),
-    maxWait: parseFloat(document.getElementById('maxWait').value),
+    minVolume: document.getElementById('minVolume').valueAsNumber / 100,
+    maxVolume: document.getElementById('maxVolume').valueAsNumber / 100,
+    minWait: document.getElementById('minWait').valueAsNumber,
+    maxWait: document.getElementById('maxWait').valueAsNumber,
 
     // Checkboxes & Radio
     usOnly: document.getElementById('usOnly')
@@ -40,14 +40,14 @@ export function getDOMInputs() {
       : false,
     qrn: document.querySelector('input[name="qrn"]:checked').value,
     qsb: document.getElementById('qsb').checked,
-    qsbPercentage: parseInt(document.getElementById('qsbPercentage').value, 10),
+    qsbPercentage: document.getElementById('qsbPercentage').valueAsNumber,
 
     // Farnsworth inputs
     enableFarnsworth: document.getElementById('enableFarnsworth')
       ? document.getElementById('enableFarnsworth').checked
       : false,
     farnsworthSpeed: document.getElementById('farnsworthSpeed')
-      ? parseInt(document.getElementById('farnsworthSpeed').value, 10)
+      ? document.getElementById('farnsworthSpeed').valueAsNumber
       : null,
 
     // Formats (callsign formats are gathered dynamically)

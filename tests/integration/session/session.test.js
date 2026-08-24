@@ -464,31 +464,65 @@ describe('CQ validation', () => {
     expect(document.getElementById('activeStations')).toHaveTextContent('0');
   });
 
-  it('rejects reversed speed and volume ranges before starting a session', async () => {
+  it('rejects native numeric constraint violations before starting a session', async () => {
+    await bootSession();
+    configureValidInputs();
+    const invalidValues = {
+      yourSpeed: '0',
+      maxStations: '',
+      maxWait: '0.1',
+    };
+    const validationMessages = {};
+
+    for (const [fieldId, value] of Object.entries(invalidValues)) {
+      const field = document.getElementById(fieldId);
+      field.value = value;
+      validationMessages[fieldId] = field.validationMessage;
+    }
+
+    document.getElementById('cqButton').click();
+
+    for (const [fieldId, message] of Object.entries(validationMessages)) {
+      const field = document.getElementById(fieldId);
+      expect(message).not.toBe('');
+      expect(field).toHaveClass('is-invalid');
+      expect(
+        field.parentElement.querySelector('.invalid-feedback')
+      ).toHaveTextContent(message);
+    }
+    expect(transcript()).toEqual([]);
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+  });
+
+  it('rejects every reversed numeric range before starting a session', async () => {
     await bootSession();
     configureValidInputs();
     document.getElementById('minSpeed').value = '25';
     document.getElementById('maxSpeed').value = '18';
+    document.getElementById('minTone').value = '500';
+    document.getElementById('maxTone').value = '400';
     document.getElementById('minVolume').value = '80';
     document.getElementById('maxVolume').value = '50';
+    document.getElementById('minWait').value = '1';
+    document.getElementById('maxWait').value = '0';
 
     document.getElementById('cqButton').click();
 
-    expect(document.getElementById('minSpeed')).toHaveClass('is-invalid');
-    expect(
-      document
-        .getElementById('minSpeed')
-        .parentElement.querySelector('.invalid-feedback')
-    ).toHaveTextContent('Minimum Speed cannot be greater than Maximum Speed!');
-    expect(document.getElementById('minVolume')).toHaveClass('is-invalid');
-    expect(
-      document
-        .getElementById('minVolume')
-        .parentElement.querySelector('.invalid-feedback')
-    ).toHaveTextContent(
-      'Minimum Volume cannot be greater than Maximum Volume!'
-    );
+    const feedback = {
+      minSpeed: 'Minimum Speed cannot be greater than Maximum Speed!',
+      minTone: 'Minimum Tone cannot be greater than Maximum Tone!',
+      minVolume: 'Minimum Volume cannot be greater than Maximum Volume!',
+      minWait: 'Minimum Wait cannot be greater than Maximum Wait!',
+    };
+    for (const [fieldId, message] of Object.entries(feedback)) {
+      const field = document.getElementById(fieldId);
+      expect(field).toHaveClass('is-invalid');
+      expect(
+        field.parentElement.querySelector('.invalid-feedback')
+      ).toHaveTextContent(message);
+    }
     expect(transcript()).toEqual([]);
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
   });
 });
 

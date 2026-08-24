@@ -203,6 +203,29 @@ test('invalid CQ is rejected before a station or audio starts', async ({
   expect((await audioSnapshot(page)).scheduledEvents).toBe(0);
 });
 
+test('invalid numeric settings are rejected before a station or audio starts', async ({
+  page,
+}) => {
+  await openApp(page);
+  await configureValidInputs(page);
+  const yourSpeed = page.locator('#yourSpeed');
+  await yourSpeed.fill('0');
+  const validationMessage = await yourSpeed.evaluate(
+    (input) => input.validationMessage
+  );
+
+  expect(validationMessage).not.toBe('');
+  await page.locator('#cqButton').click();
+
+  await expect(yourSpeed).toHaveClass(/is-invalid/);
+  await expect(page.locator('#yourSpeed + .invalid-feedback')).toHaveText(
+    validationMessage
+  );
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  expect((await audioSnapshot(page)).scheduledEvents).toBe(0);
+});
+
 test('Reset, mode switching, and persisted station settings survive a reload', async ({
   page,
 }) => {

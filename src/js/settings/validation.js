@@ -2,6 +2,29 @@ import * as bootstrap from 'bootstrap';
 
 import { getMode } from '../modes/index.js';
 
+const orderedNumericRanges = [
+  {
+    minId: 'minSpeed',
+    maxId: 'maxSpeed',
+    message: 'Minimum Speed cannot be greater than Maximum Speed!',
+  },
+  {
+    minId: 'minTone',
+    maxId: 'maxTone',
+    message: 'Minimum Tone cannot be greater than Maximum Tone!',
+  },
+  {
+    minId: 'minVolume',
+    maxId: 'maxVolume',
+    message: 'Minimum Volume cannot be greater than Maximum Volume!',
+  },
+  {
+    minId: 'minWait',
+    maxId: 'maxWait',
+    message: 'Minimum Wait cannot be greater than Maximum Wait!',
+  },
+];
+
 /**
  * Validates the collected form inputs and ensures their logical consistency.
  *
@@ -33,30 +56,26 @@ export function validateInputs(inputs) {
     }
   }
 
-  if (inputs.minSpeed > inputs.maxSpeed) {
+  for (const input of document.querySelectorAll('input[type="number"]')) {
+    if (!input.willValidate || input.validity.valid) continue;
+
     markFieldInvalid(
-      'minSpeed',
-      'Minimum Speed cannot be greater than Maximum Speed!'
+      input.id,
+      input.validationMessage || 'Enter a valid value.'
     );
-    openAccordionSection('collapseRespondingStationSettings');
+    openContainingAccordionSection(input);
     isValid = false;
   }
 
-  if (inputs.minVolume > inputs.maxVolume) {
-    markFieldInvalid(
-      'minVolume',
-      'Minimum Volume cannot be greater than Maximum Volume!'
-    );
-    openAccordionSection('collapseRespondingStationSettings');
-    isValid = false;
-  }
+  for (const { minId, maxId, message } of orderedNumericRanges) {
+    const minInput = document.getElementById(minId);
+    const maxInput = document.getElementById(maxId);
 
-  if (inputs.minSpeed > inputs.maxSpeed) {
-    markFieldInvalid(
-      'minSpeed',
-      'Minimum Speed cannot be greater than Maximum Speed!'
-    );
-    openAccordionSection('collapseRespondingStationSettings');
+    if (!minInput.validity.valid || !maxInput.validity.valid) continue;
+    if (inputs[minId] <= inputs[maxId]) continue;
+
+    markFieldInvalid(minId, message);
+    openContainingAccordionSection(minInput);
     isValid = false;
   }
 
@@ -129,5 +148,17 @@ function openAccordionSection(sectionId) {
       bsCollapse = new bootstrap.Collapse(section, { toggle: false });
     }
     bsCollapse.show();
+  }
+}
+
+/**
+ * Opens the accordion section containing an invalid input.
+ *
+ * @param {HTMLInputElement} input - Invalid input whose section should be shown.
+ */
+function openContainingAccordionSection(input) {
+  const section = input.closest('.accordion-collapse');
+  if (section) {
+    openAccordionSection(section.id);
   }
 }

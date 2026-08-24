@@ -41,21 +41,27 @@ Evidence:
 - `tests/unit/audio/station-mix.test.js`
 - `tests/unit/settings/inputs.test.js`
 
-## 3. Numeric input constraints are not fully enforced
+## 3. FIXED: Numeric input constraints are not fully enforced
+
+Status: Fixed on `v1-defect-3-numeric-input-constraints`
 
 Severity: High
 
-The HTML declares numeric minima, maxima, and steps, but the application does
-not submit a form or otherwise apply all native constraints. Values such as
-zero WPM, out-of-range volume, reversed tone ranges, and reversed wait ranges
-can pass the current custom validation. Custom validation currently compares
-only speed and volume ranges.
+The baseline read numeric values without applying the minima, maxima, steps,
+and required constraints declared in HTML. The fix validates every enabled
+number input with the browser Constraint Validation API, displays its localized
+message in Bootstrap feedback, and reads accepted values with browser number
+semantics. Speed, tone, volume, and wait ranges must also be ordered from
+minimum to maximum.
 
 Evidence:
 
 - `src/js/settings/read.js`
 - `src/js/settings/validation.js`
+- `src/index.html`, numeric input feedback
 - `tests/unit/settings/inputs.test.js`
+- `tests/integration/session/session.test.js`
+- `tests/e2e/morsewalker.spec.js`
 
 ## 4. Maximum tone is exclusive
 
