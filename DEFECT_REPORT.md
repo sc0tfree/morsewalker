@@ -128,19 +128,30 @@ Evidence:
 - `src/js/results/table.js`, `updateSummaryRow`
 - `tests/unit/results/util-results.test.js`
 
-## 7. Resetting active QRN re-locks the replacement audio context
+## 7. FIXED: Resetting active QRN re-locks the replacement audio context
+
+Status: Fixed on `v1-defect-7-qrn-lifecycle`
 
 Severity: Medium
 
-When QRN is active, `stopAllAudio` replaces the foreground context and clears
-its lock, then the QRN fade extends the new lock for the fade duration. An
-immediate action can therefore remain blocked after an audio reset.
+The baseline QRN fade extended the foreground audio lock. Because
+`stopAllAudio` replaced the foreground context before starting that fade, the
+fade wrote a new deadline into the replacement context and silently blocked an
+immediate CQ, Send, or TU.
+
+The fix makes the foreground lock exclusive to Morse scheduling. QRN tracks
+retire synchronously, fade and stop on the background context's timeline, and
+clean up only their own captured nodes. An immediate CQ can therefore load a
+replacement while the previous QRN fades, without a stale callback stopping
+the replacement. Stopping during a pending load also prevents that load from
+starting QRN afterward.
 
 Evidence:
 
 - `src/js/audio/lifecycle.js`
 - `src/js/audio/background-static.js`, `stopBackgroundStatic`
 - `tests/unit/audio/background-static.test.js`
+- `tests/integration/session/session.test.js`
 
 ## 8. State persistence relies on a browser-created global
 
@@ -199,3 +210,25 @@ Evidence:
 - `src/js/stations/generator.js`, `getCallingStation`
 - `tests/unit/audio/morse-player.test.js`
 - `tests/unit/stations/stationGenerator.test.js`
+
+## 11. FIXED: QRN cannot be re-enabled after selecting Off
+
+Status: Fixed on `v1-defect-7-qrn-lifecycle`
+
+Severity: Medium
+
+The baseline used the presence of a QRN source to decide whether intensity
+changes should do anything. During an active session, selecting Off stopped and
+cleared the source. A later selection of Normal, Moderate, or Heavy then saw no
+source and returned without starting one, leaving QRN stuck off.
+
+The fix tracks active-session QRN intent separately from the current source.
+Off can now silence QRN while preserving that intent, so selecting any audible
+level starts a replacement. Setting changes before the first CQ or after an
+audio reset remain silent until CQ starts a session.
+
+Evidence:
+
+- `src/js/audio/background-static.js`, `updateStaticIntensity`
+- `tests/unit/audio/background-static.test.js`
+- `tests/integration/session/session.test.js`
