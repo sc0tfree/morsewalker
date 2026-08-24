@@ -9,6 +9,7 @@ export default {
   label: 'K1USN SST',
   ui: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Name',
     showInfoField2: true,
@@ -28,6 +29,22 @@ export default {
       `GL ${arbitrary} TU ${yourStation.callsign} SST`,
     theirSignoff: null,
     signoffArg: ({ infoValue1 }) => infoValue1,
+    exchangeComponents: [
+      {
+        id: 'name',
+        inputId: 'infoField',
+        fieldKey: 'name',
+        request: 'NAME?',
+        reply: (station) => station.name,
+      },
+      {
+        id: 'state',
+        inputId: 'infoField2',
+        fieldKey: 'state',
+        request: 'STATE?',
+        reply: (station) => station.state,
+      },
+    ],
     requiresInfoField: true,
     requiresInfoField2: true,
     showTuStep: true,

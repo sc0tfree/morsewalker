@@ -25,6 +25,7 @@ beforeAll(async () => {
 const uiContracts = {
   single: {
     showTuButton: false,
+    showAgnButton: false,
     showInfoField: false,
     infoFieldPlaceholder: '',
     showInfoField2: false,
@@ -35,6 +36,7 @@ const uiContracts = {
   },
   contest: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Serial Number',
     showInfoField2: false,
@@ -45,6 +47,7 @@ const uiContracts = {
   },
   pota: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'State',
     showInfoField2: false,
@@ -55,6 +58,7 @@ const uiContracts = {
   },
   sst: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Name',
     showInfoField2: true,
@@ -65,6 +69,7 @@ const uiContracts = {
   },
   cwt: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Name',
     showInfoField2: true,
@@ -85,6 +90,7 @@ const logicContracts = {
       theirSignoff: 'EE',
     },
     metadata: {
+      exchangeComponents: [],
       requiresInfoField: false,
       requiresInfoField2: false,
       showTuStep: false,
@@ -102,6 +108,15 @@ const logicContracts = {
       theirSignoff: null,
     },
     metadata: {
+      exchangeComponents: [
+        {
+          id: 'serialNumber',
+          inputId: 'infoField',
+          fieldKey: 'serialNumber',
+          request: 'NR?',
+          reply: '07',
+        },
+      ],
       requiresInfoField: true,
       requiresInfoField2: false,
       showTuStep: true,
@@ -119,6 +134,15 @@ const logicContracts = {
       theirSignoff: 'EE',
     },
     metadata: {
+      exchangeComponents: [
+        {
+          id: 'state',
+          inputId: 'infoField',
+          fieldKey: 'state',
+          request: 'STATE?',
+          reply: 'TX TX',
+        },
+      ],
       requiresInfoField: true,
       requiresInfoField2: false,
       showTuStep: true,
@@ -136,6 +160,22 @@ const logicContracts = {
       theirSignoff: null,
     },
     metadata: {
+      exchangeComponents: [
+        {
+          id: 'name',
+          inputId: 'infoField',
+          fieldKey: 'name',
+          request: 'NAME?',
+          reply: 'Alice',
+        },
+        {
+          id: 'state',
+          inputId: 'infoField2',
+          fieldKey: 'state',
+          request: 'STATE?',
+          reply: 'TX',
+        },
+      ],
       requiresInfoField: true,
       requiresInfoField2: true,
       showTuStep: true,
@@ -153,6 +193,22 @@ const logicContracts = {
       theirSignoff: null,
     },
     metadata: {
+      exchangeComponents: [
+        {
+          id: 'name',
+          inputId: 'infoField',
+          fieldKey: 'name',
+          request: 'NAME?',
+          reply: 'Alice',
+        },
+        {
+          id: 'cwopsNumber',
+          inputId: 'infoField2',
+          fieldKey: 'cwopsNumber',
+          request: 'NR?',
+          reply: '2468',
+        },
+      ],
       requiresInfoField: true,
       requiresInfoField2: true,
       showTuStep: true,
@@ -209,6 +265,15 @@ describe('mode contracts', () => {
       }).toEqual(expected.messages);
 
       expect({
+        exchangeComponents: logic.exchangeComponents.map(
+          ({ id, inputId, fieldKey, request, reply }) => ({
+            id,
+            inputId,
+            fieldKey,
+            request,
+            reply: reply(theirStation),
+          })
+        ),
         requiresInfoField: logic.requiresInfoField,
         requiresInfoField2: logic.requiresInfoField2,
         showTuStep: logic.showTuStep,
