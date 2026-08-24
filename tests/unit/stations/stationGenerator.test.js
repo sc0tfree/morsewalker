@@ -239,7 +239,7 @@ describe('calling-station attributes', () => {
       wpm: 25,
       enableFarnsworth: false,
       farnsworthSpeed: 10,
-      frequency: 899,
+      frequency: 900,
       name: 'Yan',
       state: 'WY',
       serialNumber: '30',
