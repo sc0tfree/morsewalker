@@ -309,6 +309,10 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('agnButton')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveClass('btn-warning');
     expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
+    const [agnKey, enterKey] = infoCard.querySelectorAll('kbd');
+    expect(agnKey).toHaveTextContent('AGN');
+    expect(agnKey).toHaveClass('bg-warning', 'text-dark');
+    expect(enterKey).toHaveTextContent('Enter');
     expect(infoCard).toHaveTextContent(
       'Enter the exchange details you copy, such as a name, state, or serial number.'
     );
