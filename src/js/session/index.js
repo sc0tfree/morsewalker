@@ -374,6 +374,8 @@ function requestFill({ focusFirstComponent = false } = {}) {
     return;
   }
 
+  console.log(`--> Sending "${fill.request}"`);
+
   const yourResponseTimer = yourStation.player.playSentence(fill.request);
   updateAudioLock(yourResponseTimer);
 

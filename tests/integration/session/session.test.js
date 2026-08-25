@@ -960,6 +960,7 @@ describe('session controls and message flows', () => {
       ['N0ME', 'NR?'],
       ['K0A', '1'],
     ]);
+    expect(console.log).toHaveBeenCalledWith('--> Sending "NR?"');
     expect(resultsRows()).toHaveLength(0);
     expect(document.getElementById('activeStations')).toHaveTextContent('1');
     expect(document.getElementById('infoField')).toHaveValue('Adam');
@@ -997,6 +998,7 @@ describe('session controls and message flows', () => {
       ['N0ME', 'AGN?'],
       ['K0A', 'Adam 1'],
     ]);
+    expect(console.log).toHaveBeenCalledWith('--> Sending "AGN?"');
     expect(document.getElementById('infoField')).toHaveValue('');
     expect(document.getElementById('infoField2')).toHaveValue('');
     expect(resultsRows()).toHaveLength(0);
