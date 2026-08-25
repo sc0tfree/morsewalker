@@ -299,10 +299,66 @@ describe('session initialization and mode UI', () => {
     expect(RecordingAudioContext.instances.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('keeps AGN guidance in the mode-specific card and six-card Help grid', async () => {
+  it('styles Help control references and typed values in the six-card grid', async () => {
     await bootSession();
 
-    expect(document.querySelectorAll('#helpModal .col-xl-4')).toHaveLength(6);
+    const helpModal = document.getElementById('helpModal');
+    expect(helpModal.querySelectorAll('.col-xl-4')).toHaveLength(6);
+
+    const buttonsByLabel = new Map(
+      [...helpModal.querySelectorAll('.card-header button')].map((button) => [
+        button.textContent.trim(),
+        button,
+      ])
+    );
+    const buttonReferences = [
+      ...helpModal.querySelectorAll('.card-body kbd'),
+    ].filter((reference) => buttonsByLabel.has(reference.textContent.trim()));
+    expect(
+      buttonReferences.map((reference) => reference.textContent.trim())
+    ).toEqual([
+      'CQ',
+      'CQ',
+      'Send',
+      'Send',
+      'Send',
+      'AGN',
+      'TU',
+      'TU',
+      'CQ',
+      'Stop',
+      'Reset',
+    ]);
+    for (const reference of buttonReferences) {
+      const label = reference.textContent.trim();
+      const button = buttonsByLabel.get(label);
+      const buttonVariant = [...button.classList].find((className) =>
+        className.startsWith('btn-')
+      );
+
+      expect(reference).toHaveClass(buttonVariant.replace('btn-', 'bg-'));
+      expect(reference).toHaveClass(
+        label === 'Reset' ? 'text-body' : 'text-white'
+      );
+    }
+
+    expect(
+      [...helpModal.querySelectorAll('.card-body code')].map((code) =>
+        code.textContent.trim()
+      )
+    ).toEqual([
+      'AGN',
+      'AGN?',
+      '?',
+      'W6NYC',
+      'W?',
+      'W6?',
+      'W6NC',
+      'NYC',
+      'QRS',
+      'AGN',
+      '?',
+    ]);
 
     const infoCard = document.getElementById('modeInfoHelpCard');
     expect(infoCard.closest('.col-xl-4')).not.toBeNull();
@@ -311,7 +367,7 @@ describe('session initialization and mode UI', () => {
     expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
     const [agnKey, enterKey] = infoCard.querySelectorAll('kbd');
     expect(agnKey).toHaveTextContent('AGN');
-    expect(agnKey).toHaveClass('bg-warning', 'text-dark');
+    expect(agnKey).toHaveClass('bg-warning', 'text-white');
     expect(enterKey).toHaveTextContent('Enter');
     expect(infoCard).toHaveTextContent(
       'Enter the exchange details you copy, such as a name, state, or serial number.'
