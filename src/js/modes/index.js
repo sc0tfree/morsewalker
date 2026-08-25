@@ -12,13 +12,15 @@ import sst from './sst.js';
  *
  * - `id`: the value used in local storage and in the mode radio buttons.
  * - `label`: the text shown on the mode's radio button.
- * - `ui`: which controls and info fields are visible, their placeholders, and
- *   the results table headers. Consumed by `./view.js`.
+ * - `ui`: which controls (including AGN and TU) and info fields are visible,
+ *   their placeholders, and the results table headers. Consumed by `./view.js`.
  * - `logic`: the messages each side sends, which of the operator's info-field
  *   values the sign-off message quotes back (`signoffArg`), whether the info
- *   fields are required, whether the QSO has a TU step, and which
- *   calling-station attributes the info fields are scored against. Consumed by
- *   `../session/index.js`.
+ *   fields are required, whether the QSO has a TU step, which calling-station
+ *   attributes the info fields are scored against, and the ordered
+ *   `exchangeComponents` available for AGN fills. Each exchange component
+ *   declares an `id`, `inputId`, station `fieldKey`, canonical `request`, and
+ *   `reply` formatter. Consumed by `../session/index.js`.
  * - `requiredOperatorFields`: the operator's own settings the mode cannot run
  *   without, each an `{ id, message }` pair where `id` is both the input's DOM
  *   element id and its key on the collected inputs. Consumed by

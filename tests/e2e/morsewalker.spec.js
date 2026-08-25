@@ -152,6 +152,168 @@ for (const journey of modeJourneys) {
   });
 }
 
+test('Enter and AGN repeat CWT fields and record each count', async ({
+  page,
+}) => {
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'cwt');
+
+  const agnButton = page.locator('#agnButton');
+  const infoField = page.locator('#infoField');
+  const infoField2 = page.locator('#infoField2');
+
+  await expect(agnButton).toBeVisible();
+  await expect(agnButton).toBeDisabled();
+
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+
+  await expect(infoField).toBeFocused();
+  await expect(agnButton).toBeEnabled();
+  await releaseAudio(page);
+
+  await infoField.fill('Adam');
+  const oneFieldEvents = (await audioSnapshot(page)).scheduledEvents;
+  await infoField.press('Enter');
+
+  await expect(infoField2).toBeFocused();
+  await expect(infoField).toHaveValue('Adam');
+  await expect(infoField2).toHaveValue('');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  await expect
+    .poll(async () => (await audioSnapshot(page)).scheduledEvents)
+    .toBeGreaterThan(oneFieldEvents);
+
+  await releaseAudio(page);
+  await infoField.fill('');
+  const allFieldEvents = (await audioSnapshot(page)).scheduledEvents;
+  await agnButton.click();
+
+  await expect(infoField).toBeFocused();
+  await expect(infoField).toHaveValue('');
+  await expect(infoField2).toHaveValue('');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  await expect
+    .poll(async () => (await audioSnapshot(page)).scheduledEvents)
+    .toBeGreaterThan(allFieldEvents);
+
+  await releaseAudio(page);
+  await infoField.fill('Adam');
+  await infoField2.fill('1');
+  await expect(agnButton).toBeDisabled();
+
+  await setRandom(page, 0.9);
+  await page.locator('#tuButton').click();
+
+  const cells = page.locator('#resultsTable tbody tr').first().locator('td');
+  await expect(cells.nth(3)).toHaveText('3');
+  await expect(cells.nth(5)).toContainText('ADAM (1 AGN) / 1 (2 AGN)');
+});
+
+test('AGN controls and Help retain their responsive layout', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'cwt');
+
+  const desktopActions = await page
+    .locator('#agnButton, #tuButton')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, y: rect.y };
+      })
+    );
+  expect(desktopActions[0].x).toBeLessThan(desktopActions[1].x);
+  expect(Math.abs(desktopActions[0].y - desktopActions[1].y)).toBeLessThan(2);
+
+  await page.locator('[data-bs-target="#helpModal"]').click();
+  await expect(page.locator('#helpModal')).toBeVisible();
+  await expect(page.locator('#helpModal .col-xl-4')).toHaveCount(6);
+  await expect(page.locator('#modeInfoHelpCard button')).toHaveText('AGN');
+  await expect(page.locator('#modeInfoHelpCard')).toContainText(
+    'Only those fields repeat. The QSO stays open.'
+  );
+
+  const desktopHelpColumns = await page
+    .locator('#helpModal .col-xl-4')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, y: rect.y };
+      })
+    );
+  expect(
+    Math.abs(desktopHelpColumns[0].y - desktopHelpColumns[1].y)
+  ).toBeLessThan(2);
+  expect(
+    Math.abs(desktopHelpColumns[1].y - desktopHelpColumns[2].y)
+  ).toBeLessThan(2);
+  expect(
+    Math.abs(desktopHelpColumns[3].y - desktopHelpColumns[4].y)
+  ).toBeLessThan(2);
+  expect(
+    Math.abs(desktopHelpColumns[4].y - desktopHelpColumns[5].y)
+  ).toBeLessThan(2);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const mobileHelpColumns = await page
+    .locator('#helpModal .col-xl-4')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: rect.width, y: rect.y };
+      })
+    );
+  for (let index = 1; index < mobileHelpColumns.length; index += 1) {
+    expect(mobileHelpColumns[index].y).toBeGreaterThan(
+      mobileHelpColumns[index - 1].y
+    );
+  }
+  expect(
+    Math.max(...mobileHelpColumns.map(({ width }) => width)) -
+      Math.min(...mobileHelpColumns.map(({ width }) => width))
+  ).toBeLessThan(2);
+
+  await page.locator('#helpModal [data-bs-dismiss="modal"]').last().click();
+  await expect(page.locator('#helpModal')).toBeHidden();
+
+  const mobileControls = await page
+    .locator('#infoField, #infoField2, #agnButton, #tuButton')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          bottom: rect.bottom,
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+        };
+      })
+    );
+  for (const control of mobileControls) {
+    expect(control.left).toBeGreaterThanOrEqual(0);
+    expect(control.right).toBeLessThanOrEqual(390);
+  }
+  for (let first = 0; first < mobileControls.length; first += 1) {
+    for (let second = first + 1; second < mobileControls.length; second += 1) {
+      const a = mobileControls[first];
+      const b = mobileControls[second];
+      const overlaps =
+        a.left < b.right &&
+        a.right > b.left &&
+        a.top < b.bottom &&
+        a.bottom > b.top;
+      expect(overlaps).toBe(false);
+    }
+  }
+});
+
 test('repeat, partial, and QRS requests recover into a completed contact', async ({
   page,
 }) => {

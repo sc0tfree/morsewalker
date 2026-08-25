@@ -961,7 +961,7 @@
           <!-- Force a new line after sendButton on small screens -->
           <div class="w-100 d-sm-block d-md-none"></div>
 
-          <!-- Second row on small: infoField, infoField2, TU -->
+          <!-- Second row on small: infoField, infoField2, AGN, TU -->
           <input
             type="text"
             id="infoField"
@@ -984,6 +984,14 @@
             spellcheck="false"
             autocorrect="off"
           />
+          <button
+            id="agnButton"
+            class="btn btn-warning me-2 mb-2"
+            style="display: none"
+            disabled
+          >
+            AGN
+          </button>
           <button id="tuButton" class="btn btn-info mb-2" style="display: none">
             TU
           </button>
@@ -1131,21 +1139,36 @@
 
               <!-- Info Fields Card -->
               <div class="col-12 col-xl-4">
-                <div class="card border-info h-100">
-                  <div class="card-header">
+                <div id="modeInfoHelpCard" class="card border-info h-100">
+                  <div class="card-header d-flex align-items-center">
                     <input
                       type="text"
                       class="form-control me-2"
                       style="max-width: 200px"
                       placeholder="Mode-Specific Info"
                     />
+                    <button class="btn btn-warning">AGN</button>
                   </div>
                   <div class="card-body">
                     <p class="card-text">
-                      These mode-specific fields appear when you need to enter
-                      extra details, such as a name, state, or a contest serial
-                      number. Filling these in are completely optional before
-                      clicking "TU".
+                      Enter the exchange details you copy, such as a name,
+                      state, or serial number.
+                    </p>
+                    <p class="card-text mb-2">
+                      <strong>Need a repeat?</strong>
+                    </p>
+                    <ul class="mb-2">
+                      <li>
+                        Leave a field blank, enter <code>AGN</code>, or add
+                        <code>?</code> anywhere in it.
+                      </li>
+                      <li>
+                        Click <kbd class="bg-warning text-dark">AGN</kbd> or
+                        press <kbd>Enter</kbd> before all fields are complete.
+                      </li>
+                    </ul>
+                    <p class="card-text mb-0">
+                      Only those fields repeat. The QSO stays open.
                     </p>
                   </div>
                 </div>

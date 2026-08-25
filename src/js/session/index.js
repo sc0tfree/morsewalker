@@ -24,6 +24,9 @@ import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
 import { wireSettingsStorage } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
+import { resolveFill, selectFillComponents } from './fills.js';
+import { applyCutNumbers } from './message-format.js';
+import { setAgnButtonEnabled } from './view.js';
 
 /**
  * Application state variables.
@@ -39,6 +42,7 @@ import { submitStartupStats } from '../telemetry/stats.js';
  * - `totalContacts`: Counter for the total number of completed contacts.
  * - `yourStation`: Stores the user's station configuration.
  * - `lastRespondingStations`: An array of stations that last responded to the user's call.
+ * - `currentExchangeAgnCounts`: Per-component AGN requests for the selected QSO.
  * - `farnsworthLowerBy`: The amount to increase the Farnsworth spacing when using QRS.
  */
 let currentMode;
@@ -52,6 +56,8 @@ let currentStationStartTime = null;
 let totalContacts = 0;
 let yourStation = null;
 let lastRespondingStations = null;
+let currentExchangeAgnCounts = {};
+let lastFocusedInfoFieldId = null;
 const farnsworthLowerBy = 6;
 
 /**
@@ -68,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
   const sendButton = document.getElementById('sendButton');
+  const agnButton = document.getElementById('agnButton');
   const tuButton = document.getElementById('tuButton');
   const resetButton = document.getElementById('resetButton');
   const stopButton = document.getElementById('stopButton');
@@ -82,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Event Listeners
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
+  agnButton.addEventListener('click', () => requestFill());
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
   stopButton.addEventListener('click', stop);
@@ -172,18 +180,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  infoField.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && tuButton.style.display !== 'none') {
-      event.preventDefault();
-      tuButton.click();
-    }
-  });
-
-  infoField2.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && tuButton.style.display !== 'none') {
-      event.preventDefault();
-      tuButton.click();
-    }
+  [infoField, infoField2].forEach((field) => {
+    field.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && tuButton.style.display !== 'none') {
+        event.preventDefault();
+        const eligibleComponents =
+          getEligibleExchangeComponents(getModeConfig());
+        if (readyForTU && eligibleComponents.length > 0) {
+          requestFill({ focusFirstComponent: true });
+        } else {
+          tuButton.click();
+        }
+      }
+    });
+    field.addEventListener('input', updateAgnButtonAvailability);
+    field.addEventListener('focus', () => {
+      lastFocusedInfoFieldId = field.id;
+    });
   });
 
   cqButton.addEventListener('click', () => {
@@ -238,6 +251,152 @@ function getModeConfig() {
 }
 
 /**
+ * Initializes zeroed AGN counts for a newly selected exchange.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ */
+function initializeExchangeAgnCounts(modeConfig) {
+  currentExchangeAgnCounts = Object.fromEntries(
+    modeConfig.exchangeComponents.map(({ id }) => [id, 0])
+  );
+}
+
+/**
+ * Clears all AGN counts outside an active selected exchange.
+ */
+function clearExchangeAgnCounts() {
+  currentExchangeAgnCounts = {};
+}
+
+/**
+ * Records one AGN request for every component replayed by an action.
+ *
+ * @param {Object[]} components - The exchange components that were replayed.
+ */
+function recordExchangeAgn(components) {
+  components.forEach(({ id }) => {
+    currentExchangeAgnCounts[id] = (currentExchangeAgnCounts[id] || 0) + 1;
+  });
+}
+
+/**
+ * Reads the AGN count associated with one mode-specific input.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @param {string} inputId - The mode-specific input id.
+ * @returns {number} The number of accepted fill requests.
+ */
+function getExchangeAgnCount(modeConfig, inputId) {
+  const component = modeConfig.exchangeComponents.find(
+    (candidate) => candidate.inputId === inputId
+  );
+
+  return component ? currentExchangeAgnCounts[component.id] || 0 : 0;
+}
+
+/**
+ * Reads the current values for the mode's ordered exchange components.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @returns {Object<string, string>} Field values keyed by input id.
+ */
+function getExchangeFieldValues(modeConfig) {
+  return Object.fromEntries(
+    modeConfig.exchangeComponents.map(({ inputId }) => [
+      inputId,
+      document.getElementById(inputId).value,
+    ])
+  );
+}
+
+/**
+ * Selects every exchange component currently marked for a fill.
+ *
+ * @param {Object} modeConfig - The current mode's logic configuration.
+ * @returns {Object[]} Eligible components in mode order.
+ */
+function getEligibleExchangeComponents(modeConfig) {
+  return selectFillComponents(
+    modeConfig.exchangeComponents,
+    getExchangeFieldValues(modeConfig)
+  );
+}
+
+/**
+ * Synchronizes AGN availability with QSO phase and exchange field contents.
+ */
+function updateAgnButtonAvailability() {
+  const modeConfig = getModeConfig();
+  const eligibleComponents = getEligibleExchangeComponents(modeConfig);
+
+  setAgnButtonEnabled(readyForTU && eligibleComponents.length > 0);
+}
+
+/**
+ * Focuses an explicit mode-specific field or restores the most recently used one.
+ *
+ * @param {string|null} inputId - An explicit field to focus.
+ */
+function restoreInfoFieldFocus(inputId = lastFocusedInfoFieldId) {
+  if (inputId) {
+    document.getElementById(inputId).focus();
+  }
+}
+
+/**
+ * Requests the missing or uncertain components for the selected station.
+ *
+ * @param {Object} options - Focus behavior for the completed request.
+ * @param {boolean} options.focusFirstComponent - Focus the first repeated field.
+ */
+function requestFill({ focusFirstComponent = false } = {}) {
+  if (getAudioLock()) {
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  const modeConfig = getModeConfig();
+  const selectedStation = currentStations[activeStationIndex];
+  if (!readyForTU || !selectedStation) {
+    updateAgnButtonAvailability();
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  const fill = resolveFill(
+    modeConfig.exchangeComponents,
+    getExchangeFieldValues(modeConfig),
+    selectedStation
+  );
+  if (!fill) {
+    updateAgnButtonAvailability();
+    restoreInfoFieldFocus();
+    return;
+  }
+
+  console.log(`--> Sending "${fill.request}"`);
+
+  const yourResponseTimer = yourStation.player.playSentence(fill.request);
+  updateAudioLock(yourResponseTimer);
+
+  const response = applyCutNumbers(fill.response, inputs);
+  if (response) {
+    const theirResponseTimer = selectedStation.player.playSentence(
+      response,
+      yourResponseTimer + 0.5
+    );
+    updateAudioLock(theirResponseTimer);
+  }
+
+  recordExchangeAgn(fill.components);
+  currentStationAttempts++;
+  updateAgnButtonAvailability();
+  restoreInfoFieldFocus(
+    focusFirstComponent ? fill.components[0].inputId : lastFocusedInfoFieldId
+  );
+}
+
+/**
  * Resets the game state and clears all UI elements.
  *
  * Resets variables related to stations, attempts, and contacts. Clears the results
@@ -251,6 +410,8 @@ function resetGameState() {
   currentStationAttempts = 0;
   currentStationStartTime = null;
   totalContacts = 0;
+  clearExchangeAgnCounts();
+  lastFocusedInfoFieldId = null;
 
   updateActiveStations(0);
   clearTable('resultsTable');
@@ -258,6 +419,7 @@ function resetGameState() {
   document.getElementById('infoField').value = '';
   document.getElementById('infoField2').value = '';
   document.getElementById('cqButton').disabled = false;
+  updateAgnButtonAvailability();
   stopAllAudio();
   updateAudioLock(0);
 }
@@ -425,22 +587,8 @@ function send() {
           null
         );
 
-        if (inputs.enableCutNumbers) {
-          // inputs.cutNumbers is the object returned by getSelectedCutNumbers()
-          // e.g. { '0': 'T', '9': 'N' } if T/0 and N/9 are selected
-          const cutMap = inputs.cutNumbers;
-
-          // Convert any digits in yourExchange and theirExchange
-          // to their cut-letter equivalent, if found in cutMap
-          yourExchange = yourExchange.replace(
-            /\d/g,
-            (digit) => cutMap[digit] || digit
-          );
-          theirExchange = theirExchange.replace(
-            /\d/g,
-            (digit) => cutMap[digit] || digit
-          );
-        }
+        yourExchange = applyCutNumbers(yourExchange, inputs);
+        theirExchange = applyCutNumbers(theirExchange, inputs);
 
         let yourResponseTimer2 = yourStation.player.playSentence(
           yourExchange,
@@ -453,11 +601,14 @@ function send() {
         updateAudioLock(theirResponseTimer);
         currentStationAttempts++;
 
+        readyForTU = true;
+        activeStationIndex = matchIndex;
+        initializeExchangeAgnCounts(modeConfig);
+        updateAgnButtonAvailability();
+
         if (modeConfig.requiresInfoField) {
           infoField.focus();
         }
-        readyForTU = true;
-        activeStationIndex = matchIndex;
         return;
       }
     }
@@ -638,14 +789,16 @@ function tu() {
   extraInfo += compareExtraInfo(
     modeConfig.extraInfoFieldKey,
     infoValue1,
-    currentStation
+    currentStation,
+    getExchangeAgnCount(modeConfig, 'infoField')
   );
   if (modeConfig.requiresInfoField2 && modeConfig.extraInfoFieldKey2) {
     if (extraInfo.length > 0) extraInfo += ' / ';
     extraInfo += compareExtraInfo(
       modeConfig.extraInfoFieldKey2,
       infoValue2,
-      currentStation
+      currentStation,
+      getExchangeAgnCount(modeConfig, 'infoField2')
     );
   }
 
@@ -705,12 +858,15 @@ function tu() {
   activeStationIndex = null;
   currentStationAttempts = 0;
   readyForTU = false;
+  clearExchangeAgnCounts();
   updateActiveStations(currentStations.length);
 
   const responseField = document.getElementById('responseField');
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  lastFocusedInfoFieldId = null;
+  updateAgnButtonAvailability();
   responseField.focus();
 
   // Chance of a new station joining
@@ -764,6 +920,7 @@ function nextSingleStation(responseStartTime) {
  */
 function stop() {
   stopAllAudio();
+  clearExchangeAgnCounts();
   const cqButton = document.getElementById('cqButton');
   cqButton.disabled = false;
 
@@ -792,6 +949,7 @@ function reset() {
   currentStations = [];
   activeStationIndex = null;
   readyForTU = false;
+  clearExchangeAgnCounts();
 
   updateActiveStations(0);
   updateAudioLock(0);
@@ -803,6 +961,8 @@ function reset() {
   responseField.value = '';
   infoField.value = '';
   infoField2.value = '';
+  lastFocusedInfoFieldId = null;
+  updateAgnButtonAvailability();
   responseField.focus();
 
   const modeConfig = getModeConfig();

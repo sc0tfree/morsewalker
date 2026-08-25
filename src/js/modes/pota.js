@@ -9,6 +9,7 @@ export default {
   label: 'POTA Activator',
   ui: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'State',
     showInfoField2: false,
@@ -27,6 +28,15 @@ export default {
       `<BK> TU ${arbitrary} 73 EE`,
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
     signoffArg: ({ infoValue1 }) => infoValue1,
+    exchangeComponents: [
+      {
+        id: 'state',
+        inputId: 'infoField',
+        fieldKey: 'state',
+        request: 'STATE?',
+        reply: (station) => `${station.state} ${station.state}`,
+      },
+    ],
     requiresInfoField: true,
     requiresInfoField2: false,
     showTuStep: true,

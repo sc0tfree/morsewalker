@@ -9,6 +9,7 @@ export default {
   label: 'CWT',
   ui: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Name',
     showInfoField2: true,
@@ -28,6 +29,22 @@ export default {
       `TU ${yourStation.callsign}`,
     theirSignoff: null,
     signoffArg: () => null,
+    exchangeComponents: [
+      {
+        id: 'name',
+        inputId: 'infoField',
+        fieldKey: 'name',
+        request: 'NAME?',
+        reply: (station) => station.name,
+      },
+      {
+        id: 'cwopsNumber',
+        inputId: 'infoField2',
+        fieldKey: 'cwopsNumber',
+        request: 'NR?',
+        reply: (station) => `${station.cwopsNumber}`,
+      },
+    ],
     requiresInfoField: true,
     requiresInfoField2: true,
     showTuStep: true,

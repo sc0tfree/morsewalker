@@ -9,6 +9,7 @@ export default {
   label: 'Basic Contest',
   ui: {
     showTuButton: true,
+    showAgnButton: true,
     showInfoField: true,
     infoFieldPlaceholder: 'Serial Number',
     showInfoField2: false,
@@ -27,6 +28,15 @@ export default {
       `TU ${yourStation.callsign}`,
     theirSignoff: null,
     signoffArg: () => null,
+    exchangeComponents: [
+      {
+        id: 'serialNumber',
+        inputId: 'infoField',
+        fieldKey: 'serialNumber',
+        request: 'NR?',
+        reply: (station) => station.serialNumber,
+      },
+    ],
     requiresInfoField: true,
     requiresInfoField2: false,
     showTuStep: true,

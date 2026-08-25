@@ -9,6 +9,7 @@ export default {
   label: 'Single Caller',
   ui: {
     showTuButton: false,
+    showAgnButton: false,
     showInfoField: false,
     infoFieldPlaceholder: '',
     showInfoField2: false,
@@ -25,6 +26,7 @@ export default {
     yourSignoff: (yourStation, theirStation, arbitrary) => `TU EE`,
     theirSignoff: (yourStation, theirStation, arbitrary) => `EE`,
     signoffArg: () => null,
+    exchangeComponents: [],
     requiresInfoField: false,
     requiresInfoField2: false,
     showTuStep: false,

@@ -8,10 +8,18 @@
  * @param {string} fieldKey - The station attribute to compare (e.g., name, state).
  * @param {string} userInput - The user's input value.
  * @param {Object} callingStation - The station object to compare against.
+ * @param {number} agnCount - Number of fills requested for this field.
  * @returns {string} A string indicating correctness or showing the expected value.
  */
-export function compareExtraInfo(fieldKey, userInput, callingStation) {
+export function compareExtraInfo(
+  fieldKey,
+  userInput,
+  callingStation,
+  agnCount = 0
+) {
   if (!fieldKey) return '';
+
+  const agnSuffix = agnCount > 0 ? ` (${agnCount} AGN)` : '';
 
   // Grab the raw expected value
   let expectedValue = callingStation[fieldKey];
@@ -24,17 +32,17 @@ export function compareExtraInfo(fieldKey, userInput, callingStation) {
     if (isNaN(userValInt)) {
       return `<span class="text-warning">
                 <i class="fa-solid fa-triangle-exclamation me-1"></i>
-              </span> (${expectedValue})`;
+              </span> (${expectedValue})${agnSuffix}`;
     }
 
     let correct = userValInt === Number(expectedValue);
     return correct
       ? `<span class="text-success">
            <i class="fa-solid fa-check me-1"></i><strong>${userValInt}</strong>
-         </span>`
+         </span>${agnSuffix}`
       : `<span class="text-warning">
            <i class="fa-solid fa-triangle-exclamation me-1"></i>${userValInt}
-         </span> (${expectedValue})`;
+         </span> (${expectedValue})${agnSuffix}`;
   }
 
   // For string-based fields (e.g. name, state), force them to string
@@ -43,7 +51,7 @@ export function compareExtraInfo(fieldKey, userInput, callingStation) {
 
   // Special rule: if both are empty => "N/A"
   if (upperExpectedValue === '') {
-    return 'N/A';
+    return `N/A${agnSuffix}`;
   }
 
   // Normal string comparison
@@ -51,8 +59,8 @@ export function compareExtraInfo(fieldKey, userInput, callingStation) {
   return correct
     ? `<span class="text-success">
          <i class="fa-solid fa-check me-1"></i><strong>${userInput}</strong>
-       </span>`
+       </span>${agnSuffix}`
     : `<span class="text-warning">
          <i class="fa-solid fa-triangle-exclamation me-1"></i>${userInput}
-       </span> (${upperExpectedValue})`;
+       </span> (${upperExpectedValue})${agnSuffix}`;
 }

@@ -45,6 +45,13 @@ mode-specific inputs, result fields, and completion path.
 - Send preserves the current behavior for empty input, wrong input, partial
   callsigns, exact callsigns, uncertain exact callsigns containing `?`, `AGN`,
   `AGN?`, `?`, and `QRS`.
+- AGN becomes available after an exact caller is selected when at least one
+  mode-specific field is blank, equals `AGN`, or contains `?`. One missing field
+  sends its canonical request; all missing fields send `AGN?`. The selected
+  station repeats only those fields without logging or advancing the QSO. Enter
+  in any mode-specific field invokes this AGN action while a field qualifies,
+  then focuses the first repeated field. Enter invokes TU only after every field
+  is complete.
 - TU is ignored until the current pileup exchange is ready, then records the
   selected caller, clears fields, removes that caller, optionally adds callers,
   and restarts the pileup.
@@ -65,13 +72,15 @@ mode-specific inputs, result fields, and completion path.
 - Callsign matching covers perfect, prefix, middle/end, one-substitution,
   extended-prefix, and initial-two-character partial criteria.
 - Results preserve attempts, total-time behavior, WPM/Farnsworth formatting,
-  copied-field comparison, newest-first rows, and summary averages.
+  copied-field comparison, per-field AGN request counts, newest-first rows, and
+  summary averages.
 
 ### Browser journey
 
 Chromium completes one deterministic journey in each mode and focused recovery
 journeys for repeats, partial calls, QRS, invalid settings, mode changes, Stop,
-Reset, persistence, results, and keyboard-operated app controls.
+Reset, persistence, results, component-specific AGN fills, and keyboard-operated
+app controls.
 
 ## Manual audio checklist
 
@@ -86,6 +95,9 @@ browser, output device, volume, and settings.
 - One caller and overlapping pileups preserve relative timing and volume.
 - Partial replies, repeats, uncertain exact replies, and QRS sound unchanged.
 - Cut-number exchanges sound unchanged.
+- Component fills transmit the displayed request and only the selected
+  mode-specific values; numeric fills use the same cut-number settings as the
+  complete exchange.
 - QSB fade rates follow each station's generated frequency; non-QSB audio and
   each QRN level sound unchanged.
 - During an active session, Normal, Moderate, Heavy, Off, and back to an audible

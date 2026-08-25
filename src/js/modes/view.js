@@ -11,13 +11,15 @@ import { modeUIConfig } from './index.js';
  */
 export function applyModeSettings(mode) {
   const config = modeUIConfig[mode];
+  const agnButton = document.getElementById('agnButton');
   const tuButton = document.getElementById('tuButton');
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
   const resultsTable = document.getElementById('resultsTable');
   const modeResultsHeader = document.getElementById('modeResultsHeader');
 
-  // TU button visibility
+  // Exchange action visibility
+  agnButton.style.display = config.showAgnButton ? 'inline-block' : 'none';
   tuButton.style.display = config.showTuButton ? 'inline-block' : 'none';
 
   // Info field visibility & placeholder

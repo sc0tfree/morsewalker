@@ -225,6 +225,13 @@ function sendResponse(value) {
   document.getElementById('sendButton').click();
 }
 
+function setInfoValue(id, value) {
+  const field = document.getElementById(id);
+  field.value = value;
+  field.dispatchEvent(new Event('input', { bubbles: true }));
+  return field;
+}
+
 function pressEnter(element) {
   const event = new KeyboardEvent('keydown', {
     bubbles: true,
@@ -269,6 +276,10 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('tuButton')).toHaveStyle({
       display: 'none',
     });
+    expect(document.getElementById('agnButton')).toHaveStyle({
+      display: 'none',
+    });
+    expect(document.getElementById('agnButton')).toBeDisabled();
     expect(document.getElementById('infoField')).toHaveStyle({
       display: 'none',
     });
@@ -286,6 +297,35 @@ describe('session initialization and mode UI', () => {
     expect(storage.peek('mode')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
     expect(RecordingAudioContext.instances.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('keeps AGN guidance in the mode-specific card and six-card Help grid', async () => {
+    await bootSession();
+
+    expect(document.querySelectorAll('#helpModal .col-xl-4')).toHaveLength(6);
+
+    const infoCard = document.getElementById('modeInfoHelpCard');
+    expect(infoCard.closest('.col-xl-4')).not.toBeNull();
+    expect(document.getElementById('agnButton')).toHaveClass('btn-warning');
+    expect(infoCard.querySelector('button')).toHaveClass('btn-warning');
+    expect(infoCard.querySelector('button')).toHaveTextContent('AGN');
+    const [agnKey, enterKey] = infoCard.querySelectorAll('kbd');
+    expect(agnKey).toHaveTextContent('AGN');
+    expect(agnKey).toHaveClass('bg-warning', 'text-dark');
+    expect(enterKey).toHaveTextContent('Enter');
+    expect(infoCard).toHaveTextContent(
+      'Enter the exchange details you copy, such as a name, state, or serial number.'
+    );
+    expect(infoCard).toHaveTextContent('Need a repeat?');
+    expect(infoCard).toHaveTextContent(
+      'Leave a field blank, enter AGN, or add ? anywhere in it.'
+    );
+    expect(infoCard).toHaveTextContent(
+      'Click AGN or press Enter before all fields are complete.'
+    );
+    expect(infoCard).toHaveTextContent(
+      'Only those fields repeat. The QSO stays open.'
+    );
   });
 
   it('restores saved mode and station settings and submits startup stats', async () => {
@@ -385,6 +425,7 @@ describe('session initialization and mode UI', () => {
         info1: null,
         info2: null,
         mode: 'single',
+        showAgn: false,
         showExtra: false,
         showTu: false,
       },
@@ -394,6 +435,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Serial Number',
         info2: null,
         mode: 'contest',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -403,6 +445,7 @@ describe('session initialization and mode UI', () => {
         info1: 'State',
         info2: null,
         mode: 'pota',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -412,6 +455,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Name',
         info2: 'State',
         mode: 'sst',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -421,6 +465,7 @@ describe('session initialization and mode UI', () => {
         info1: 'Name',
         info2: 'CW Ops No.',
         mode: 'cwt',
+        showAgn: true,
         showExtra: true,
         showTu: true,
       },
@@ -446,6 +491,10 @@ describe('session initialization and mode UI', () => {
       expect(document.getElementById('tuButton').style.display).toBe(
         testCase.showTu ? 'inline-block' : 'none'
       );
+      expect(document.getElementById('agnButton').style.display).toBe(
+        testCase.showAgn ? 'inline-block' : 'none'
+      );
+      expect(document.getElementById('agnButton')).toBeDisabled();
       expect(infoField.style.display).toBe(
         testCase.info1 ? 'inline-block' : 'none'
       );
@@ -748,6 +797,338 @@ describe('session controls and message flows', () => {
   );
 
   it.each([
+    {
+      completedFieldId: 'infoField',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      label: 'CW Ops number',
+      missingFieldId: 'infoField2',
+    },
+    {
+      completedFieldId: 'infoField2',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      label: 'name',
+      missingFieldId: 'infoField',
+    },
+  ])(
+    'routes Enter from a completed field to the missing CWT $label',
+    async ({
+      completedFieldId,
+      expectedExtra,
+      expectedRequest,
+      expectedResponse,
+      missingFieldId,
+    }) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+
+      setInfoValue('infoField', missingFieldId === 'infoField' ? '' : 'Adam');
+      setInfoValue('infoField2', missingFieldId === 'infoField2' ? '' : '1');
+      const completedField = document.getElementById(completedFieldId);
+      const missingField = document.getElementById(missingFieldId);
+      completedField.focus();
+
+      const enterForAgn = pressEnter(completedField);
+
+      expect(enterForAgn.defaultPrevented).toBe(true);
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', expectedRequest],
+        ['K0A', expectedResponse],
+      ]);
+      expect(resultsRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(missingField).toHaveValue('');
+      expect(document.activeElement).toBe(missingField);
+
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      random.mockReturnValue(0.9);
+
+      const enterForTu = pressEnter(missingField);
+
+      expect(enterForTu.defaultPrevented).toBe(true);
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(expectedExtra);
+    }
+  );
+
+  it.each([
+    {
+      candidate: '',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      fieldId: 'infoField2',
+      label: 'a blank number',
+    },
+    {
+      candidate: 'AGN',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      fieldId: 'infoField',
+      label: 'AGN in the name',
+    },
+    {
+      candidate: 'AGN?',
+      expectedExtra: 'ADAM / 1 (1 AGN)',
+      expectedRequest: 'NR?',
+      expectedResponse: '1',
+      fieldId: 'infoField2',
+      label: 'AGN? in the number',
+    },
+    {
+      candidate: 'AD?M',
+      expectedExtra: 'ADAM (1 AGN) / 1',
+      expectedRequest: 'NAME?',
+      expectedResponse: 'Adam',
+      fieldId: 'infoField',
+      label: 'a question-marked name',
+    },
+  ])(
+    'routes Enter through AGN for $label, then allows normal Enter to TU',
+    async ({
+      candidate,
+      expectedExtra,
+      expectedRequest,
+      expectedResponse,
+      fieldId,
+    }) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+
+      setInfoValue('infoField', fieldId === 'infoField' ? candidate : 'Adam');
+      setInfoValue('infoField2', fieldId === 'infoField2' ? candidate : '1');
+      const candidateField = document.getElementById(fieldId);
+      candidateField.focus();
+
+      const enterForAgn = pressEnter(candidateField);
+
+      expect(enterForAgn.defaultPrevented).toBe(true);
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', expectedRequest],
+        ['K0A', expectedResponse],
+      ]);
+      expect(resultsRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(candidateField).toHaveValue(candidate);
+      expect(document.activeElement).toBe(candidateField);
+
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      const finalField = setInfoValue('infoField2', '1');
+      random.mockReturnValue(0.9);
+
+      const enterForTu = pressEnter(finalField);
+
+      expect(enterForTu.defaultPrevented).toBe(true);
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(expectedExtra);
+      expect(document.getElementById('activeStations')).toHaveTextContent('0');
+    }
+  );
+
+  it('replays only the blank CWT field and preserves the active QSO', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+
+    const agnButton = document.getElementById('agnButton');
+    expect(agnButton).toBeDisabled();
+
+    releaseAudio();
+    sendResponse('K0A');
+    expect(agnButton).toBeEnabled();
+
+    releaseAudio();
+    const nameField = setInfoValue('infoField', 'Adam');
+    const numberField = document.getElementById('infoField2');
+    nameField.focus();
+    agnButton.click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NR?'],
+      ['K0A', '1'],
+    ]);
+    expect(console.log).toHaveBeenCalledWith('--> Sending "NR?"');
+    expect(resultsRows()).toHaveLength(0);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(document.getElementById('infoField')).toHaveValue('Adam');
+    expect(numberField).toHaveValue('');
+    expect(document.activeElement).toBe(nameField);
+    expect(agnButton).toBeEnabled();
+
+    releaseAudio();
+    setInfoValue('infoField2', '1');
+    expect(agnButton).toBeDisabled();
+
+    const completedTranscript = transcript();
+    agnButton.click();
+    expect(transcript()).toEqual(completedTranscript);
+
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent('ADAM / 1 (1 AGN)');
+  });
+
+  it('uses one AGN? request when every CWT field is blank', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+
+    const agnButton = document.getElementById('agnButton');
+    agnButton.click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+    ]);
+    expect(console.log).toHaveBeenCalledWith('--> Sending "AGN?"');
+    expect(document.getElementById('infoField')).toHaveValue('');
+    expect(document.getElementById('infoField2')).toHaveValue('');
+    expect(resultsRows()).toHaveLength(0);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+    releaseAudio();
+    agnButton.click();
+    expect(transcript().slice(-4)).toEqual([
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+      ['N0ME', 'AGN?'],
+      ['K0A', 'Adam 1'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('3');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (2 AGN) / 1 (2 AGN)'
+    );
+  });
+
+  it('uses the canonical request and cut numbers for a one-field AGN fill', async () => {
+    const { releaseAudio } = await bootSession();
+    configureValidInputs();
+    selectMode('contest');
+
+    const enableCutNumbers = document.getElementById('enableCutNumbers');
+    enableCutNumbers.checked = true;
+    enableCutNumbers.dispatchEvent(new Event('change', { bubbles: true }));
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NR?'],
+      ['K0A', 'T1'],
+    ]);
+  });
+
+  it('starts field AGN counts fresh after Reset', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    document.getElementById('resetButton').click();
+    expect(document.getElementById('agnButton')).toBeDisabled();
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / 1 (1 AGN)'
+    );
+  });
+
+  it('starts field AGN counts fresh after a mode change', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    selectMode('sst');
+    expect(document.getElementById('agnButton')).toBeDisabled();
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', 'AL');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / AL (1 AGN)'
+    );
+  });
+
+  it('clears field AGN counts when Stop resets active audio', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('cwt');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    document.getElementById('stopButton').click();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(
+      'ADAM (1 AGN) / 1 (1 AGN)'
+    );
+  });
+
+  it.each([
     ['single', 'CQ DE N0ME K'],
     ['contest', 'CQ TEST DE N0ME'],
   ])(
@@ -957,7 +1338,7 @@ describe('session controls and message flows', () => {
     }
   );
 
-  it('blocks CQ, Send, and TU during audio and guards repeated actions', async () => {
+  it('blocks CQ, Send, AGN, and TU during audio and guards repeated actions', async () => {
     const { random, releaseAudio } = await bootSession();
     startSession('contest');
     const callingTranscript = transcript();
@@ -969,6 +1350,7 @@ describe('session controls and message flows', () => {
     releaseAudio();
     sendResponse('K0A');
     const readyTranscript = transcript();
+    document.getElementById('agnButton').click();
     sendResponse('K0A');
     document.getElementById('infoField').value = '01';
     document.getElementById('tuButton').click();
