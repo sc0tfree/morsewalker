@@ -240,6 +240,44 @@ test('AGN controls and Help retain their responsive layout', async ({
     'Only those fields repeat. The QSO stays open.'
   );
 
+  const helpReferenceStyles = await page
+    .locator('#helpModal')
+    .evaluate((modal) => {
+      const buttonsByLabel = new Map(
+        [...modal.querySelectorAll('.card-header button')].map((button) => {
+          const styles = window.getComputedStyle(button);
+          return [
+            button.textContent.trim(),
+            {
+              backgroundColor: styles.backgroundColor,
+              color: styles.color,
+            },
+          ];
+        })
+      );
+
+      return [...modal.querySelectorAll('.card-body kbd[class*="bg-"]')].map(
+        (reference) => {
+          const label = reference.textContent.trim();
+          const styles = window.getComputedStyle(reference);
+          return {
+            button: buttonsByLabel.get(label),
+            label,
+            reference: {
+              backgroundColor: styles.backgroundColor,
+              color: styles.color,
+            },
+          };
+        }
+      );
+    });
+  expect(helpReferenceStyles).toHaveLength(11);
+  for (const { button, label, reference } of helpReferenceStyles) {
+    expect(reference, `${label} reference should match its button`).toEqual(
+      button
+    );
+  }
+
   const desktopHelpColumns = await page
     .locator('#helpModal .col-xl-4')
     .evaluateAll((elements) =>
