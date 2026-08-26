@@ -1,5 +1,6 @@
 import single from './single.js';
 import contest from './contest.js';
+import fieldDay from './field-day.js';
 import pota from './pota.js';
 import cwt from './cwt.js';
 import sst from './sst.js';
@@ -22,16 +23,17 @@ import sst from './sst.js';
  *   declares an `id`, `inputId`, station `fieldKey`, canonical `request`, and
  *   `reply` formatter. Consumed by `../session/index.js`.
  * - `requiredOperatorFields`: the operator's own settings the mode cannot run
- *   without, each an `{ id, message }` pair where `id` is both the input's DOM
- *   element id and its key on the collected inputs. Consumed by
+ *   without. Each declares `id` and `message`, and may declare `validate` plus
+ *   `invalidMessage` for format checks. The id is both the input's DOM element
+ *   id and its key on the collected inputs. Consumed by
  *   `../settings/validation.js`.
  *
  * The array order is the order the modes appear in the UI.
  *
- * To add a mode, create its module, add it here, and add its radio button in
- * `src/index.html`. Nothing else needs to change.
+ * To add a mode, create its module, add it here, add its radio button in
+ * `src/index.html`, and extend the relevant station data, settings, and tests.
  */
-export const modes = [single, contest, pota, cwt, sst];
+export const modes = [single, contest, fieldDay, pota, cwt, sst];
 
 const modesById = Object.fromEntries(modes.map((mode) => [mode.id, mode]));
 

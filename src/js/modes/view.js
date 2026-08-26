@@ -26,18 +26,24 @@ export function applyModeSettings(mode) {
   if (config.showInfoField) {
     infoField.style.display = 'inline-block';
     infoField.placeholder = config.infoFieldPlaceholder;
+    infoField.setAttribute('aria-label', config.infoFieldPlaceholder);
   } else {
     infoField.style.display = 'none';
     infoField.value = '';
+    infoField.placeholder = '';
+    infoField.removeAttribute('aria-label');
   }
 
   // Info field 2 visibility & placeholder
   if (config.showInfoField2) {
     infoField2.style.display = 'inline-block';
     infoField2.placeholder = config.infoField2Placeholder;
+    infoField2.setAttribute('aria-label', config.infoField2Placeholder);
   } else {
     infoField2.style.display = 'none';
     infoField2.value = '';
+    infoField2.placeholder = '';
+    infoField2.removeAttribute('aria-label');
   }
 
   // Update results header text

@@ -19,6 +19,14 @@ export function getDOMInputs() {
       .toUpperCase(),
     yourName: document.getElementById('yourName').value.trim(),
     yourState: document.getElementById('yourState').value.trim().toUpperCase(), // Convert to uppercase for consistency
+    yourFieldDayClass: document
+      .getElementById('yourFieldDayClass')
+      .value.trim()
+      .toUpperCase(),
+    yourFieldDaySection: document
+      .getElementById('yourFieldDaySection')
+      .value.trim()
+      .toUpperCase(),
     yourSpeed: parseInt(document.getElementById('yourSpeed').value, 10),
     yourSidetone: parseInt(document.getElementById('yourSidetone').value, 10),
     // convert volume to a float between 0 and 1

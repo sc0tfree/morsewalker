@@ -6,7 +6,7 @@
     <title>Morse Walker</title>
     <meta
       name="description"
-      content="Morse Walker is a CW pileup trainer with modes such as POTA, SST, and CWT, plus beginner-friendly features, including adjustable speeds and Farnsworth spacing."
+      content="Morse Walker is a CW pileup trainer with modes such as Field Day, POTA, SST, and CWT, plus beginner-friendly features, including adjustable speeds and Farnsworth spacing."
     />
 
     <!-- Favicon -->
@@ -118,7 +118,11 @@
       <div
         class="flex-grow-1 d-flex justify-content-center flex-column align-items-center"
       >
-        <div class="btn-group" role="group" aria-label="Mode selection">
+        <div
+          class="btn-group flex-wrap"
+          role="group"
+          aria-label="Mode selection"
+        >
           <input
             type="radio"
             class="btn-check"
@@ -146,6 +150,20 @@
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
             for="modeContest"
             >Basic Contest</label
+          >
+
+          <input
+            type="radio"
+            class="btn-check"
+            name="mode"
+            id="modeFieldDay"
+            value="fd"
+            autocomplete="off"
+          />
+          <label
+            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            for="modeFieldDay"
+            >Field Day</label
           >
 
           <input
@@ -259,6 +277,41 @@
                     class="form-control"
                     maxlength="2"
                     placeholder="(e.g., CA, TX)"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    autocorrect="off"
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                  <label for="yourFieldDayClass" class="form-label"
+                    >FD Class</label
+                  >
+                  <input
+                    type="text"
+                    id="yourFieldDayClass"
+                    name="fieldDayClass"
+                    class="form-control"
+                    placeholder="(e.g., 2A)"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    autocorrect="off"
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2">
+                  <label for="yourFieldDaySection" class="form-label"
+                    >ARRL/RAC Section</label
+                  >
+                  <input
+                    type="text"
+                    id="yourFieldDaySection"
+                    name="fieldDaySection"
+                    class="form-control"
+                    maxlength="3"
+                    placeholder="(e.g., EWA, DX)"
                     autocomplete="off"
                     autocapitalize="characters"
                     spellcheck="false"
@@ -1161,7 +1214,14 @@
                   <div class="card-body">
                     <p class="card-text">
                       Enter the exchange details you copy, such as a name,
-                      state, or serial number.
+                      state, serial number, Field Day class, or ARRL/RAC
+                      section.
+                    </p>
+                    <p class="card-text">
+                      <strong>Field Day:</strong> Enter the decoded class (for
+                      example, <code>2A</code>) and section (for example,
+                      <code>EWA</code> or <code>DX</code>) in their separate
+                      fields.
                     </p>
                     <p class="card-text mb-2">
                       <strong>Need a repeat?</strong>

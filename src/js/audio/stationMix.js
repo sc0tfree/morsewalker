@@ -68,10 +68,13 @@ export function normalizeStationGain(stations) {
  *
  * @param {Array<Object>} stations - Stations to respond to, each with a `callsign` and `volume`.
  * @param {number} audioLock - Base time offset for playback start.
+ * @param {Object|null} [inputs=getInputs()] - Validated session settings.
  */
-export function respondWithAllStations(stations, audioLock) {
-  let inputs = getInputs();
-
+export function respondWithAllStations(
+  stations,
+  audioLock,
+  inputs = getInputs()
+) {
   // Ensure minWait is between 0 and 2, and maxWait is between 0 and 5
   const minDelay = Math.max(0, Math.min(inputs.minWait, 2));
   const maxDelay = Math.max(0, Math.min(inputs.maxWait, 5));

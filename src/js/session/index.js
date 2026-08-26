@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const yourCallsign = document.getElementById('yourCallsign');
   const yourName = document.getElementById('yourName');
   const yourState = document.getElementById('yourState');
+  const yourFieldDayClass = document.getElementById('yourFieldDayClass');
+  const yourFieldDaySection = document.getElementById('yourFieldDaySection');
   const yourSpeed = document.getElementById('yourSpeed');
   const yourSidetone = document.getElementById('yourSidetone');
   const yourVolume = document.getElementById('yourVolume');
@@ -207,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
     yourCallsign,
     yourName,
     yourState,
+    yourFieldDayClass,
+    yourFieldDaySection,
     yourSpeed,
     yourSidetone,
     yourVolume
@@ -467,7 +471,7 @@ function cq() {
   inputs = getInputs();
   if (inputs === null) return;
 
-  yourStation = getYourStation();
+  yourStation = getYourStation(inputs);
   yourStation.player = createMorsePlayer(yourStation);
 
   let cqMsg = modeConfig.cqMessage(yourStation, null, null);
@@ -480,7 +484,7 @@ function cq() {
   if (modeConfig.showTuStep) {
     // Contest-like modes: CQ adds more stations
     addStations(currentStations, inputs);
-    respondWithAllStations(currentStations, yourResponseTimer);
+    respondWithAllStations(currentStations, yourResponseTimer, inputs);
     lastRespondingStations = currentStations;
   } else {
     // Single mode: Just get one station
@@ -529,7 +533,7 @@ function send() {
       responseFieldText === 'AGN' ||
       responseFieldText === 'AGN?'
     ) {
-      respondWithAllStations(currentStations, yourResponseTimer);
+      respondWithAllStations(currentStations, yourResponseTimer, inputs);
       lastRespondingStations = currentStations;
       currentStationAttempts++;
       return;
@@ -551,7 +555,7 @@ function send() {
         }
       });
 
-      respondWithAllStations(lastRespondingStations, yourResponseTimer);
+      respondWithAllStations(lastRespondingStations, yourResponseTimer, inputs);
       currentStationAttempts++;
       return;
     }
@@ -618,7 +622,7 @@ function send() {
       let partialMatchStations = currentStations.filter(
         (_, index) => results[index] === 'partial'
       );
-      respondWithAllStations(partialMatchStations, yourResponseTimer);
+      respondWithAllStations(partialMatchStations, yourResponseTimer, inputs);
       lastRespondingStations = partialMatchStations;
       currentStationAttempts++;
       return;
@@ -874,7 +878,7 @@ function tu() {
     addStations(currentStations, inputs);
   }
 
-  respondWithAllStations(currentStations, responseTimerToUse);
+  respondWithAllStations(currentStations, responseTimerToUse, inputs);
   lastRespondingStations = currentStations;
   currentStationStartTime = audioContext.currentTime;
 }
@@ -892,7 +896,7 @@ function nextSingleStation(responseStartTime) {
   const responseField = document.getElementById('responseField');
   const cqButton = document.getElementById('cqButton');
 
-  let callingStation = getCallingStation();
+  let callingStation = getCallingStation(inputs);
   printStation(callingStation);
   currentStation = callingStation;
   currentStationAttempts = 0;
