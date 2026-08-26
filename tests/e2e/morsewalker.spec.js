@@ -244,7 +244,7 @@ test('Enter and AGN repeat CWT fields and record each count', async ({
   await expect(cells.nth(5)).toContainText('ADAM (1 AGN) / 1 (2 AGN)');
 });
 
-test('AGN controls and Help retain their responsive layout', async ({
+test('Mode, AGN controls, and Help retain their responsive layout', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -263,6 +263,38 @@ test('AGN controls and Help retain their responsive layout', async ({
   expect(desktopActions[0].x).toBeLessThan(desktopActions[1].x);
   expect(Math.abs(desktopActions[0].y - desktopActions[1].y)).toBeLessThan(2);
 
+  const modeHeading = page.getByRole('heading', {
+    name: 'Mode',
+    exact: true,
+  });
+  const modeSelector = page.locator('[aria-label="Mode selection"]');
+  const modeButtons = modeSelector.locator('label');
+
+  for (const width of [575, 576, 767]) {
+    await page.setViewportSize({ width, height: 900 });
+    const buttonTops = await modeButtons.evaluateAll((elements) =>
+      elements.map((element) => Math.round(element.getBoundingClientRect().top))
+    );
+    expect(new Set(buttonTops).size, `${width}px mode rows`).toBe(1);
+  }
+
+  const stackedHeading = await modeHeading.boundingBox();
+  const stackedSelector = await modeSelector.boundingBox();
+  expect(stackedHeading.y + stackedHeading.height).toBeLessThanOrEqual(
+    stackedSelector.y
+  );
+
+  await page.setViewportSize({ width: 768, height: 900 });
+  const inlineHeading = await modeHeading.boundingBox();
+  const inlineSelector = await modeSelector.boundingBox();
+  const headingCenter = inlineHeading.y + inlineHeading.height / 2;
+  const selectorCenter = inlineSelector.y + inlineSelector.height / 2;
+  expect(inlineHeading.x + inlineHeading.width).toBeLessThanOrEqual(
+    inlineSelector.x
+  );
+  expect(Math.abs(headingCenter - selectorCenter)).toBeLessThan(2);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.locator('[data-bs-target="#helpModal"]').click();
   await expect(page.locator('#helpModal')).toBeVisible();
   await expect(page.locator('#helpModal .col-xl-4')).toHaveCount(6);
