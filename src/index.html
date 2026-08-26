@@ -149,7 +149,21 @@
           <label
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
             for="modeContest"
-            >Basic Contest</label
+            >Contest</label
+          >
+
+          <input
+            type="radio"
+            class="btn-check"
+            name="mode"
+            id="modePota"
+            value="pota"
+            autocomplete="off"
+          />
+          <label
+            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            for="modePota"
+            >POTA</label
           >
 
           <input
@@ -164,20 +178,6 @@
             class="btn btn-outline-primary d-flex align-items-center justify-content-center"
             for="modeFieldDay"
             >Field Day</label
-          >
-
-          <input
-            type="radio"
-            class="btn-check"
-            name="mode"
-            id="modePota"
-            value="pota"
-            autocomplete="off"
-          />
-          <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
-            for="modePota"
-            >POTA Activator</label
           >
 
           <input
@@ -238,7 +238,7 @@
           <div class="accordion-body">
             <div class="container">
               <div class="row g-3">
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourCallsign" class="form-label">Callsign</label>
                   <input
                     type="text"
@@ -253,7 +253,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourName" class="form-label">First Name</label>
                   <input
                     type="text"
@@ -268,7 +268,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourState" class="form-label">State</label>
                   <input
                     type="text"
@@ -284,7 +284,25 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
+                  <label for="yourFieldDaySection" class="form-label"
+                    >FD Section</label
+                  >
+                  <input
+                    type="text"
+                    id="yourFieldDaySection"
+                    name="fieldDaySection"
+                    class="form-control"
+                    maxlength="3"
+                    placeholder="(e.g., EWA, DX)"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    autocorrect="off"
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourFieldDayClass" class="form-label"
                     >FD Class</label
                   >
@@ -301,27 +319,9 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
-                  <label for="yourFieldDaySection" class="form-label"
-                    >ARRL/RAC Section</label
-                  >
-                  <input
-                    type="text"
-                    id="yourFieldDaySection"
-                    name="fieldDaySection"
-                    class="form-control"
-                    maxlength="3"
-                    placeholder="(e.g., EWA, DX)"
-                    autocomplete="off"
-                    autocapitalize="characters"
-                    spellcheck="false"
-                    autocorrect="off"
-                  />
-                  <div class="invalid-feedback"></div>
-                </div>
 
-                <div class="col-6 col-md-4 col-lg-2">
-                  <label for="yourSpeed" class="form-label">Speed (WPM)</label>
+                <div class="col-6 col-md-4 col-lg">
+                  <label for="yourSpeed" class="form-label">Speed WPM</label>
                   <input
                     type="number"
                     id="yourSpeed"
@@ -335,9 +335,9 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourSidetone" class="form-label"
-                    >Sidetone (Hz)</label
+                    >Sidetone Hz</label
                   >
                   <input
                     type="number"
@@ -352,9 +352,9 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-4 col-lg">
                   <label for="yourVolume" class="form-label"
-                    >Sidetone Volume</label
+                    >Sidetone Vol</label
                   >
                   <input
                     type="number"

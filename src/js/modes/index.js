@@ -1,7 +1,7 @@
 import single from './single.js';
 import contest from './contest.js';
-import fieldDay from './field-day.js';
 import pota from './pota.js';
+import fieldDay from './field-day.js';
 import cwt from './cwt.js';
 import sst from './sst.js';
 
@@ -33,7 +33,7 @@ import sst from './sst.js';
  * To add a mode, create its module, add it here, add its radio button in
  * `src/index.html`, and extend the relevant station data, settings, and tests.
  */
-export const modes = [single, contest, fieldDay, pota, cwt, sst];
+export const modes = [single, contest, pota, fieldDay, cwt, sst];
 
 const modesById = Object.fromEntries(modes.map((mode) => [mode.id, mode]));
 

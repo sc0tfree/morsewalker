@@ -1,12 +1,12 @@
 /**
- * POTA Activator mode: a pileup where each station sends its state, and your
+ * POTA mode: a pileup where each station sends its state, and your
  * sign-off names the station you just worked.
  *
  * See `./index.js` for the descriptor shape shared by every mode.
  */
 export default {
   id: 'pota',
-  label: 'POTA Activator',
+  label: 'POTA',
   ui: {
     showTuButton: true,
     showAgnButton: true,

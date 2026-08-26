@@ -6,7 +6,7 @@
  */
 export default {
   id: 'contest',
-  label: 'Basic Contest',
+  label: 'Contest',
   ui: {
     showTuButton: true,
     showAgnButton: true,
