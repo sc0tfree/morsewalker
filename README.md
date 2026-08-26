@@ -17,6 +17,7 @@ improve their pileup handling skills, and enhance their overall proficiency in C
 
 - Single Caller - only one station responding at a time.
 - Basic Contest - exchange callsign and serial number.
+- Field Day - exchange callsign, operating class, and ARRL/RAC section.
 - POTA Activator - exchange callsign and state in a POTA-style format.
 - CW Ops Test (CWT) - exchange callsign, name and CW Ops number in the CWT QSO format.
 - K1USN SST - exchange callsign, name, and state in the SST QSO format.

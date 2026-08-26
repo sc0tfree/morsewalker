@@ -29,6 +29,8 @@ Baseline commit: `35f975495156f3b23ab5b7ab6a18d1c0b24df6ad`
   callsign, records the result, and automatically schedules the next caller.
 - Basic Contest sends `CQ TEST DE <CALL>`, exchanges `5NN` and a serial number,
   and completes through TU.
+- Field Day sends `CQ FD <CALL>`, exchanges operating class and ARRL/RAC
+  section (or `DX`), supports class/section fills, and completes through TU.
 - POTA sends `CQ POTA DE <CALL>`, exchanges signal reports and state, and
   completes through TU.
 - SST sends `CQ SST <CALL>`, exchanges name and state, and completes through TU.
@@ -60,7 +62,8 @@ mode-specific inputs, result fields, and completion path.
 
 ### Settings and generated stations
 
-- Own callsign, name, state, speed, sidetone, and volume parsing and persistence.
+- Own callsign, name, state, Field Day class/section, speed, sidetone, and
+  volume parsing and persistence.
 - Mode-specific required fields and the validation rules currently enforced.
 - Station limits, speed/tone/volume/wait ranges, US-only selection, callsign
   formats, Farnsworth, cut numbers, QRN, QSB, and QSB percentage.
@@ -98,6 +101,8 @@ browser, output device, volume, and settings.
 - Component fills transmit the displayed request and only the selected
   mode-specific values; numeric fills use the same cut-number settings as the
   complete exchange.
+- Field Day class digits use configured cut numbers during playback while
+  keeping canonical numeric class values for copy and results.
 - QSB fade rates follow each station's generated frequency; non-QSB audio and
   each QRN level sound unchanged.
 - During an active session, Normal, Moderate, Heavy, Off, and back to an audible
