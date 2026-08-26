@@ -147,6 +147,20 @@ describe('station mix v1 characterization', () => {
       expect(player.playSentence).toHaveBeenCalledWith('CLAMP', 100 + delay);
     });
 
+    it('uses a supplied settings snapshot without rereading inputs', () => {
+      const [player] = arrangePlayers([150]);
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
+      const station = buildStation({ callsign: 'SNAPSHOT' });
+
+      stationMix.respondWithAllStations([station], 100, {
+        minWait: 1,
+        maxWait: 3,
+      });
+
+      expect(getInputs).not.toHaveBeenCalled();
+      expect(player.playSentence).toHaveBeenCalledWith('SNAPSHOT', 102);
+    });
+
     it('uses the default minimum and maximum as delay boundaries', () => {
       getInputs.mockReturnValue({ minWait: 0.25, maxWait: 2 });
       const players = arrangePlayers([20, 30]);

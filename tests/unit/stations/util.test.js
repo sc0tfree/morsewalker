@@ -196,11 +196,13 @@ describe('addStations', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
     dependencies.getCallingStation.mockReturnValue(stationA);
 
-    const result = addStations(stations, { maxStations: 4 });
+    const inputs = { maxStations: 4 };
+    const result = addStations(stations, inputs);
 
     expect(result).toBe(stations);
     expect(result).toEqual([stationA]);
     expect(dependencies.getCallingStation).toHaveBeenCalledTimes(1);
+    expect(dependencies.getCallingStation).toHaveBeenCalledWith(inputs);
     expect(document.getElementById('activeStations')).toHaveTextContent('1');
     expect(log).toHaveBeenCalledWith('+ Adding 1 stations...');
   });

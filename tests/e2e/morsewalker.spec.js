@@ -28,6 +28,15 @@ const modeJourneys = [
   },
   {
     activeAfterCompletion: '0',
+    extra: '1D / AL',
+    header: 'Field Day Mode Results',
+    info1: '1D',
+    info2: 'AL',
+    label: 'Field Day',
+    mode: 'fd',
+  },
+  {
+    activeAfterCompletion: '0',
     extra: 'AL',
     header: 'POTA Mode Results',
     info1: 'AL',
@@ -53,6 +62,15 @@ const modeJourneys = [
     mode: 'cwt',
   },
 ];
+
+const modeInfoLabels = {
+  contest: ['Serial Number', null],
+  cwt: ['Name', 'CW Ops No.'],
+  fd: ['Class', 'Section'],
+  pota: ['State', null],
+  single: [null, null],
+  sst: ['Name', 'State'],
+};
 
 test.beforeEach(async ({ page }) => {
   await installTestEnvironment(page);
@@ -101,6 +119,19 @@ for (const journey of modeJourneys) {
     await selectMode(page, journey.mode);
 
     await expect(page.locator('#modeResultsHeader')).toHaveText(journey.header);
+    const [infoLabel1, infoLabel2] = modeInfoLabels[journey.mode];
+    if (infoLabel1) {
+      await expect(page.locator('#infoField')).toHaveAttribute(
+        'aria-label',
+        infoLabel1
+      );
+    }
+    if (infoLabel2) {
+      await expect(page.locator('#infoField2')).toHaveAttribute(
+        'aria-label',
+        infoLabel2
+      );
+    }
 
     if (journey.mode === 'single') {
       await page.keyboard.press('Control+Shift+C');
@@ -321,6 +352,27 @@ test('AGN controls and Help retain their responsive layout', async ({
   await page.locator('#helpModal [data-bs-dismiss="modal"]').last().click();
   await expect(page.locator('#helpModal')).toBeHidden();
 
+  const mobileModeButtons = await page
+    .locator('[aria-label="Mode selection"] label')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          left: rect.left,
+          right: rect.right,
+          top: Math.round(rect.top),
+        };
+      })
+    );
+  expect(mobileModeButtons).toHaveLength(6);
+  expect(new Set(mobileModeButtons.map(({ top }) => top)).size).toBeGreaterThan(
+    1
+  );
+  for (const button of mobileModeButtons) {
+    expect(button.left).toBeGreaterThanOrEqual(0);
+    expect(button.right).toBeLessThanOrEqual(390);
+  }
+
   const mobileControls = await page
     .locator('#infoField, #infoField2, #agnButton, #tuButton')
     .evaluateAll((elements) =>
@@ -448,6 +500,8 @@ test('Reset, mode switching, and persisted station settings survive a reload', a
   );
 
   await page.locator('#yourCallsign').fill('W1AW');
+  await page.locator('#yourFieldDayClass').fill('3A');
+  await page.locator('#yourFieldDaySection').fill('CT');
   await page.locator('#yourName').fill('MAYA');
   await page.locator('#yourState').fill('TX');
   await page.locator('#yourSpeed').fill('24');
@@ -469,6 +523,8 @@ test('Reset, mode switching, and persisted station settings survive a reload', a
     'CWT Mode Results'
   );
   await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourFieldDayClass')).toHaveValue('3A');
+  await expect(page.locator('#yourFieldDaySection')).toHaveValue('CT');
   await expect(page.locator('#yourName')).toHaveValue('MAYA');
   await expect(page.locator('#yourState')).toHaveValue('TX');
   await expect(page.locator('#yourSpeed')).toHaveValue('24');
