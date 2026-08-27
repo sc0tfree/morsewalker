@@ -130,6 +130,7 @@ test('Your Station settings preserve their responsive information groups', async
     await stationInputs.evaluateAll((inputs) => inputs.map(({ id }) => id))
   ).toEqual(expectedOrder);
 
+  const fourColumnRows = [expectedOrder.slice(0, 4), expectedOrder.slice(4)];
   const expectedRows = new Map([
     [
       390,
@@ -140,8 +141,10 @@ test('Your Station settings preserve their responsive information groups', async
         ['yourFieldDaySection', 'yourFieldDayClass'],
       ],
     ],
-    [768, [expectedOrder.slice(0, 4), expectedOrder.slice(4)]],
-    [992, [expectedOrder]],
+    [768, fourColumnRows],
+    [992, fourColumnRows],
+    [1199, fourColumnRows],
+    [1200, [expectedOrder]],
   ]);
 
   for (const [width, expected] of expectedRows) {
