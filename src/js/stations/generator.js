@@ -3,6 +3,7 @@ import {
   US_CALLSIGN_PREFIXES_WEIGHTED,
   NON_US_CALLSIGN_PREFIXES,
 } from './callsignData.js';
+import { generateFieldDayData } from './fieldDayData.js';
 import { stateAbbreviations, names } from './operatorData.js';
 
 /**
@@ -13,10 +14,10 @@ import { stateAbbreviations, names } from './operatorData.js';
  * If no inputs are available, it returns `null`. It also sets default values
  * for `player` and `qsb`.
  *
+ * @param {Object|null} [inputs=getInputs()] - Validated session settings.
  * @returns {Object|null} The user's station configuration or null if inputs are unavailable.
  */
-export function getYourStation() {
-  let inputs = getInputs();
+export function getYourStation(inputs = getInputs()) {
   if (inputs === null) return;
 
   return {
@@ -26,6 +27,8 @@ export function getYourStation() {
     frequency: inputs.yourSidetone,
     name: inputs.yourName,
     state: inputs.yourState,
+    fieldDayClass: inputs.yourFieldDayClass,
+    fieldDaySection: inputs.yourFieldDaySection,
     player: null,
     qsb: false,
   };
@@ -40,10 +43,10 @@ export function getYourStation() {
  * serial number, and CWOPS number, are randomly generated within the specified constraints.
  * Additionally, introduces optional QSB (fading) parameters like frequency and depth.
  *
+ * @param {Object|null} [inputs=getInputs()] - Validated session settings.
  * @returns {Object|null} The calling station configuration or null if inputs are unavailable.
  */
-export function getCallingStation() {
-  let inputs = getInputs();
+export function getCallingStation(inputs = getInputs()) {
   if (inputs === null) return;
 
   // determine if it's a US station
@@ -81,6 +84,15 @@ export function getCallingStation() {
   if (station.farnsworthSpeed) {
     station.farnsworthSpeed = Math.min(station.farnsworthSpeed, station.wpm);
   }
+
+  Object.assign(
+    station,
+    generateFieldDayData({
+      callsign: station.callsign,
+      isUS,
+      state: station.state,
+    })
+  );
 
   return station;
 }

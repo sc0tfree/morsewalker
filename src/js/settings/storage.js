@@ -4,6 +4,8 @@
  * @param {HTMLInputElement} yourCallsign - User callsign input.
  * @param {HTMLInputElement} yourName - User name input.
  * @param {HTMLInputElement} yourState - User state input.
+ * @param {HTMLInputElement} yourFieldDayClass - User Field Day class input.
+ * @param {HTMLInputElement} yourFieldDaySection - User Field Day section input.
  * @param {HTMLInputElement} yourSpeed - User speed input.
  * @param {HTMLInputElement} yourSidetone - User sidetone input.
  * @param {HTMLInputElement} yourVolume - User volume input.
@@ -12,6 +14,8 @@ export function wireSettingsStorage(
   yourCallsign,
   yourName,
   yourState,
+  yourFieldDayClass,
+  yourFieldDaySection,
   yourSpeed,
   yourSidetone,
   yourVolume
@@ -21,6 +25,8 @@ export function wireSettingsStorage(
     yourCallsign: 'yourCallsign',
     yourName: 'yourName',
     yourState: 'yourState',
+    yourFieldDayClass: 'yourFieldDayClass',
+    yourFieldDaySection: 'yourFieldDaySection',
     yourSpeed: 'yourSpeed',
     yourSidetone: 'yourSidetone',
     yourVolume: 'yourVolume',
@@ -37,6 +43,10 @@ export function wireSettingsStorage(
     localStorage.getItem(keys.yourCallsign) || yourCallsign.value;
   yourName.value = localStorage.getItem(keys.yourName) || yourName.value;
   yourState.value = localStorage.getItem(keys.yourState) || yourState.value;
+  yourFieldDayClass.value =
+    localStorage.getItem(keys.yourFieldDayClass) || yourFieldDayClass.value;
+  yourFieldDaySection.value =
+    localStorage.getItem(keys.yourFieldDaySection) || yourFieldDaySection.value;
   yourSpeed.value = localStorage.getItem(keys.yourSpeed) || yourSpeed.value;
   yourSidetone.value =
     localStorage.getItem(keys.yourSidetone) || yourSidetone.value;
@@ -51,6 +61,12 @@ export function wireSettingsStorage(
   });
   yourState.addEventListener('input', () => {
     localStorage.setItem(keys.yourState, yourState.value);
+  });
+  yourFieldDayClass.addEventListener('input', () => {
+    localStorage.setItem(keys.yourFieldDayClass, yourFieldDayClass.value);
+  });
+  yourFieldDaySection.addEventListener('input', () => {
+    localStorage.setItem(keys.yourFieldDaySection, yourFieldDaySection.value);
   });
   yourSpeed.addEventListener('input', () => {
     localStorage.setItem(keys.yourSpeed, yourSpeed.value);

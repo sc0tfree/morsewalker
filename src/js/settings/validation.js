@@ -60,6 +60,8 @@ export function validateInputs(inputs) {
   for (const field of requiredOperatorFields) {
     if (!inputs[field.id]) {
       reject(field.id, field.message);
+    } else if (field.validate && !field.validate(inputs[field.id])) {
+      reject(field.id, field.invalidMessage ?? field.message);
     }
   }
 

@@ -6,7 +6,7 @@
     <title>Morse Walker</title>
     <meta
       name="description"
-      content="Morse Walker is a CW pileup trainer with modes such as POTA, SST, and CWT, plus beginner-friendly features, including adjustable speeds and Farnsworth spacing."
+      content="Morse Walker is a CW pileup trainer with modes such as Field Day, POTA, SST, and CWT, plus beginner-friendly features, including adjustable speeds and Farnsworth spacing."
     />
 
     <!-- Favicon -->
@@ -110,15 +110,19 @@
     <hr />
 
     <!-- Mode Section -->
-    <div class="d-flex flex-column flex-sm-row align-items-center mb-3">
-      <!-- On extra-small screens, this will be centered and above the buttons.
-         From 'sm' breakpoint and up, it aligns to the start (left) and sits inline. -->
-      <h3 class="mb-2 mb-sm-0 text-center text-sm-start me-sm-3">Mode</h3>
+    <div class="d-flex flex-column flex-md-row align-items-center mb-3">
+      <!-- Below the 'md' breakpoint, this is centered above the buttons.
+         From 'md' and up, it aligns to the start (left) and sits inline. -->
+      <h3 class="mb-2 mb-md-0 text-center text-md-start me-md-3">Mode</h3>
 
       <div
         class="flex-grow-1 d-flex justify-content-center flex-column align-items-center"
       >
-        <div class="btn-group" role="group" aria-label="Mode selection">
+        <div
+          class="btn-group flex-wrap"
+          role="group"
+          aria-label="Mode selection"
+        >
           <input
             type="radio"
             class="btn-check"
@@ -129,7 +133,7 @@
             checked
           />
           <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
             for="modeSingle"
             >Single Caller</label
           >
@@ -143,9 +147,9 @@
             autocomplete="off"
           />
           <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
             for="modeContest"
-            >Basic Contest</label
+            >Contest</label
           >
 
           <input
@@ -157,9 +161,23 @@
             autocomplete="off"
           />
           <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
             for="modePota"
-            >POTA Activator</label
+            >POTA</label
+          >
+
+          <input
+            type="radio"
+            class="btn-check"
+            name="mode"
+            id="modeFieldDay"
+            value="fd"
+            autocomplete="off"
+          />
+          <label
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
+            for="modeFieldDay"
+            >Field Day</label
           >
 
           <input
@@ -171,7 +189,7 @@
             autocomplete="off"
           />
           <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
             for="modeCwt"
             >CWT</label
           >
@@ -185,7 +203,7 @@
             autocomplete="off"
           />
           <label
-            class="btn btn-outline-primary d-flex align-items-center justify-content-center"
+            class="btn btn-outline-primary px-2 d-flex align-items-center justify-content-center"
             for="modeSst"
             >K1USN SST</label
           >
@@ -220,7 +238,7 @@
           <div class="accordion-body">
             <div class="container">
               <div class="row g-3">
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-3 col-xl">
                   <label for="yourCallsign" class="form-label">Callsign</label>
                   <input
                     type="text"
@@ -235,7 +253,56 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-3 col-xl">
+                  <label for="yourSpeed" class="form-label">Speed WPM</label>
+                  <input
+                    type="number"
+                    id="yourSpeed"
+                    name="yourSpeed"
+                    class="form-control"
+                    value="20"
+                    min="5"
+                    max="60"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                  <label for="yourSidetone" class="form-label"
+                    >Sidetone Hz</label
+                  >
+                  <input
+                    type="number"
+                    id="yourSidetone"
+                    name="yourSidetone"
+                    class="form-control"
+                    value="600"
+                    min="200"
+                    max="1500"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
+                  <label for="yourVolume" class="form-label"
+                    >Sidetone Vol</label
+                  >
+                  <input
+                    type="number"
+                    id="yourVolume"
+                    name="yourVolume"
+                    class="form-control"
+                    value="70"
+                    min="0"
+                    max="100"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-xl">
                   <label for="yourName" class="form-label">First Name</label>
                   <input
                     type="text"
@@ -250,7 +317,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
+                <div class="col-6 col-md-3 col-xl">
                   <label for="yourState" class="form-label">State</label>
                   <input
                     type="text"
@@ -266,53 +333,38 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-
-                <div class="col-6 col-md-4 col-lg-2">
-                  <label for="yourSpeed" class="form-label">Speed (WPM)</label>
+                <div class="col-6 col-md-3 col-xl">
+                  <label for="yourFieldDaySection" class="form-label"
+                    >FD Section</label
+                  >
                   <input
-                    type="number"
-                    id="yourSpeed"
-                    name="yourSpeed"
+                    type="text"
+                    id="yourFieldDaySection"
+                    name="fieldDaySection"
                     class="form-control"
-                    value="20"
-                    min="5"
-                    max="60"
-                    step="1"
-                    required
+                    maxlength="3"
+                    placeholder="(e.g., EWA, DX)"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    autocorrect="off"
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg-2">
-                  <label for="yourSidetone" class="form-label"
-                    >Sidetone (Hz)</label
+                <div class="col-6 col-md-3 col-xl">
+                  <label for="yourFieldDayClass" class="form-label"
+                    >FD Class</label
                   >
                   <input
-                    type="number"
-                    id="yourSidetone"
-                    name="yourSidetone"
+                    type="text"
+                    id="yourFieldDayClass"
+                    name="fieldDayClass"
                     class="form-control"
-                    value="600"
-                    min="200"
-                    max="1500"
-                    step="1"
-                    required
-                  />
-                  <div class="invalid-feedback"></div>
-                </div>
-                <div class="col-6 col-md-4 col-lg-2">
-                  <label for="yourVolume" class="form-label"
-                    >Sidetone Volume</label
-                  >
-                  <input
-                    type="number"
-                    id="yourVolume"
-                    name="yourVolume"
-                    class="form-control"
-                    value="70"
-                    min="0"
-                    max="100"
-                    step="1"
-                    required
+                    placeholder="(e.g., 2A)"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    autocorrect="off"
                   />
                   <div class="invalid-feedback"></div>
                 </div>
@@ -1161,7 +1213,14 @@
                   <div class="card-body">
                     <p class="card-text">
                       Enter the exchange details you copy, such as a name,
-                      state, or serial number.
+                      state, serial number, Field Day class, or ARRL/RAC
+                      section.
+                    </p>
+                    <p class="card-text">
+                      <strong>Field Day:</strong> Enter the decoded class (for
+                      example, <code>2A</code>) and section (for example,
+                      <code>EWA</code> or <code>DX</code>) in their separate
+                      fields.
                     </p>
                     <p class="card-text mb-2">
                       <strong>Need a repeat?</strong>
@@ -1255,7 +1314,7 @@
           <th>WPM</th>
           <th>Attempts</th>
           <th>Total Time</th>
-          <th class="mode-specific-column">Additional Info</th>
+          <th class="mode-specific-column">Exchange</th>
         </tr>
       </thead>
       <tbody>

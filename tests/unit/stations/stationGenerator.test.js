@@ -78,6 +78,8 @@ describe('getYourStation', () => {
     setValue('yourCallsign', ' w6nyc ');
     setValue('yourName', ' Henry ');
     setValue('yourState', ' ca ');
+    setValue('yourFieldDayClass', ' 2a ');
+    setValue('yourFieldDaySection', ' ewa ');
     setValue('yourSpeed', 23);
     setValue('yourSidetone', 725);
     setValue('yourVolume', 65);
@@ -89,6 +91,8 @@ describe('getYourStation', () => {
       frequency: 725,
       name: 'Henry',
       state: 'CA',
+      fieldDayClass: '2A',
+      fieldDaySection: 'EWA',
       player: null,
       qsb: false,
     });
@@ -114,7 +118,7 @@ describe('callsign generation', () => {
 
       expect(station.callsign).toBe(expectedUS);
       expect(station.state).toBe('AL');
-      expect(sequence.calls).toBe(expectedDraws);
+      expect(sequence.calls).toBe(expectedDraws + 2);
     }
   );
 
@@ -132,7 +136,7 @@ describe('callsign generation', () => {
 
       expect(station.callsign).toBe(expectedInternational);
       expect(station.state).toBe('');
-      expect(sequence.calls).toBe(expectedDraws);
+      expect(sequence.calls).toBe(expectedDraws + 2);
     }
   );
 
@@ -170,7 +174,7 @@ describe('callsign generation', () => {
     const station = getCallingStation();
 
     expect(station.callsign).toBe('F0A');
-    expect(sequence.calls).toBe(15);
+    expect(sequence.calls).toBe(17);
   });
 
   it('keeps a two-letter international prefix for a 2x format', () => {
@@ -222,8 +226,10 @@ describe('calling-station attributes', () => {
       qsb: false,
       qsbFrequency: 0.85,
       qsbDepth: 0.6,
+      fieldDayClass: '1D',
+      fieldDaySection: 'AL',
     });
-    expect(sequence.calls).toBe(13);
+    expect(sequence.calls).toBe(15);
   });
 
   it('preserves upper-boundary ranges and their inclusive/exclusive behavior', () => {
@@ -246,6 +252,8 @@ describe('calling-station attributes', () => {
       cwopsNumber: 4000,
       player: null,
       qsb: false,
+      fieldDayClass: '3E',
+      fieldDaySection: 'WY',
     });
     expect(station.volume).toBeLessThan(1);
     expect(station.volume).toBeCloseTo(1, 12);
@@ -300,7 +308,7 @@ describe('calling-station attributes', () => {
       expect(station.qsb).toBe(expected);
       expect(station.qsbFrequency).toBe(0.85);
       expect(station.qsbDepth).toBe(0.6);
-      expect(sequence.calls).toBe(14);
+      expect(sequence.calls).toBe(16);
     }
   );
 

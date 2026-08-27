@@ -170,6 +170,8 @@ function configureValidInputs() {
   document.getElementById('yourCallsign').value = 'N0ME';
   document.getElementById('yourName').value = 'HENRY';
   document.getElementById('yourState').value = 'CA';
+  document.getElementById('yourFieldDayClass').value = '2A';
+  document.getElementById('yourFieldDaySection').value = 'EWA';
   document.getElementById('yourSpeed').value = '20';
   document.getElementById('yourSidetone').value = '600';
   document.getElementById('yourVolume').value = '70';
@@ -356,6 +358,9 @@ describe('session initialization and mode UI', () => {
       'W6NC',
       'NYC',
       'QRS',
+      '2A',
+      'EWA',
+      'DX',
       'AGN',
       '?',
     ]);
@@ -370,7 +375,10 @@ describe('session initialization and mode UI', () => {
     expect(agnKey).toHaveClass('bg-warning', 'text-white');
     expect(enterKey).toHaveTextContent('Enter');
     expect(infoCard).toHaveTextContent(
-      'Enter the exchange details you copy, such as a name, state, or serial number.'
+      'Enter the exchange details you copy, such as a name, state, serial number, Field Day class, or ARRL/RAC section.'
+    );
+    expect(infoCard).toHaveTextContent(
+      'Field Day: Enter the decoded class (for example, 2A) and section (for example, EWA or DX) in their separate fields.'
     );
     expect(infoCard).toHaveTextContent('Need a repeat?');
     expect(infoCard).toHaveTextContent(
@@ -389,6 +397,8 @@ describe('session initialization and mode UI', () => {
       stored: {
         mode: 'cwt',
         yourCallsign: 'N0ME',
+        yourFieldDayClass: '2A',
+        yourFieldDaySection: 'EWA',
         yourName: 'HENRY',
         yourSidetone: '650',
         yourSpeed: '24',
@@ -404,6 +414,8 @@ describe('session initialization and mode UI', () => {
     expect(document.getElementById('yourCallsign')).toHaveValue('N0ME');
     expect(document.getElementById('yourName')).toHaveValue('HENRY');
     expect(document.getElementById('yourState')).toHaveValue('CA');
+    expect(document.getElementById('yourFieldDayClass')).toHaveValue('2A');
+    expect(document.getElementById('yourFieldDaySection')).toHaveValue('EWA');
     expect(document.getElementById('yourSpeed')).toHaveValue(24);
     expect(document.getElementById('yourSidetone')).toHaveValue(650);
     expect(document.getElementById('yourVolume')).toHaveValue(55);
@@ -429,6 +441,16 @@ describe('session initialization and mode UI', () => {
     state.value = 'CT';
     state.dispatchEvent(new Event('input', { bubbles: true }));
     expect(storage.peek('yourState')).toBe('CT');
+
+    const fieldDayClass = document.getElementById('yourFieldDayClass');
+    fieldDayClass.value = '3A';
+    fieldDayClass.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(storage.peek('yourFieldDayClass')).toBe('3A');
+
+    const fieldDaySection = document.getElementById('yourFieldDaySection');
+    fieldDaySection.value = 'CT';
+    fieldDaySection.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(storage.peek('yourFieldDaySection')).toBe('CT');
   });
 
   it.each(['retired-mode', 'legacy"]', 'constructor'])(
@@ -476,7 +498,7 @@ describe('session initialization and mode UI', () => {
     const { storage } = await bootSession();
     const cases = [
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'Single Mode Results',
         info1: null,
         info2: null,
@@ -496,6 +518,16 @@ describe('session initialization and mode UI', () => {
         showTu: true,
       },
       {
+        extraHeader: 'Exchange',
+        header: 'Field Day Mode Results',
+        info1: 'Class',
+        info2: 'Section',
+        mode: 'fd',
+        showAgn: true,
+        showExtra: true,
+        showTu: true,
+      },
+      {
         extraHeader: 'State',
         header: 'POTA Mode Results',
         info1: 'State',
@@ -506,7 +538,7 @@ describe('session initialization and mode UI', () => {
         showTu: true,
       },
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'SST Mode Results',
         info1: 'Name',
         info2: 'State',
@@ -516,7 +548,7 @@ describe('session initialization and mode UI', () => {
         showTu: true,
       },
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'CWT Mode Results',
         info1: 'Name',
         info2: 'CW Ops No.',
@@ -555,10 +587,12 @@ describe('session initialization and mode UI', () => {
         testCase.info1 ? 'inline-block' : 'none'
       );
       expect(infoField.placeholder).toBe(testCase.info1 ?? '');
+      expect(infoField.getAttribute('aria-label')).toBe(testCase.info1);
       expect(infoField2.style.display).toBe(
         testCase.info2 ? 'inline-block' : 'none'
       );
       expect(infoField2.placeholder).toBe(testCase.info2 ?? '');
+      expect(infoField2.getAttribute('aria-label')).toBe(testCase.info2);
       expect(extraHeader.style.display).toBe(
         testCase.showExtra ? 'table-cell' : 'none'
       );
@@ -604,6 +638,20 @@ describe('CQ validation', () => {
       mutate() {
         document.getElementById('yourName').value = '';
         document.getElementById('yourState').value = '';
+      },
+    },
+    {
+      feedback: {
+        yourFieldDayClass:
+          'Your Field Day class is required for Field Day mode.',
+        yourFieldDaySection:
+          'Your ARRL/RAC section is required for Field Day mode.',
+      },
+      label: 'requires operator class and section in Field Day mode',
+      mode: 'fd',
+      mutate() {
+        document.getElementById('yourFieldDayClass').value = '';
+        document.getElementById('yourFieldDaySection').value = '';
       },
     },
   ])('$label', async ({ feedback, mode, mutate }) => {
@@ -747,6 +795,19 @@ describe('session controls and message flows', () => {
       signoffMessages: [['N0ME', 'TU N0ME']],
     },
     {
+      cqMessage: 'CQ FD N0ME',
+      extraText: '1D / AL',
+      info1: '1D',
+      info2: 'AL',
+      mode: 'fd',
+      sendMessages: [
+        ['N0ME', 'K0A'],
+        ['N0ME', ' 2A EWA'],
+        ['K0A', 'R 1D AL'],
+      ],
+      signoffMessages: [['N0ME', 'TU N0ME FD']],
+    },
+    {
       cqMessage: 'CQ POTA DE N0ME',
       extraText: 'AL',
       info1: 'AL',
@@ -851,6 +912,144 @@ describe('session controls and message flows', () => {
       expect(document.activeElement).toBe(responseField);
     }
   );
+
+  it('requests Field Day class, section, and full-exchange fills', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('fd');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+
+    setInfoValue('infoField', '');
+    setInfoValue('infoField2', 'AL');
+    document.getElementById('agnButton').click();
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'CL?'],
+      ['K0A', '1D'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '1D');
+    setInfoValue('infoField2', '');
+    document.getElementById('agnButton').click();
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'SEC?'],
+      ['K0A', 'AL'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '');
+    setInfoValue('infoField2', '');
+    document.getElementById('agnButton').click();
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'AGN?'],
+      ['K0A', '1D AL'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '1D');
+    setInfoValue('infoField2', 'AL');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    const [row] = resultsRows();
+    expect(resultsRows()).toHaveLength(1);
+    expect(row.cells[3]).toHaveTextContent('4');
+    expect(row.cells[5]).toHaveTextContent('1D (2 AGN) / AL (2 AGN)');
+  });
+
+  it('applies cut numbers to Field Day class playback but scores digits', async () => {
+    const { random, releaseAudio } = await bootSession();
+    configureValidInputs();
+    selectMode('fd');
+    document.getElementById('enableCutNumbers').checked = true;
+    document.getElementById('cutA').checked = true;
+
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    sendResponse('K0A');
+
+    expect(transcript().slice(-3)).toEqual([
+      ['N0ME', 'K0A'],
+      ['N0ME', ' 2A EWA'],
+      ['K0A', 'R AD AL'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '');
+    setInfoValue('infoField2', 'AL');
+    document.getElementById('agnButton').click();
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'CL?'],
+      ['K0A', 'AD'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '1D');
+    setInfoValue('infoField2', 'AL');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()[0].cells[5]).toHaveTextContent('1D (1 AGN) / AL');
+  });
+
+  it('completes two consecutive Field Day contacts', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('fd');
+
+    for (let contact = 1; contact <= 2; contact += 1) {
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      setInfoValue('infoField', '1D');
+      const sectionField = setInfoValue('infoField2', 'AL');
+      random.mockReturnValue(0.9);
+      pressEnter(sectionField);
+
+      const contactRows = resultsRows().filter(
+        (row) => row.id !== 'resultsTable-summary'
+      );
+      expect(contactRows).toHaveLength(contact);
+      expect(contactRows[0].cells[5]).toHaveTextContent('1D / AL');
+
+      if (contact === 1) {
+        releaseAudio();
+        random.mockReturnValue(0);
+        document.getElementById('cqButton').click();
+      }
+    }
+
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+  });
+
+  it('keeps the validated Field Day settings snapshot for the active QSO', async () => {
+    const { random, releaseAudio } = await bootSession();
+    startSession('fd');
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+
+    document.getElementById('yourFieldDayClass').value = '';
+    document.getElementById('yourFieldDaySection').value = '';
+    setInfoValue('infoField', '');
+    setInfoValue('infoField2', 'AL');
+    document.getElementById('agnButton').click();
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'CL?'],
+      ['K0A', '1D'],
+    ]);
+
+    releaseAudio();
+    setInfoValue('infoField', '1D');
+    setInfoValue('infoField2', 'AL');
+    random.mockReturnValue(0);
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(transcript().at(-1)).toEqual(['K0A', 'K0A']);
+  });
 
   it.each([
     {

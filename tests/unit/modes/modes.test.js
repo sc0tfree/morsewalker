@@ -45,6 +45,17 @@ const uiContracts = {
     extraColumnHeader: 'Serial Number',
     resultsHeader: 'Contest Mode Results',
   },
+  fd: {
+    showTuButton: true,
+    showAgnButton: true,
+    showInfoField: true,
+    infoFieldPlaceholder: 'Class',
+    showInfoField2: true,
+    infoField2Placeholder: 'Section',
+    tableExtraColumn: true,
+    extraColumnHeader: 'Exchange',
+    resultsHeader: 'Field Day Mode Results',
+  },
   pota: {
     showTuButton: true,
     showAgnButton: true,
@@ -64,7 +75,7 @@ const uiContracts = {
     showInfoField2: true,
     infoField2Placeholder: 'State',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'SST Mode Results',
   },
   cwt: {
@@ -75,7 +86,7 @@ const uiContracts = {
     showInfoField2: true,
     infoField2Placeholder: 'CW Ops No.',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'CWT Mode Results',
   },
 };
@@ -123,6 +134,39 @@ const logicContracts = {
       modeName: 'Contest',
       extraInfoFieldKey: 'serialNumber',
       extraInfoFieldKey2: null,
+    },
+  },
+  fd: {
+    messages: {
+      cqMessage: 'CQ FD W6NYC',
+      yourExchange: '2A EWA',
+      theirExchange: 'R 1D EB',
+      yourSignoff: 'TU W6NYC FD',
+      theirSignoff: null,
+    },
+    metadata: {
+      exchangeComponents: [
+        {
+          id: 'fieldDayClass',
+          inputId: 'infoField',
+          fieldKey: 'fieldDayClass',
+          request: 'CL?',
+          reply: '1D',
+        },
+        {
+          id: 'fieldDaySection',
+          inputId: 'infoField2',
+          fieldKey: 'fieldDaySection',
+          request: 'SEC?',
+          reply: 'EB',
+        },
+      ],
+      requiresInfoField: true,
+      requiresInfoField2: true,
+      showTuStep: true,
+      modeName: 'Field Day',
+      extraInfoFieldKey: 'fieldDayClass',
+      extraInfoFieldKey2: 'fieldDaySection',
     },
   },
   pota: {
@@ -221,6 +265,8 @@ const logicContracts = {
 
 const yourStation = {
   callsign: 'W6NYC',
+  fieldDayClass: '2A',
+  fieldDaySection: 'EWA',
   name: 'Henry',
   state: 'CA',
 };
@@ -231,11 +277,13 @@ const theirStation = {
   state: 'TX',
   serialNumber: '07',
   cwopsNumber: 2468,
+  fieldDayClass: '1D',
+  fieldDaySection: 'EB',
 };
 
 describe('mode contracts', () => {
-  it('exports UI and logic contracts for exactly the five v1 modes', () => {
-    const expectedModes = ['contest', 'cwt', 'pota', 'single', 'sst'];
+  it('exports UI and logic contracts for exactly the six v1 modes', () => {
+    const expectedModes = ['contest', 'cwt', 'fd', 'pota', 'single', 'sst'];
 
     expect(Object.keys(modeUIConfig).sort()).toEqual(expectedModes);
     expect(Object.keys(modeLogicConfig).sort()).toEqual(expectedModes);

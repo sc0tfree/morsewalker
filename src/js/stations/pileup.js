@@ -76,7 +76,7 @@ export function addStations(stations, inputs) {
     let numStations = weightedRandom(inputs.maxStations - stations.length);
     console.log(`+ Adding ${numStations} stations...`);
     for (let i = 0; i < numStations; i++) {
-      let callingStation = getCallingStation();
+      let callingStation = getCallingStation(inputs);
       printStation(callingStation);
       stations.push(callingStation);
     }

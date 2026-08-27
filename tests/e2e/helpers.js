@@ -3,6 +3,7 @@ import { expect } from '@playwright/test';
 const modeRadioIds = {
   contest: 'modeContest',
   cwt: 'modeCwt',
+  fd: 'modeFieldDay',
   pota: 'modePota',
   single: 'modeSingle',
   sst: 'modeSst',
@@ -240,6 +241,8 @@ export async function configureValidInputs(page, overrides = {}) {
     minWait: '0',
     qrn: 'off',
     yourCallsign: 'N0ME',
+    yourFieldDayClass: '2A',
+    yourFieldDaySection: 'EWA',
     yourName: 'HENRY',
     yourSidetone: '600',
     yourSpeed: '20',
@@ -249,6 +252,8 @@ export async function configureValidInputs(page, overrides = {}) {
   };
 
   await page.locator('#yourCallsign').fill(settings.yourCallsign);
+  await page.locator('#yourFieldDayClass').fill(settings.yourFieldDayClass);
+  await page.locator('#yourFieldDaySection').fill(settings.yourFieldDaySection);
   await page.locator('#yourName').fill(settings.yourName);
   await page.locator('#yourState').fill(settings.yourState);
   await page.locator('#yourSpeed').fill(settings.yourSpeed);

@@ -86,6 +86,8 @@ describe('settings form parsing and normalization', () => {
     element('yourCallsign').value = '  k1abc/p  ';
     element('yourName').value = '  Ada Lovelace  ';
     element('yourState').value = ' ca ';
+    element('yourFieldDayClass').value = ' 2a ';
+    element('yourFieldDaySection').value = ' ewa ';
     element('yourSpeed').value = '27.9';
     element('yourSidetone').value = '725';
     element('yourVolume').value = '37.5';
@@ -132,6 +134,8 @@ describe('settings form parsing and normalization', () => {
       yourCallsign: 'K1ABC/P',
       yourName: 'Ada Lovelace',
       yourState: 'CA',
+      yourFieldDayClass: '2A',
+      yourFieldDaySection: 'EWA',
       yourSpeed: 27,
       yourSidetone: 725,
       yourVolume: 0.375,
@@ -166,6 +170,8 @@ describe('settings form parsing and normalization', () => {
         mode,
         yourName: '',
         yourState: '',
+        yourFieldDayClass: '',
+        yourFieldDaySection: '',
       });
     }
   );
@@ -210,6 +216,62 @@ describe('settings form parsing and normalization', () => {
       yourState: 'NY',
     });
   });
+
+  it('requires and normalizes class and section in Field Day mode', () => {
+    setCallsign();
+    chooseRadio('mode', 'fd');
+
+    expect(getInputs()).toBeNull();
+    expect(element('yourFieldDayClass')).toHaveClass('is-invalid');
+    expect(element('yourFieldDayClass').nextElementSibling).toHaveTextContent(
+      'Your Field Day class is required for Field Day mode.'
+    );
+    expect(element('yourFieldDaySection')).toHaveClass('is-invalid');
+    expect(element('yourFieldDaySection').nextElementSibling).toHaveTextContent(
+      'Your ARRL/RAC section is required for Field Day mode.'
+    );
+
+    element('yourFieldDayClass').value = ' 2a ';
+    element('yourFieldDaySection').value = ' ewa ';
+
+    expect(getInputs()).toMatchObject({
+      mode: 'fd',
+      yourFieldDayClass: '2A',
+      yourFieldDaySection: 'EWA',
+    });
+  });
+
+  it.each(['0A', 'A1', '1G', '1AB'])(
+    'rejects invalid Field Day class %s',
+    (fieldDayClass) => {
+      setCallsign();
+      chooseRadio('mode', 'fd');
+      element('yourFieldDayClass').value = fieldDayClass;
+      element('yourFieldDaySection').value = 'EWA';
+
+      expect(getInputs()).toBeNull();
+      expect(element('yourFieldDayClass')).toHaveClass('is-invalid');
+      expect(element('yourFieldDayClass').nextElementSibling).toHaveTextContent(
+        'Use a valid Field Day class, such as 1D or 3A.'
+      );
+    }
+  );
+
+  it.each(['CA', 'TX', 'GTA', 'ZZZ'])(
+    'rejects invalid Field Day section %s',
+    (fieldDaySection) => {
+      setCallsign();
+      chooseRadio('mode', 'fd');
+      element('yourFieldDayClass').value = '2A';
+      element('yourFieldDaySection').value = fieldDaySection;
+
+      expect(getInputs()).toBeNull();
+      expect(element('yourFieldDaySection')).toHaveClass('is-invalid');
+      expect(
+        element('yourFieldDaySection').nextElementSibling
+      ).toHaveTextContent('Use a current ARRL/RAC section abbreviation or DX.');
+    }
+  );
 
   it('returns selected callsign formats in the source-defined order', () => {
     setCallsign();
