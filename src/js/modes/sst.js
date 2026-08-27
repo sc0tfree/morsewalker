@@ -15,7 +15,7 @@ export default {
     showInfoField2: true,
     infoField2Placeholder: 'State',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'SST Mode Results',
   },
   logic: {

@@ -15,7 +15,7 @@ export default {
     showInfoField2: true,
     infoField2Placeholder: 'CW Ops No.',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'CWT Mode Results',
   },
   logic: {

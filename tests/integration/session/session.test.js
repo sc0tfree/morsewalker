@@ -498,7 +498,7 @@ describe('session initialization and mode UI', () => {
     const { storage } = await bootSession();
     const cases = [
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'Single Mode Results',
         info1: null,
         info2: null,
@@ -538,7 +538,7 @@ describe('session initialization and mode UI', () => {
         showTu: true,
       },
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'SST Mode Results',
         info1: 'Name',
         info2: 'State',
@@ -548,7 +548,7 @@ describe('session initialization and mode UI', () => {
         showTu: true,
       },
       {
-        extraHeader: 'Additional Info',
+        extraHeader: 'Exchange',
         header: 'CWT Mode Results',
         info1: 'Name',
         info2: 'CW Ops No.',

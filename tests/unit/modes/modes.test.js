@@ -75,7 +75,7 @@ const uiContracts = {
     showInfoField2: true,
     infoField2Placeholder: 'State',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'SST Mode Results',
   },
   cwt: {
@@ -86,7 +86,7 @@ const uiContracts = {
     showInfoField2: true,
     infoField2Placeholder: 'CW Ops No.',
     tableExtraColumn: true,
-    extraColumnHeader: 'Additional Info',
+    extraColumnHeader: 'Exchange',
     resultsHeader: 'CWT Mode Results',
   },
 };

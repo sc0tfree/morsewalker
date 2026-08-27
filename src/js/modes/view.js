@@ -60,6 +60,6 @@ export function applyModeSettings(mode) {
     'thead .mode-specific-column'
   );
   extraColumnHeaders.forEach((header) => {
-    header.textContent = config.extraColumnHeader || 'Additional Info';
+    header.textContent = config.extraColumnHeader || 'Exchange';
   });
 }
