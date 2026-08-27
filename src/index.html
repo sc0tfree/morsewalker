@@ -238,7 +238,7 @@
           <div class="accordion-body">
             <div class="container">
               <div class="row g-3">
-                <div class="col-6 col-md-4 col-lg">
+                <div class="col-6 col-md-3 col-lg">
                   <label for="yourCallsign" class="form-label">Callsign</label>
                   <input
                     type="text"
@@ -253,7 +253,56 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg">
+                <div class="col-6 col-md-3 col-lg">
+                  <label for="yourSpeed" class="form-label">Speed WPM</label>
+                  <input
+                    type="number"
+                    id="yourSpeed"
+                    name="yourSpeed"
+                    class="form-control"
+                    value="20"
+                    min="5"
+                    max="60"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-lg">
+                  <label for="yourSidetone" class="form-label"
+                    >Sidetone Hz</label
+                  >
+                  <input
+                    type="number"
+                    id="yourSidetone"
+                    name="yourSidetone"
+                    class="form-control"
+                    value="600"
+                    min="200"
+                    max="1500"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-lg">
+                  <label for="yourVolume" class="form-label"
+                    >Sidetone Vol</label
+                  >
+                  <input
+                    type="number"
+                    id="yourVolume"
+                    name="yourVolume"
+                    class="form-control"
+                    value="70"
+                    min="0"
+                    max="100"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+                <div class="col-6 col-md-3 col-lg">
                   <label for="yourName" class="form-label">First Name</label>
                   <input
                     type="text"
@@ -268,7 +317,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg">
+                <div class="col-6 col-md-3 col-lg">
                   <label for="yourState" class="form-label">State</label>
                   <input
                     type="text"
@@ -284,7 +333,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg">
+                <div class="col-6 col-md-3 col-lg">
                   <label for="yourFieldDaySection" class="form-label"
                     >FD Section</label
                   >
@@ -302,7 +351,7 @@
                   />
                   <div class="invalid-feedback"></div>
                 </div>
-                <div class="col-6 col-md-4 col-lg">
+                <div class="col-6 col-md-3 col-lg">
                   <label for="yourFieldDayClass" class="form-label"
                     >FD Class</label
                   >
@@ -316,56 +365,6 @@
                     autocapitalize="characters"
                     spellcheck="false"
                     autocorrect="off"
-                  />
-                  <div class="invalid-feedback"></div>
-                </div>
-
-                <div class="col-6 col-md-4 col-lg">
-                  <label for="yourSpeed" class="form-label">Speed WPM</label>
-                  <input
-                    type="number"
-                    id="yourSpeed"
-                    name="yourSpeed"
-                    class="form-control"
-                    value="20"
-                    min="5"
-                    max="60"
-                    step="1"
-                    required
-                  />
-                  <div class="invalid-feedback"></div>
-                </div>
-                <div class="col-6 col-md-4 col-lg">
-                  <label for="yourSidetone" class="form-label"
-                    >Sidetone Hz</label
-                  >
-                  <input
-                    type="number"
-                    id="yourSidetone"
-                    name="yourSidetone"
-                    class="form-control"
-                    value="600"
-                    min="200"
-                    max="1500"
-                    step="1"
-                    required
-                  />
-                  <div class="invalid-feedback"></div>
-                </div>
-                <div class="col-6 col-md-4 col-lg">
-                  <label for="yourVolume" class="form-label"
-                    >Sidetone Vol</label
-                  >
-                  <input
-                    type="number"
-                    id="yourVolume"
-                    name="yourVolume"
-                    class="form-control"
-                    value="70"
-                    min="0"
-                    max="100"
-                    step="1"
-                    required
                   />
                   <div class="invalid-feedback"></div>
                 </div>

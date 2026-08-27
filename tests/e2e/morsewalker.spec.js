@@ -110,6 +110,59 @@ test('production artifact boots with its required assets and no page errors', as
   expect(pageErrors).toEqual([]);
 });
 
+test('Your Station settings preserve their responsive information groups', async ({
+  page,
+}) => {
+  await openApp(page);
+
+  const stationInputs = page.locator('#collapseYourStationSettings input');
+  const expectedOrder = [
+    'yourCallsign',
+    'yourSpeed',
+    'yourSidetone',
+    'yourVolume',
+    'yourName',
+    'yourState',
+    'yourFieldDaySection',
+    'yourFieldDayClass',
+  ];
+  expect(
+    await stationInputs.evaluateAll((inputs) => inputs.map(({ id }) => id))
+  ).toEqual(expectedOrder);
+
+  const expectedRows = new Map([
+    [
+      390,
+      [
+        ['yourCallsign', 'yourSpeed'],
+        ['yourSidetone', 'yourVolume'],
+        ['yourName', 'yourState'],
+        ['yourFieldDaySection', 'yourFieldDayClass'],
+      ],
+    ],
+    [768, [expectedOrder.slice(0, 4), expectedOrder.slice(4)]],
+    [992, [expectedOrder]],
+  ]);
+
+  for (const [width, expected] of expectedRows) {
+    await page.setViewportSize({ width, height: 900 });
+    const rows = await stationInputs.evaluateAll((inputs) => {
+      const grouped = new Map();
+
+      for (const input of inputs) {
+        const top = Math.round(input.parentElement.getBoundingClientRect().top);
+        const row = grouped.get(top) ?? [];
+        row.push(input.id);
+        grouped.set(top, row);
+      }
+
+      return [...grouped.values()];
+    });
+
+    expect(rows, `${width}px station rows`).toEqual(expected);
+  }
+});
+
 for (const journey of modeJourneys) {
   test(`${journey.label} completes a deterministic mode-specific journey`, async ({
     page,
