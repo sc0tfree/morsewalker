@@ -802,7 +802,7 @@ describe('session controls and message flows', () => {
       mode: 'fd',
       sendMessages: [
         ['N0ME', 'K0A'],
-        ['N0ME', ' TU 2A EWA'],
+        ['N0ME', ' 2A EWA'],
         ['K0A', 'R 1D AL'],
       ],
       signoffMessages: [['N0ME', 'TU N0ME FD']],
@@ -971,7 +971,7 @@ describe('session controls and message flows', () => {
 
     expect(transcript().slice(-3)).toEqual([
       ['N0ME', 'K0A'],
-      ['N0ME', ' TU 2A EWA'],
+      ['N0ME', ' 2A EWA'],
       ['K0A', 'R AD AL'],
     ]);
 

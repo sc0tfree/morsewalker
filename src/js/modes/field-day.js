@@ -27,7 +27,7 @@ export default {
     cqMessage: (yourStation, theirStation, arbitrary) =>
       `CQ FD ${yourStation.callsign}`,
     yourExchange: (yourStation, theirStation, arbitrary) =>
-      `TU ${yourStation.fieldDayClass} ${yourStation.fieldDaySection}`,
+      `${yourStation.fieldDayClass} ${yourStation.fieldDaySection}`,
     theirExchange: (yourStation, theirStation, arbitrary) =>
       `R ${theirStation.fieldDayClass} ${theirStation.fieldDaySection}`,
     yourSignoff: (yourStation, theirStation, arbitrary) =>

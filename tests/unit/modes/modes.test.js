@@ -139,7 +139,7 @@ const logicContracts = {
   fd: {
     messages: {
       cqMessage: 'CQ FD W6NYC',
-      yourExchange: 'TU 2A EWA',
+      yourExchange: '2A EWA',
       theirExchange: 'R 1D EB',
       yourSignoff: 'TU W6NYC FD',
       theirSignoff: null,
