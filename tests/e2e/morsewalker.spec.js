@@ -72,6 +72,170 @@ const modeInfoLabels = {
   sst: ['Name', 'State'],
 };
 
+const respondingNumberIds = [
+  'maxStations',
+  'minSpeed',
+  'maxSpeed',
+  'farnsworthSpeed',
+  'minTone',
+  'maxTone',
+  'minVolume',
+  'maxVolume',
+  'minWait',
+  'maxWait',
+];
+
+const respondingCheckboxIds = [
+  'enableFarnsworth',
+  'usOnly',
+  '1x1',
+  '1x2',
+  '2x1',
+  '2x2',
+  '1x3',
+  '2x3',
+  'enableCutNumbers',
+  'cutT',
+  'cutA',
+  'cutU',
+  'cutV',
+  'cutE',
+  'cutG',
+  'cutD',
+  'cutN',
+];
+
+const customRespondingPreferences = {
+  maxStations: 7,
+  minSpeed: 12,
+  maxSpeed: 36,
+  enableFarnsworth: true,
+  farnsworthSpeed: 8,
+  minTone: 350,
+  maxTone: 1050,
+  minVolume: 10,
+  maxVolume: 90,
+  minWait: 0.5,
+  maxWait: 3.25,
+  usOnly: false,
+  '1x1': true,
+  '1x2': false,
+  '2x1': false,
+  '2x2': false,
+  '1x3': false,
+  '2x3': false,
+  enableCutNumbers: true,
+  cutT: false,
+  cutA: true,
+  cutU: true,
+  cutV: true,
+  cutE: true,
+  cutG: true,
+  cutD: true,
+  cutN: false,
+};
+
+const defaultRespondingPreferences = {
+  maxStations: 3,
+  minSpeed: 18,
+  maxSpeed: 25,
+  enableFarnsworth: false,
+  farnsworthSpeed: 10,
+  minTone: 400,
+  maxTone: 900,
+  minVolume: 30,
+  maxVolume: 100,
+  minWait: 0.25,
+  maxWait: 2,
+  usOnly: true,
+  '1x1': false,
+  '1x2': true,
+  '2x1': true,
+  '2x2': true,
+  '1x3': true,
+  '2x3': true,
+  enableCutNumbers: false,
+  cutT: true,
+  cutA: false,
+  cutU: false,
+  cutV: false,
+  cutE: false,
+  cutG: false,
+  cutD: false,
+  cutN: true,
+};
+
+const customEffectsPreferences = {
+  qrn: 'heavy',
+  qsb: true,
+  qsbPercentage: 82,
+};
+
+const defaultEffectsPreferences = {
+  qrn: 'normal',
+  qsb: false,
+  qsbPercentage: 50,
+};
+
+async function setPracticePreferences(page, responding, effects) {
+  await page.evaluate(
+    ({ checkboxIds, effectsValues, numberIds, respondingValues }) => {
+      const updateValue = (id, value) => {
+        const input = document.getElementById(id);
+        input.value = String(value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+      const updateChecked = (id, checked) => {
+        const input = document.getElementById(id);
+        input.checked = checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+
+      numberIds.forEach((id) => updateValue(id, respondingValues[id]));
+      checkboxIds.forEach((id) => updateChecked(id, respondingValues[id]));
+      ['off', 'normal', 'moderate', 'heavy'].forEach((level) => {
+        const id = `qrn${level[0].toUpperCase()}${level.slice(1)}`;
+        updateChecked(id, effectsValues.qrn === level);
+      });
+      updateChecked('qsb', effectsValues.qsb);
+      updateValue('qsbPercentage', effectsValues.qsbPercentage);
+    },
+    {
+      checkboxIds: respondingCheckboxIds,
+      effectsValues: effects,
+      numberIds: respondingNumberIds,
+      respondingValues: responding,
+    }
+  );
+}
+
+async function practicePreferencesSnapshot(page) {
+  return page.evaluate(
+    ({ checkboxIds, numberIds }) => {
+      const responding = {};
+      numberIds.forEach((id) => {
+        responding[id] = Number(document.getElementById(id).value);
+      });
+      checkboxIds.forEach((id) => {
+        responding[id] = document.getElementById(id).checked;
+      });
+
+      return {
+        responding,
+        effects: {
+          qrn: document.querySelector('input[name="qrn"]:checked').value,
+          qsb: document.getElementById('qsb').checked,
+          qsbPercentage: Number(document.getElementById('qsbPercentage').value),
+        },
+      };
+    },
+    {
+      checkboxIds: respondingCheckboxIds,
+      numberIds: respondingNumberIds,
+    }
+  );
+}
+
 test.beforeEach(async ({ page }) => {
   await installTestEnvironment(page);
 });
@@ -530,7 +694,7 @@ test('invalid CQ is rejected before a station or audio starts', async ({
   page,
 }) => {
   await openApp(page);
-  await configureValidInputs(page);
+  await configureValidInputs(page, { qrn: 'normal' });
   await page.locator('#yourCallsign').fill('');
   await page.locator('#cqButton').click();
 
@@ -540,7 +704,10 @@ test('invalid CQ is rejected before a station or audio starts', async ({
   );
   await expect(page.locator('#activeStations')).toHaveText('0');
   await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
-  expect((await audioSnapshot(page)).scheduledEvents).toBe(0);
+  expect(await audioSnapshot(page)).toMatchObject({
+    bufferSources: 0,
+    scheduledEvents: 0,
+  });
 });
 
 test('Reset, mode switching, and persisted station settings survive a reload', async ({
@@ -618,4 +785,121 @@ test('Reset, mode switching, and persisted station settings survive a reload', a
   await expect(page.locator('#yourSpeed')).toHaveValue('24');
   await expect(page.locator('#yourSidetone')).toHaveValue('650');
   await expect(page.locator('#yourVolume')).toHaveValue('55');
+});
+
+test('practice preferences persist and each Defaults action remains section-scoped', async ({
+  page,
+}) => {
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'cwt');
+  await page.locator('#yourCallsign').fill('W1AW');
+  await page.locator('#yourName').fill('MAYA');
+  await page.locator('#yourSpeed').fill('24');
+  await setPracticePreferences(
+    page,
+    customRespondingPreferences,
+    customEffectsPreferences
+  );
+
+  await page.reload();
+  await expect(page.locator('#modeResultsHeader')).toHaveText(
+    'CWT Mode Results'
+  );
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: customRespondingPreferences,
+    effects: customEffectsPreferences,
+  });
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourName')).toHaveValue('MAYA');
+  await expect(page.locator('#yourSpeed')).toHaveValue('24');
+  await expect(page.locator('#farnsworthSpeed')).toBeEnabled();
+  await expect(page.locator('#cutA')).toBeEnabled();
+  await expect(page.locator('#qsbPercentage')).toBeEnabled();
+  await expect(page.locator('#qsbValue')).toHaveText('82%');
+
+  await page
+    .locator('#headingRespondingStationSettings .accordion-button')
+    .click();
+  await expect(page.locator('#collapseRespondingStationSettings')).toHaveClass(
+    /show/
+  );
+  const respondingDefaults = page.getByRole('button', {
+    name: 'Restore Responding Station defaults',
+  });
+  await expect(respondingDefaults).toHaveText('Defaults');
+  await respondingDefaults.click();
+
+  const defaultsModal = page.locator('#settingsDefaultsModal');
+  await expect(defaultsModal).toBeVisible();
+  await expect(page.locator('#settingsDefaultsModalLabel')).toHaveText(
+    'Restore Responding Station Settings to defaults?'
+  );
+  await expect(page.locator('#settingsDefaultsModalDescription')).toContainText(
+    'Your Station and Effects settings will not change.'
+  );
+
+  await defaultsModal.getByRole('button', { name: 'Cancel' }).click();
+  await expect(defaultsModal).toBeHidden();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: customRespondingPreferences,
+    effects: customEffectsPreferences,
+  });
+
+  await respondingDefaults.click();
+  await defaultsModal.getByRole('button', { name: 'Restore defaults' }).click();
+  await expect(defaultsModal).toBeHidden();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: defaultRespondingPreferences,
+    effects: customEffectsPreferences,
+  });
+  await expect(page.locator('#farnsworthSpeed')).toBeDisabled();
+  await expect(page.locator('#cutA')).toBeDisabled();
+  await expect(page.locator('#qsbPercentage')).toBeEnabled();
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#modeCwt')).toBeChecked();
+
+  await page.reload();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: defaultRespondingPreferences,
+    effects: customEffectsPreferences,
+  });
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#modeCwt')).toBeChecked();
+
+  await page.locator('#headingEffects .accordion-button').click();
+  await expect(page.locator('#collapseEffects')).toHaveClass(/show/);
+  const effectsDefaults = page.getByRole('button', {
+    name: 'Restore Effects defaults',
+  });
+  await expect(effectsDefaults).toHaveText('Defaults');
+  await effectsDefaults.click();
+
+  await expect(defaultsModal).toBeVisible();
+  await expect(page.locator('#settingsDefaultsModalLabel')).toHaveText(
+    'Restore Effects Settings to defaults?'
+  );
+  await expect(page.locator('#settingsDefaultsModalDescription')).toContainText(
+    'Your Station and Responding Station settings will not change.'
+  );
+  await defaultsModal.getByRole('button', { name: 'Restore defaults' }).click();
+  await expect(defaultsModal).toBeHidden();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: defaultRespondingPreferences,
+    effects: defaultEffectsPreferences,
+  });
+  await expect(page.locator('#qsbPercentage')).toBeDisabled();
+  await expect(page.locator('#qsbValue')).toHaveText('50%');
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourName')).toHaveValue('MAYA');
+
+  await page.reload();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: defaultRespondingPreferences,
+    effects: defaultEffectsPreferences,
+  });
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourName')).toHaveValue('MAYA');
+  await expect(page.locator('#yourSpeed')).toHaveValue('24');
+  await expect(page.locator('#modeCwt')).toBeChecked();
 });

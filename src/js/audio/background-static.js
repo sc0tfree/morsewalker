@@ -1,5 +1,3 @@
-import { getInputs } from '../inputs.js';
-
 const backgroundStaticContext = new AudioContext();
 const staticUrl = '../audio/static.mp3';
 const fadeSeconds = 1;
@@ -84,10 +82,10 @@ async function loadTrack(track) {
 function startSelectedTrack() {
   if (!backgroundStaticSessionActive || currentTrack) return;
 
-  const inputs = getInputs();
-  if (inputs === null || inputs.qrn === 'off') return;
+  const selectedQRN =
+    document.querySelector('input[name="qrn"]:checked')?.value ?? 'off';
+  if (selectedQRN === 'off') return;
 
-  const selectedQRN = inputs.qrn;
   const track = {
     disconnected: false,
     gain: null,

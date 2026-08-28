@@ -169,6 +169,25 @@ describe('background static lifecycle', () => {
     expect(audio.isBackgroundStaticPlaying()).toBe(true);
   });
 
+  it('updates QRN even when an unrelated setting is invalid', async () => {
+    const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+    const normalSource = staticContext.bufferSources[0];
+
+    document.getElementById('yourCallsign').value = '';
+    document.getElementById('qrnHeavy').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    expect(normalSource.stopped).toEqual([0]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(staticContext.gains[1].gain.value).toBe(3);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+  });
+
   it('invalidates a duplicate pending load before it can decode or start', async () => {
     const pendingArrayBuffer = createDeferred();
     const response = {
