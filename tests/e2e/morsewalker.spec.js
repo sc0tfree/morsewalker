@@ -433,13 +433,19 @@ test('Defaults actions remain visible and independent in accordion headers', asy
         button.parentElement.querySelector('.accordion-button');
       const actionStyles = window.getComputedStyle(button);
       const accordionStyles = window.getComputedStyle(accordionButton);
+      const colorChannels = (value) =>
+        (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
 
       return {
         actionBackground: actionStyles.backgroundColor,
         accordionBackground: accordionStyles.backgroundColor,
+        backgroundChannels: colorChannels(actionStyles.backgroundColor),
+        borderChannels: colorChannels(actionStyles.borderTopColor),
+        borderRadius: parseFloat(actionStyles.borderTopLeftRadius),
         borderStyle: actionStyles.borderTopStyle,
         borderWidth: parseFloat(actionStyles.borderTopWidth),
         boxShadow: actionStyles.boxShadow,
+        textChannels: colorChannels(actionStyles.color),
       };
     });
 
@@ -449,7 +455,15 @@ test('Defaults actions remain visible and independent in accordion headers', asy
     );
     expect(appearance.borderStyle).toBe('solid');
     expect(appearance.borderWidth).toBeGreaterThan(0);
-    expect(appearance.boxShadow).not.toBe('none');
+    expect(appearance.borderRadius).toBeGreaterThan(0);
+    expect(appearance.backgroundChannels).toHaveLength(3);
+    expect(appearance.borderChannels[2]).toBeGreaterThan(
+      appearance.borderChannels[0]
+    );
+    expect(appearance.textChannels[2]).toBeGreaterThan(
+      appearance.textChannels[0]
+    );
+    expect(appearance.boxShadow).toBe('none');
 
     await action.click();
     await expect(defaultsModal).toBeVisible();
