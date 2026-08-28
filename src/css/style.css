@@ -32,3 +32,12 @@ input[type='text']::placeholder {
   white-space: nowrap;
   transform: translateY(-50%);
 }
+
+.accordion-header-with-action
+  .accordion-button:not(.collapsed)
+  + .accordion-header-action {
+  --bs-btn-color: var(--bs-body-color);
+  --bs-btn-bg: var(--bs-body-bg);
+  --bs-btn-border-color: var(--bs-body-color);
+  box-shadow: 0 0.125rem 0.25rem rgba(var(--bs-body-color-rgb), 0.25);
+}

@@ -419,6 +419,48 @@ test('Defaults actions remain visible and independent in accordion headers', asy
     await expect(defaultsModal).toBeHidden();
     await expect(collapse).not.toHaveClass(/show/);
   }
+
+  for (const { actionId, collapseId, headerId, name } of actions) {
+    const collapse = page.locator(`#${collapseId}`);
+    const collapseButton = page.locator(`#${headerId} > .accordion-button`);
+    const action = page.getByRole('button', { name });
+
+    await collapseButton.click();
+    await expect(collapse).toHaveClass(/show/);
+
+    const appearance = await page.locator(`#${actionId}`).evaluate((button) => {
+      const accordionButton =
+        button.parentElement.querySelector('.accordion-button');
+      const actionStyles = window.getComputedStyle(button);
+      const accordionStyles = window.getComputedStyle(accordionButton);
+
+      return {
+        actionBackground: actionStyles.backgroundColor,
+        accordionBackground: accordionStyles.backgroundColor,
+        borderStyle: actionStyles.borderTopStyle,
+        borderWidth: parseFloat(actionStyles.borderTopWidth),
+        boxShadow: actionStyles.boxShadow,
+      };
+    });
+
+    expect(appearance.actionBackground).not.toBe('rgba(0, 0, 0, 0)');
+    expect(appearance.actionBackground).not.toBe(
+      appearance.accordionBackground
+    );
+    expect(appearance.borderStyle).toBe('solid');
+    expect(appearance.borderWidth).toBeGreaterThan(0);
+    expect(appearance.boxShadow).not.toBe('none');
+
+    await action.click();
+    await expect(defaultsModal).toBeVisible();
+    await expect(collapse).toHaveClass(/show/);
+    await defaultsModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(defaultsModal).toBeHidden();
+    await expect(collapse).toHaveClass(/show/);
+
+    await collapseButton.click();
+    await expect(collapse).not.toHaveClass(/show/);
+  }
 });
 
 for (const journey of modeJourneys) {
