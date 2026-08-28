@@ -236,6 +236,42 @@ async function practicePreferencesSnapshot(page) {
   );
 }
 
+async function accordionHeaderActionLayout(page, headerId, actionId) {
+  return page.locator(`#${headerId}`).evaluate((header, id) => {
+    const collapseButton = header.querySelector('.accordion-button');
+    const heading = collapseButton.querySelector('h5');
+    const action = document.getElementById(id);
+    const headerRect = header.getBoundingClientRect();
+    const collapseRect = collapseButton.getBoundingClientRect();
+    const headingRect = heading.getBoundingClientRect();
+    const actionRect = action.getBoundingClientRect();
+    const collapseStyles = window.getComputedStyle(collapseButton);
+    const caretStyles = window.getComputedStyle(collapseButton, '::after');
+    const caretLeft =
+      collapseRect.right -
+      parseFloat(collapseStyles.paddingRight) -
+      parseFloat(caretStyles.width);
+
+    return {
+      action: {
+        bottom: actionRect.bottom,
+        left: actionRect.left,
+        right: actionRect.right,
+        top: actionRect.top,
+      },
+      caretLeft,
+      header: {
+        bottom: headerRect.bottom,
+        left: headerRect.left,
+        right: headerRect.right,
+        top: headerRect.top,
+      },
+      headingRight: headingRect.right,
+      parentId: action.parentElement.id,
+    };
+  }, actionId);
+}
+
 test.beforeEach(async ({ page }) => {
   await installTestEnvironment(page);
 });
@@ -327,6 +363,61 @@ test('Your Station settings preserve their responsive information groups', async
     });
 
     expect(rows, `${width}px station rows`).toEqual(expected);
+  }
+});
+
+test('Defaults actions remain visible and independent in accordion headers', async ({
+  page,
+}) => {
+  await openApp(page);
+  const actions = [
+    {
+      actionId: 'respondingStationDefaultsButton',
+      collapseId: 'collapseRespondingStationSettings',
+      headerId: 'headingRespondingStationSettings',
+      name: 'Restore Responding Station defaults',
+    },
+    {
+      actionId: 'effectsDefaultsButton',
+      collapseId: 'collapseEffects',
+      headerId: 'headingEffects',
+      name: 'Restore Effects defaults',
+    },
+  ];
+
+  for (const width of [390, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+
+    for (const { actionId, headerId, name } of actions) {
+      const action = page.getByRole('button', { name });
+      await expect(action).toBeVisible();
+
+      const layout = await accordionHeaderActionLayout(
+        page,
+        headerId,
+        actionId
+      );
+      expect(layout.parentId).toBe(headerId);
+      expect(layout.action.left).toBeGreaterThanOrEqual(layout.header.left);
+      expect(layout.action.right).toBeLessThanOrEqual(layout.caretLeft - 1);
+      expect(layout.action.top).toBeGreaterThanOrEqual(layout.header.top);
+      expect(layout.action.bottom).toBeLessThanOrEqual(layout.header.bottom);
+      expect(layout.headingRight).toBeLessThanOrEqual(layout.action.left + 1);
+    }
+  }
+
+  const defaultsModal = page.locator('#settingsDefaultsModal');
+  for (const { collapseId, name } of actions) {
+    const collapse = page.locator(`#${collapseId}`);
+    await expect(collapse).not.toHaveClass(/show/);
+
+    await page.getByRole('button', { name }).click();
+
+    await expect(defaultsModal).toBeVisible();
+    await expect(collapse).not.toHaveClass(/show/);
+    await defaultsModal.getByRole('button', { name: 'Cancel' }).click();
+    await expect(defaultsModal).toBeHidden();
+    await expect(collapse).not.toHaveClass(/show/);
   }
 });
 

@@ -376,7 +376,10 @@
 
       <!-- Responding Station Settings -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingRespondingStationSettings">
+        <h2
+          class="accordion-header accordion-header-with-action"
+          id="headingRespondingStationSettings"
+        >
           <button
             class="accordion-button collapsed"
             type="button"
@@ -387,6 +390,18 @@
           >
             <h5>Responding Station Settings</h5>
           </button>
+          <button
+            type="button"
+            id="respondingStationDefaultsButton"
+            class="btn btn-outline-secondary btn-sm accordion-header-action"
+            data-settings-defaults-group="respondingStation"
+            data-bs-toggle="modal"
+            data-bs-target="#settingsDefaultsModal"
+            aria-label="Restore Responding Station defaults"
+          >
+            <i class="fa-solid fa-arrow-rotate-left me-2" aria-hidden="true"></i
+            >Defaults
+          </button>
         </h2>
         <div
           id="collapseRespondingStationSettings"
@@ -396,24 +411,6 @@
         >
           <div class="accordion-body">
             <div class="container">
-              <div class="d-flex justify-content-end mb-3">
-                <button
-                  type="button"
-                  id="respondingStationDefaultsButton"
-                  class="btn btn-outline-secondary btn-sm"
-                  data-settings-defaults-group="respondingStation"
-                  data-bs-toggle="modal"
-                  data-bs-target="#settingsDefaultsModal"
-                  aria-label="Restore Responding Station defaults"
-                >
-                  <i
-                    class="fa-solid fa-arrow-rotate-left me-2"
-                    aria-hidden="true"
-                  ></i
-                  >Defaults
-                </button>
-              </div>
-
               <!-- Farnsworth Row -->
               <div class="row g-3 align-items-end">
                 <!-- Max Stations -->
@@ -841,7 +838,10 @@
       <!-- Effects -->
       <!-- Effects -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingEffects">
+        <h2
+          class="accordion-header accordion-header-with-action"
+          id="headingEffects"
+        >
           <button
             class="accordion-button collapsed"
             type="button"
@@ -852,6 +852,18 @@
           >
             <h5>Effects Settings</h5>
           </button>
+          <button
+            type="button"
+            id="effectsDefaultsButton"
+            class="btn btn-outline-secondary btn-sm accordion-header-action"
+            data-settings-defaults-group="effects"
+            data-bs-toggle="modal"
+            data-bs-target="#settingsDefaultsModal"
+            aria-label="Restore Effects defaults"
+          >
+            <i class="fa-solid fa-arrow-rotate-left me-2" aria-hidden="true"></i
+            >Defaults
+          </button>
         </h2>
         <div
           id="collapseEffects"
@@ -861,24 +873,6 @@
         >
           <div class="accordion-body">
             <div class="container">
-              <div class="d-flex justify-content-end mb-3">
-                <button
-                  type="button"
-                  id="effectsDefaultsButton"
-                  class="btn btn-outline-secondary btn-sm"
-                  data-settings-defaults-group="effects"
-                  data-bs-toggle="modal"
-                  data-bs-target="#settingsDefaultsModal"
-                  aria-label="Restore Effects defaults"
-                >
-                  <i
-                    class="fa-solid fa-arrow-rotate-left me-2"
-                    aria-hidden="true"
-                  ></i
-                  >Defaults
-                </button>
-              </div>
-
               <div class="row g-3 align-items-end">
                 <!-- QRN (Atmospheric Noise) -->
                 <div class="col-12 col-lg-4 d-flex flex-column">
