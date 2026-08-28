@@ -1,0 +1,10 @@
+{
+  "name": "Morse Walker",
+  "install": "npm ci",
+  "terminals": [
+    {
+      "name": "dev-server",
+      "command": "./node_modules/.bin/webpack serve --config webpack.config.dev.js --host 0.0.0.0 --port 8080 --no-open"
+    }
+  ]
+}
