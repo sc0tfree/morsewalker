@@ -983,7 +983,7 @@ test('practice preferences persist and each Defaults action remains section-scop
     'Restore Responding Station Settings to defaults?'
   );
   await expect(page.locator('#settingsDefaultsModalDescription')).toContainText(
-    'Your Station and Effects settings will not change.'
+    'Only Responding Station settings will be reset.'
   );
 
   await defaultsModal.getByRole('button', { name: 'Cancel' }).click();

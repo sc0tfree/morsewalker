@@ -561,7 +561,7 @@ describe('session initialization and mode UI', () => {
       'Restore Responding Station Settings to defaults?'
     );
     expect(modalDescription).toHaveTextContent(
-      'Your Station and Effects settings will not change.'
+      'Only Responding Station settings will be reset.'
     );
     confirmButton.dispatchEvent(new window.MouseEvent('click'));
 

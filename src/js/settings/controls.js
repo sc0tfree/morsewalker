@@ -45,8 +45,7 @@ const toggleControls = [
 
 const defaultsModalCopy = {
   respondingStation: {
-    description:
-      'Only Responding Station Settings will be reset. Your Station and Effects settings will not change.',
+    description: 'Only Responding Station settings will be reset.',
     title: 'Restore Responding Station Settings to defaults?',
   },
   effects: {
