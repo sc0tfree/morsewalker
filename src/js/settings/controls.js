@@ -50,8 +50,7 @@ const defaultsModalCopy = {
     title: 'Restore Responding Station Settings to defaults?',
   },
   effects: {
-    description:
-      'Only Effects Settings will be reset. Your Station and Responding Station settings will not change.',
+    description: 'Only Effects settings will be reset.',
     title: 'Restore Effects Settings to defaults?',
   },
 };

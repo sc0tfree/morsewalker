@@ -1027,7 +1027,7 @@ test('practice preferences persist and each Defaults action remains section-scop
     'Restore Effects Settings to defaults?'
   );
   await expect(page.locator('#settingsDefaultsModalDescription')).toContainText(
-    'Your Station and Responding Station settings will not change.'
+    'Only Effects settings will be reset.'
   );
   await defaultsModal.getByRole('button', { name: 'Restore defaults' }).click();
   await expect(defaultsModal).toBeHidden();
