@@ -9,3 +9,33 @@ input[type='text']::placeholder {
   opacity: 1; /* Ensures uniform appearance across different browsers */
   text-transform: none; /* Reset the text-transform */
 }
+
+.accordion-header-with-action {
+  --accordion-header-action-width: 6.5rem;
+  position: relative;
+}
+
+.accordion-header-with-action .accordion-button h5 {
+  margin-right: calc(var(--accordion-header-action-width) + 0.75rem);
+  margin-bottom: 0;
+}
+
+.accordion-header-action {
+  position: absolute;
+  top: 50%;
+  right: calc(
+    var(--bs-accordion-btn-padding-x) + var(--bs-accordion-btn-icon-width) +
+      0.75rem
+  );
+  z-index: 4;
+  width: var(--accordion-header-action-width);
+  white-space: nowrap;
+  border-radius: var(--bs-border-radius-lg);
+  transform: translateY(-50%);
+}
+
+.accordion-header-with-action
+  .accordion-button:not(.collapsed)
+  + .accordion-header-action {
+  --bs-btn-bg: var(--bs-body-bg);
+}

@@ -376,7 +376,10 @@
 
       <!-- Responding Station Settings -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingRespondingStationSettings">
+        <h2
+          class="accordion-header accordion-header-with-action"
+          id="headingRespondingStationSettings"
+        >
           <button
             class="accordion-button collapsed"
             type="button"
@@ -386,6 +389,18 @@
             aria-controls="collapseRespondingStationSettings"
           >
             <h5>Responding Station Settings</h5>
+          </button>
+          <button
+            type="button"
+            id="respondingStationDefaultsButton"
+            class="btn btn-outline-primary btn-sm accordion-header-action"
+            data-settings-defaults-group="respondingStation"
+            data-bs-toggle="modal"
+            data-bs-target="#settingsDefaultsModal"
+            aria-label="Restore Responding Station defaults"
+          >
+            <i class="fa-solid fa-arrow-rotate-left me-2" aria-hidden="true"></i
+            >Defaults
           </button>
         </h2>
         <div
@@ -458,11 +473,6 @@
                     class="btn-check"
                     id="enableFarnsworth"
                     autocomplete="off"
-                    onchange="
-                   document.getElementById('enableFarnsworthLabel').innerHTML =
-                     `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>Farnsworth`;
-                   document.getElementById('farnsworthSpeed').disabled = !this.checked;
-                 "
                   />
                   <label
                     class="btn btn-outline-primary w-100"
@@ -606,10 +616,6 @@
                     autocomplete="off"
                     id="usOnly"
                     checked
-                    onchange="
-                   document.getElementById('usOnlyLabel').innerHTML =
-                     `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>US Only Callsigns`;
-                 "
                   />
                   <label
                     class="btn btn-outline-primary w-100"
@@ -697,9 +703,6 @@
                     class="btn-check"
                     autocomplete="off"
                     id="enableCutNumbers"
-                    onchange="document.getElementById('enableCutNumbersLabel').innerHTML =
-                            `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>Enable Cut Numbers`;
-                            "
                   />
                   <label
                     class="btn btn-outline-primary w-100"
@@ -835,7 +838,10 @@
       <!-- Effects -->
       <!-- Effects -->
       <div class="accordion-item">
-        <h2 class="accordion-header" id="headingEffects">
+        <h2
+          class="accordion-header accordion-header-with-action"
+          id="headingEffects"
+        >
           <button
             class="accordion-button collapsed"
             type="button"
@@ -845,6 +851,18 @@
             aria-controls="collapseEffects"
           >
             <h5>Effects Settings</h5>
+          </button>
+          <button
+            type="button"
+            id="effectsDefaultsButton"
+            class="btn btn-outline-primary btn-sm accordion-header-action"
+            data-settings-defaults-group="effects"
+            data-bs-toggle="modal"
+            data-bs-target="#settingsDefaultsModal"
+            aria-label="Restore Effects defaults"
+          >
+            <i class="fa-solid fa-arrow-rotate-left me-2" aria-hidden="true"></i
+            >Defaults
           </button>
         </h2>
         <div
@@ -919,11 +937,6 @@
                         class="btn-check"
                         id="qsb"
                         autocomplete="off"
-                        onchange="
-                         document.getElementById('qsbLabel').innerHTML =
-                           `<i class='${this.checked ? 'fa-solid fa-circle-check' : 'fa-regular fa-circle-xmark'} me-2'></i>QSB (Fading)`;
-                         document.getElementById('qsbPercentage').disabled = !this.checked;
-                       "
                       />
                       <label
                         class="btn btn-outline-primary w-100"
@@ -948,7 +961,6 @@
                         max="100"
                         value="50"
                         disabled
-                        oninput="document.getElementById('qsbValue').textContent = this.value + '%';"
                       />
                     </div>
                   </div>
@@ -1057,6 +1069,53 @@
         >
           <button id="stopButton" class="btn btn-danger me-2 mb-2">Stop</button>
           <button id="resetButton" class="btn btn-secondary mb-2">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Defaults Confirmation Modal -->
+    <div
+      class="modal fade"
+      id="settingsDefaultsModal"
+      tabindex="-1"
+      aria-labelledby="settingsDefaultsModalLabel"
+      aria-describedby="settingsDefaultsModalDescription"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 class="modal-title fs-5" id="settingsDefaultsModalLabel">
+              Restore settings to defaults?
+            </h2>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p id="settingsDefaultsModalDescription" class="mb-0">
+              Only the selected settings section will be reset.
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              id="confirmSettingsDefaults"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Restore defaults
+            </button>
+          </div>
         </div>
       </div>
     </div>

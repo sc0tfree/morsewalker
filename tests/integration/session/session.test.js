@@ -81,6 +81,10 @@ function createMemoryStorage(initialValues = {}) {
   };
 }
 
+function preferencePayload(values) {
+  return JSON.stringify({ values, version: 1 });
+}
+
 async function loadSettledAppHtml() {
   const html = await readFile(resolve(process.cwd(), 'src/index.html'), 'utf8');
   document.open();
@@ -451,6 +455,153 @@ describe('session initialization and mode UI', () => {
     fieldDaySection.value = 'CT';
     fieldDaySection.dispatchEvent(new Event('input', { bubbles: true }));
     expect(storage.peek('yourFieldDaySection')).toBe('CT');
+  });
+
+  it('restores practice preferences with synchronized dependent controls', async () => {
+    await bootSession({
+      stored: {
+        'morsewalker.preferences.respondingStation': preferencePayload({
+          maxStations: 5,
+          minSpeed: 14,
+          maxSpeed: 31,
+          enableFarnsworth: true,
+          farnsworthSpeed: 9,
+          minTone: 300,
+          maxTone: 1100,
+          minVolume: 20,
+          maxVolume: 85,
+          minWait: 0.75,
+          maxWait: 3,
+          usOnly: false,
+          '1x1': true,
+          '1x2': false,
+          '2x1': false,
+          '2x2': true,
+          '1x3': false,
+          '2x3': false,
+          enableCutNumbers: true,
+          cutT: false,
+          cutA: true,
+          cutU: false,
+          cutV: false,
+          cutE: false,
+          cutG: false,
+          cutD: false,
+          cutN: false,
+        }),
+        'morsewalker.preferences.effects': preferencePayload({
+          qrn: 'heavy',
+          qsb: true,
+          qsbPercentage: 73,
+        }),
+        yourCallsign: 'N0ME',
+      },
+    });
+
+    expect(document.getElementById('yourCallsign')).toHaveValue('N0ME');
+    expect(document.getElementById('maxStations')).toHaveValue(5);
+    expect(document.getElementById('minSpeed')).toHaveValue(14);
+    expect(document.getElementById('maxSpeed')).toHaveValue(31);
+    expect(document.getElementById('enableFarnsworth')).toBeChecked();
+    expect(document.getElementById('farnsworthSpeed')).toHaveValue(9);
+    expect(document.getElementById('farnsworthSpeed')).toBeEnabled();
+    expect(
+      document.getElementById('enableFarnsworthLabel').innerHTML
+    ).toContain('fa-circle-check');
+    expect(document.getElementById('usOnly')).not.toBeChecked();
+    expect(document.getElementById('1x1')).toBeChecked();
+    expect(document.getElementById('1x2')).not.toBeChecked();
+    expect(document.getElementById('enableCutNumbers')).toBeChecked();
+    expect(document.getElementById('cutA')).toBeChecked();
+    expect(document.getElementById('cutA')).toBeEnabled();
+    expect(document.getElementById('cutT')).not.toBeChecked();
+    expect(document.getElementById('qrnHeavy')).toBeChecked();
+    expect(document.getElementById('qsb')).toBeChecked();
+    expect(document.getElementById('qsbPercentage')).toHaveValue('73');
+    expect(document.getElementById('qsbPercentage')).toBeEnabled();
+    expect(document.getElementById('qsbValue')).toHaveTextContent('73%');
+    expect(document.getElementById('qsbLabel').innerHTML).toContain(
+      'fa-circle-check'
+    );
+  });
+
+  it('confirms and applies section-isolated defaults without changing Your Station', async () => {
+    const respondingStorageKey = 'morsewalker.preferences.respondingStation';
+    const effectsStorageKey = 'morsewalker.preferences.effects';
+    const { storage } = await bootSession({
+      stored: {
+        [respondingStorageKey]: preferencePayload({
+          maxStations: 8,
+          enableFarnsworth: true,
+          farnsworthSpeed: 15,
+          enableCutNumbers: true,
+          cutA: true,
+        }),
+        [effectsStorageKey]: preferencePayload({
+          qrn: 'heavy',
+          qsb: true,
+          qsbPercentage: 88,
+        }),
+        mode: 'cwt',
+        yourCallsign: 'W1AW',
+        yourName: 'MAYA',
+      },
+    });
+    const modalTitle = document.getElementById('settingsDefaultsModalLabel');
+    const modalDescription = document.getElementById(
+      'settingsDefaultsModalDescription'
+    );
+    const confirmButton = document.getElementById('confirmSettingsDefaults');
+
+    document
+      .getElementById('respondingStationDefaultsButton')
+      .dispatchEvent(new window.MouseEvent('click'));
+
+    expect(modalTitle).toHaveTextContent(
+      'Restore Responding Station Settings to defaults?'
+    );
+    expect(modalDescription).toHaveTextContent(
+      'Only Responding Station settings will be reset.'
+    );
+    confirmButton.dispatchEvent(new window.MouseEvent('click'));
+
+    expect(storage.peek(respondingStorageKey)).toBeNull();
+    expect(storage.peek(effectsStorageKey)).not.toBeNull();
+    expect(storage.peek('mode')).toBe('cwt');
+    expect(storage.peek('yourCallsign')).toBe('W1AW');
+    expect(storage.peek('yourName')).toBe('MAYA');
+    expect(document.getElementById('yourCallsign')).toHaveValue('W1AW');
+    expect(document.getElementById('yourName')).toHaveValue('MAYA');
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    expect(document.getElementById('enableFarnsworth')).not.toBeChecked();
+    expect(document.getElementById('farnsworthSpeed')).toHaveValue(10);
+    expect(document.getElementById('farnsworthSpeed')).toBeDisabled();
+    expect(document.getElementById('enableCutNumbers')).not.toBeChecked();
+    expect(document.getElementById('cutA')).not.toBeChecked();
+    expect(document.getElementById('cutA')).toBeDisabled();
+    expect(document.getElementById('qrnHeavy')).toBeChecked();
+    expect(document.getElementById('qsb')).toBeChecked();
+    expect(document.getElementById('qsbPercentage')).toHaveValue('88');
+
+    document
+      .getElementById('effectsDefaultsButton')
+      .dispatchEvent(new window.MouseEvent('click'));
+
+    expect(modalTitle).toHaveTextContent(
+      'Restore Effects Settings to defaults?'
+    );
+    expect(modalDescription).toHaveTextContent(
+      'Only Effects settings will be reset.'
+    );
+    confirmButton.dispatchEvent(new window.MouseEvent('click'));
+
+    expect(storage.peek(effectsStorageKey)).toBeNull();
+    expect(document.getElementById('qrnNormal')).toBeChecked();
+    expect(document.getElementById('qsb')).not.toBeChecked();
+    expect(document.getElementById('qsbPercentage')).toHaveValue('50');
+    expect(document.getElementById('qsbPercentage')).toBeDisabled();
+    expect(document.getElementById('qsbValue')).toHaveTextContent('50%');
+    expect(document.getElementById('yourCallsign')).toHaveValue('W1AW');
   });
 
   it.each(['retired-mode', 'legacy"]', 'constructor'])(
