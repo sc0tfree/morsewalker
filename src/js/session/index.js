@@ -34,6 +34,8 @@ import { submitStartupStats } from '../telemetry/stats.js';
 import { resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
 import { setAgnButtonEnabled } from './view.js';
+import { resumeAllAudio } from '../audio/lifecycle.js';
+import { wireAudioActivation } from './audio-activation.js';
 
 /**
  * Application state variables.
@@ -96,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const yourVolume = document.getElementById('yourVolume');
 
   // Event Listeners
+  wireAudioActivation();
   cqButton.addEventListener('click', cq);
   sendButton.addEventListener('click', send);
   agnButton.addEventListener('click', () => requestFill());
@@ -422,6 +425,8 @@ function changeMode() {
  * - Plays the CQ message using the user's station configuration.
  */
 function cq() {
+  // The keyboard shortcut calls CQ directly, without the button's events.
+  resumeAllAudio();
   if (getAudioLock()) return;
 
   const modeConfig = getModeConfig();
