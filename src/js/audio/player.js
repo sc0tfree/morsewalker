@@ -1,4 +1,3 @@
-import { getInputs } from '../inputs.js';
 import { audioContext } from './runtime.js';
 
 /**
@@ -9,15 +8,15 @@ import { audioContext } from './runtime.js';
  * effects if enabled. Includes mappings for letters, numbers, punctuation, and
  * prosigns. Exposes a `playSentence` method for playing Morse sequences.
  *
- * @param {Object} station - The station configuration with attributes like volume, frequency, and WPM.
+ * Uses an existing station configuration from the validated session settings;
+ * live form edits do not affect player creation.
+ *
+ * @param {Object} station - The existing station configuration with attributes like volume, frequency, and WPM.
  * @param {number|null} volumeOverride - Optional override for the station's volume.
- * @returns {Object|null} An object with methods to play Morse sequences or null if inputs are invalid.
+ * @returns {Object} A player with a playSentence method and its audio context.
  */
 export function createMorsePlayer(station, volumeOverride = null) {
   let volume = volumeOverride !== null ? volumeOverride : station.volume;
-
-  const inputs = getInputs();
-  if (inputs === null) return;
 
   const enableFarnsworth = station.enableFarnsworth;
   // Farnsworth only widens spacing, so an effective speed at or above the
