@@ -22,7 +22,14 @@ import { updateStaticIntensity } from '../audio.js';
 import { modeIds, modeLogicConfig } from '../modes/index.js';
 import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
-import { wireSettingsStorage } from '../settings/storage.js';
+import {
+  syncSettingsControls,
+  wireSettingsControls,
+} from '../settings/controls.js';
+import {
+  resetSettingsGroup,
+  wireSettingsStorage,
+} from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
 import { resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
@@ -99,53 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     radio.addEventListener('change', changeMode);
   });
 
-  // QSB
-  const qsbCheckbox = document.getElementById('qsb');
-  const qsbPercentage = document.getElementById('qsbPercentage');
-  // Initially set the slider state based on the checkbox
-  qsbPercentage.disabled = !qsbCheckbox.checked;
-  // Add event listener to update the slider state when checkbox changes
-  qsbCheckbox.addEventListener('change', () => {
-    qsbPercentage.disabled = !qsbCheckbox.checked;
-  });
-
-  // Farnsworth elements
-  const enableFarnsworthCheckbox = document.getElementById('enableFarnsworth');
-  const farnsworthSpeedInput = document.getElementById('farnsworthSpeed');
-  // Set initial state based on whether Farnsworth is enabled
-  farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
-  // Toggle the Farnsworth speed input when the checkbox changes
-  enableFarnsworthCheckbox.addEventListener('change', () => {
-    farnsworthSpeedInput.disabled = !enableFarnsworthCheckbox.checked;
-  });
-
-  // Cut Number elements
-  const enableCutNumbersCheckbox = document.getElementById('enableCutNumbers');
-  const cutNumberIds = [
-    'cutT',
-    'cutA',
-    'cutU',
-    'cutV',
-    'cutE',
-    'cutG',
-    'cutD',
-    'cutN',
-  ];
-
-  // Set initial state based on whether Cut Numbers is enabled
-  cutNumberIds.forEach((id) => {
-    const checkbox = document.getElementById(id);
-    checkbox.disabled = !enableCutNumbersCheckbox.checked;
-  });
-
-  // Toggle the cut-number checkboxes when "Enable Cut Numbers" changes
-  enableCutNumbersCheckbox.addEventListener('change', () => {
-    cutNumberIds.forEach((id) => {
-      const checkbox = document.getElementById(id);
-      checkbox.disabled = !enableCutNumbersCheckbox.checked;
-    });
-  });
-
   function updateResponsiveButtons() {
     const responsiveButtons = document.querySelectorAll('.btn-responsive');
     responsiveButtons.forEach((button) => {
@@ -215,6 +175,15 @@ document.addEventListener('DOMContentLoaded', () => {
     yourSidetone,
     yourVolume
   );
+  wireSettingsControls({
+    onRestoreDefaults: (groupId) => {
+      resetSettingsGroup(groupId);
+      syncSettingsControls();
+      if (groupId === 'effects') {
+        updateStaticIntensity();
+      }
+    },
+  });
 
   // Handle QRN intensity changes
   const qrnRadioButtons = document.querySelectorAll('input[name="qrn"]');
@@ -462,14 +431,14 @@ function cq() {
     return;
   }
 
+  inputs = getInputs();
+  if (inputs === null) return;
+
   let backgroundStaticDelay = 0;
   if (!isBackgroundStaticPlaying()) {
     createBackgroundStatic();
     backgroundStaticDelay = 2;
   }
-
-  inputs = getInputs();
-  if (inputs === null) return;
 
   yourStation = getYourStation(inputs);
   yourStation.player = createMorsePlayer(yourStation);
