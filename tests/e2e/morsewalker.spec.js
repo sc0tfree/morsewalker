@@ -837,6 +837,180 @@ test('repeat, partial, and QRS requests recover into a completed contact', async
   await expect(cells.nth(3)).toHaveText('4');
 });
 
+test('Field Day keeps its active settings snapshot when TU schedules another caller', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'fd');
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await releaseAudio(page);
+
+  await page.locator('#yourFieldDayClass').fill('');
+  await page.locator('#yourFieldDaySection').fill('');
+  await page.locator('#infoField').fill('1D');
+  await page.locator('#infoField2').fill('AL');
+  const beforeNextCaller = await audioSnapshot(page);
+  await page.locator('#tuButton').click();
+
+  expect(pageErrors).toEqual([]);
+  const afterNextCaller = await audioSnapshot(page);
+  expect(afterNextCaller.oscillators).toBe(beforeNextCaller.oscillators + 1);
+  expect(afterNextCaller.scheduledEvents).toBeGreaterThan(
+    beforeNextCaller.scheduledEvents
+  );
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(1);
+  await expect(page.locator('#yourFieldDayClass')).toHaveValue('');
+  await expect(page.locator('#yourFieldDaySection')).toHaveValue('');
+
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await releaseAudio(page);
+  await page.locator('#infoField').fill('1D');
+  await page.locator('#infoField2').fill('AL');
+  await setRandom(page, 0.9);
+  await page.locator('#tuButton').click();
+  const latestCells = page
+    .locator('#resultsTable tbody tr')
+    .first()
+    .locator('td');
+  await expect(latestCells.nth(0)).toHaveText('2');
+  await expect(latestCells.nth(2)).toHaveText('18');
+  await expect(latestCells.nth(5)).toContainText('1D / AL');
+
+  await page.locator('#stopButton').click();
+  const beforeRejectedCq = await audioSnapshot(page);
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#yourFieldDayClass')).toHaveClass(/is-invalid/);
+  await expect(page.locator('#yourFieldDaySection')).toHaveClass(/is-invalid/);
+  expect(await audioSnapshot(page)).toEqual(beforeRejectedCq);
+  expect(pageErrors).toEqual([]);
+});
+
+test('Single keeps its active settings snapshot when completing callers after invalid edits', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await openApp(page);
+  await configureValidInputs(page);
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  await page.evaluate(() => {
+    for (const [id, value] of Object.entries({
+      minSpeed: '30',
+      maxSpeed: '30',
+      minTone: '0',
+    })) {
+      const input = document.getElementById(id);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+
+  for (const resultNumber of ['1', '2']) {
+    const beforeNextCaller = await audioSnapshot(page);
+    await page.locator('#responseField').fill('K0A');
+    await page.locator('#sendButton').click();
+
+    expect(pageErrors).toEqual([]);
+    const afterNextCaller = await audioSnapshot(page);
+    expect(afterNextCaller.oscillators).toBe(beforeNextCaller.oscillators + 1);
+    expect(afterNextCaller.scheduledEvents).toBeGreaterThan(
+      beforeNextCaller.scheduledEvents
+    );
+    const latestCells = page
+      .locator('#resultsTable tbody tr')
+      .first()
+      .locator('td');
+    await expect(latestCells.nth(0)).toHaveText(resultNumber);
+    await expect(latestCells.nth(1)).toHaveText('K0A');
+    await expect(latestCells.nth(2)).toHaveText('18');
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    await releaseAudio(page);
+  }
+
+  await expect(page.locator('#minSpeed')).toHaveValue('30');
+  await expect(page.locator('#maxSpeed')).toHaveValue('30');
+  await expect(page.locator('#minTone')).toHaveValue('0');
+  await page.locator('#stopButton').click();
+  const beforeRejectedCq = await audioSnapshot(page);
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#minTone')).toHaveClass(/is-invalid/);
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  expect(await audioSnapshot(page)).toEqual(beforeRejectedCq);
+  expect(pageErrors).toEqual([]);
+});
+
+for (const request of ['AGN', 'QRS']) {
+  test(`Contest keeps its active settings snapshot for ${request} after invalid edits`, async ({
+    page,
+  }) => {
+    const pageErrors = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    await openApp(page);
+    await configureValidInputs(page);
+    await selectMode(page, 'contest');
+    await page.locator('#cqButton').click();
+    await releaseAudio(page);
+    await page.locator('#minTone').evaluate((input) => {
+      input.value = '0';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const beforeRepeat = await audioSnapshot(page);
+    await page.locator('#responseField').fill(request);
+    await page.locator('#sendButton').click();
+
+    expect(pageErrors).toEqual([]);
+    const afterRepeat = await audioSnapshot(page);
+    expect(afterRepeat.oscillators).toBe(beforeRepeat.oscillators + 1);
+    expect(afterRepeat.scheduledEvents).toBeGreaterThan(
+      beforeRepeat.scheduledEvents
+    );
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+
+    await releaseAudio(page);
+    await page.locator('#responseField').fill('K0A');
+    await page.locator('#sendButton').click();
+    await releaseAudio(page);
+    const beforeFill = await audioSnapshot(page);
+    await page.locator('#agnButton').click();
+    expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+      beforeFill.scheduledEvents
+    );
+    await releaseAudio(page);
+    await page.locator('#infoField').fill('01');
+    await setRandom(page, 0.9);
+    await page.locator('#tuButton').click();
+
+    const cells = page.locator('#resultsTable tbody tr').first().locator('td');
+    await expect(cells.nth(1)).toHaveText('K0A');
+    await expect(cells.nth(2)).toHaveText(request === 'QRS' ? '18 / 12' : '18');
+    await expect(cells.nth(3)).toHaveText('3');
+    await expect(cells.nth(5)).toContainText('1 (1 AGN)');
+    await expect(page.locator('#minTone')).toHaveValue('0');
+
+    await page.locator('#stopButton').click();
+    const beforeRejectedCq = await audioSnapshot(page);
+    await page.locator('#cqButton').click();
+    await expect(page.locator('#minTone')).toHaveClass(/is-invalid/);
+    expect(await audioSnapshot(page)).toEqual(beforeRejectedCq);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('invalid CQ is rejected before a station or audio starts', async ({
   page,
 }) => {

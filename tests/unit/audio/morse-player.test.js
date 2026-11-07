@@ -70,13 +70,35 @@ describe('createMorsePlayer v1 characterization', () => {
     vi.restoreAllMocks();
   });
 
-  it('does not create a player when the current form inputs are invalid', () => {
-    document.getElementById('yourCallsign').value = '';
+  it.each([
+    ['standard timing', {}],
+    [
+      'Farnsworth and QSB',
+      { enableFarnsworth: true, farnsworthSpeed: 10, qsb: true },
+    ],
+  ])(
+    'preserves %s for an existing station while form inputs are invalid',
+    (_label, overrides) => {
+      vi.spyOn(Math, 'random').mockReturnValue(0.25);
+      const station = buildStation(overrides);
+      const originalPlayer = audio.createMorsePlayer(station);
+      const originalEndTime = originalPlayer.playSentence('AE E', 2);
+      const originalEvents = originalPlayer.context.gains[0].gain.events;
 
-    expect(audio.createMorsePlayer(buildStation())).toBeUndefined();
-    expect(audio.audioContext.oscillators).toHaveLength(0);
-    expect(audio.audioContext.gains).toHaveLength(0);
-  });
+      document.getElementById('yourCallsign').value = '';
+      document.getElementById('minTone').value = '';
+
+      const nextPlayer = audio.createMorsePlayer(station);
+
+      expect(nextPlayer).toBeDefined();
+      expect(nextPlayer.playSentence('AE E', 2)).toBe(originalEndTime);
+      expect(originalEvents.length).toBeGreaterThan(0);
+      expect(nextPlayer.context.gains[1].gain.events).toEqual(originalEvents);
+      expect(audio.audioContext.oscillators).toHaveLength(2);
+      expect(audio.audioContext.gains).toHaveLength(2);
+      expect(document.querySelectorAll('.is-invalid')).toHaveLength(0);
+    }
+  );
 
   it('creates and starts the station signal chain on the exported context', () => {
     const station = buildStation({ frequency: 725 });
