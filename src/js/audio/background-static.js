@@ -36,7 +36,12 @@ function disconnectTrack(track) {
  */
 async function loadTrack(track) {
   try {
-    const response = await fetch(staticUrl);
+    // Unlock audio during the CQ/QRN gesture, before loading can outlast it.
+    const resumePromise =
+      backgroundStaticContext.state === 'running'
+        ? Promise.resolve()
+        : backgroundStaticContext.resume();
+    const [response] = await Promise.all([fetch(staticUrl), resumePromise]);
     const arrayBuffer = await response.arrayBuffer();
 
     if (currentTrack !== track) return;
