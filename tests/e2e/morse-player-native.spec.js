@@ -101,8 +101,20 @@ async function observeNativeAudio(page) {
     class ObservedAudioContext extends NativeAudioContext {
       constructor(...args) {
         super(...args);
-        this.record = { context: this, gains: [], lastScheduledTime: null };
+        this.record = {
+          id: records.length,
+          context: this,
+          gains: [],
+          oscillators: 0,
+          lastScheduledTime: null,
+        };
         records.push(this.record);
+      }
+
+      createOscillator() {
+        const oscillator = super.createOscillator();
+        this.record.oscillators++;
+        return oscillator;
       }
 
       createGain() {
@@ -138,6 +150,18 @@ async function observeNativeAudio(page) {
           ({ context }) => context.state !== 'closed'
         );
         return {
+          contexts: records.map(({ id, context, gains, oscillators }) => ({
+            id,
+            state: context.state,
+            currentTime: context.currentTime,
+            oscillators,
+            gainCount: gains.length,
+            eventCount: gains.reduce(
+              (total, events) => total + events.length,
+              0
+            ),
+            firstScheduledTime: gains[0]?.[0]?.time ?? null,
+          })),
           gains: active.flatMap(({ gains }) => gains),
           eventCount: active.reduce(
             (count, { gains }) =>
@@ -166,6 +190,131 @@ async function observeNativeAudio(page) {
 async function waitForNativeAudio(page) {
   await page.waitForFunction(() => globalThis.__nativeMorseTest.idle());
 }
+
+test('native Web Audio Stop discards a selected exchange and immediately accepts fresh CQ', async ({
+  page,
+}) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await observeNativeAudio(page);
+  await page.goto('/');
+  await configureValidInputs(page, {
+    yourCallsign: 'E',
+    yourSpeed: '60',
+    minSpeed: '60',
+    maxSpeed: '60',
+  });
+  await selectMode(page, 'contest');
+  await page.locator('#cqButton').click();
+  await waitForNativeAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await waitForNativeAudio(page);
+  await expect(page.locator('#infoField')).toBeFocused();
+  await expect(page.locator('#agnButton')).toBeEnabled();
+  await page.locator('#infoField').fill('01');
+
+  const beforeStop = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  const oldForeground = beforeStop.contexts.find(
+    (context) => context.state === 'running' && context.oscillators > 0
+  );
+  expect(oldForeground.oscillators).toBe(2);
+  await page.locator('#stopButton').click();
+  const afterStop = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  const stoppedFields = await page
+    .locator('#responseField, #infoField, #infoField2')
+    .evaluateAll((fields) => fields.map((field) => field.value));
+  const activeAfterStop = await page.locator('#activeStations').textContent();
+  const replacement = afterStop.contexts.at(-1);
+  expect(replacement.id).not.toBe(oldForeground.id);
+  expect(
+    afterStop.contexts.find(({ id }) => id === oldForeground.id).state
+  ).toBe('closed');
+  expect(replacement.oscillators).toBe(0);
+  expect(replacement.eventCount).toBe(0);
+
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  // Dispatch also exercises handler guards when the corresponding button is disabled.
+  await page.locator('#agnButton').dispatchEvent('click');
+  await page.locator('#tuButton').dispatchEvent('click');
+  await page.locator('#infoField').press('Enter');
+  const afterBlockedActions = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  for (const context of afterStop.contexts) {
+    expect(
+      afterBlockedActions.contexts.find(({ id }) => id === context.id)
+    ).toMatchObject({
+      oscillators: context.oscillators,
+      gainCount: context.gainCount,
+      eventCount: context.eventCount,
+    });
+  }
+  expect(afterBlockedActions.contexts).toHaveLength(afterStop.contexts.length);
+  expect(stoppedFields).toEqual(['', '', '']);
+  expect(activeAfterStop).toBe('0');
+  await expect(page.locator('#agnButton')).toBeDisabled();
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  expect(errors).toEqual([]);
+
+  // Do not wait for the old context's timestamps before restarting.
+  const beforeRestart = afterBlockedActions.contexts.find(
+    ({ id }) => id === replacement.id
+  );
+  await page.locator('#cqButton').click();
+  const afterRestart = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  const restarted = afterRestart.contexts.find(
+    ({ id }) => id === replacement.id
+  );
+  expect(restarted.oscillators).toBe(2);
+  expect(restarted.gainCount).toBe(2);
+  expect(restarted.eventCount).toBeGreaterThan(0);
+  expect(restarted.firstScheduledTime).toBeGreaterThanOrEqual(
+    beforeRestart.currentTime + 2
+  );
+  expect(restarted.firstScheduledTime).toBeLessThanOrEqual(
+    restarted.currentTime + 2
+  );
+  expect(
+    afterRestart.contexts.find(({ id }) => id === oldForeground.id).eventCount
+  ).toBe(oldForeground.eventCount);
+  await expect(page.locator('#activeStations')).toHaveText('1');
+
+  await waitForNativeAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await waitForNativeAudio(page);
+  await page.locator('#infoField').fill('01');
+  await page.evaluate(() => {
+    Math.random = () => 0.9;
+  });
+  await page.locator('#tuButton').click();
+
+  const rows = page.locator('#resultsTable tbody tr');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first().locator('td').nth(1)).toHaveText('K0A');
+  await expect(rows.first().locator('td').nth(2)).toHaveText('60');
+  await expect(rows.first().locator('td').nth(3)).toHaveText('1');
+  await expect(rows.first().locator('td').nth(5)).toHaveText('1');
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  const completed = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  expect(
+    completed.contexts.find(({ id }) => id === oldForeground.id).eventCount
+  ).toBe(oldForeground.eventCount);
+  expect(
+    completed.contexts.find(({ id }) => id === replacement.id).eventCount
+  ).toBeGreaterThan(restarted.eventCount);
+  expect(errors).toEqual([]);
+});
 
 for (const scenario of [
   { name: 'sidetone', yourVolume: '0', callerVolume: '50' },
