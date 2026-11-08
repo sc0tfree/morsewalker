@@ -437,8 +437,10 @@ function cq() {
     return;
   }
 
-  inputs = getInputs();
-  if (inputs === null) return;
+  // Keep the active settings snapshot when validation rejects a new CQ.
+  const candidateInputs = getInputs();
+  if (candidateInputs === null) return;
+  inputs = candidateInputs;
 
   let backgroundStaticDelay = 0;
   if (!isBackgroundStaticPlaying()) {

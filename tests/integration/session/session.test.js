@@ -864,6 +864,201 @@ describe('CQ validation', () => {
   });
 });
 
+describe('rejected CQ snapshot protection', () => {
+  function startContestWithCutNumbers() {
+    configureValidInputs();
+    selectMode('contest');
+    const enableCutNumbers = document.getElementById('enableCutNumbers');
+    enableCutNumbers.checked = true;
+    enableCutNumbers.dispatchEvent(new Event('change', { bubbles: true }));
+    ['cutT', 'cutA', 'cutU', 'cutV', 'cutE', 'cutG', 'cutD', 'cutN'].forEach(
+      (id) => {
+        document.getElementById(id).checked = ['cutT', 'cutA'].includes(id);
+      }
+    );
+    document.getElementById('cqButton').click();
+  }
+
+  function collectSessionErrors() {
+    const errors = [];
+    const listener = (event) => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener('error', listener);
+    registeredGlobalListeners.push({ target: window, type: 'error', listener });
+    return errors;
+  }
+
+  function rejectPendingSettings() {
+    document.getElementById('minSpeed').value = '0';
+    document.getElementById('maxSpeed').value = '30';
+    const enableCutNumbers = document.getElementById('enableCutNumbers');
+    enableCutNumbers.checked = false;
+    enableCutNumbers.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const beforeMessages = transcript();
+    const beforePlayerCount = audioProbe.players.length;
+    const activeStations = document.getElementById('activeStations');
+    const beforeActiveStations = activeStations.textContent;
+    const tableBody = document.querySelector('#resultsTable tbody');
+    const beforeRows = tableBody.innerHTML;
+    const fields = ['responseField', 'infoField', 'infoField2'].map((id) =>
+      document.getElementById(id)
+    );
+    const beforeFieldValues = fields.map((field) => field.value);
+
+    document.getElementById('cqButton').click();
+
+    const minSpeed = document.getElementById('minSpeed');
+    expect(minSpeed).toHaveClass('is-invalid');
+    expect(
+      minSpeed.parentElement.querySelector('.invalid-feedback')
+    ).toHaveTextContent('Must be ≥ 5');
+    expect(transcript()).toEqual(beforeMessages);
+    expect(audioProbe.players).toHaveLength(beforePlayerCount);
+    expect(activeStations.textContent).toBe(beforeActiveStations);
+    expect(tableBody.innerHTML).toBe(beforeRows);
+    expect(fields.map((field) => field.value)).toEqual(beforeFieldValues);
+  }
+
+  it('keeps the original exchange for Send after repairing a rejected CQ without another CQ', async () => {
+    const { random, releaseAudio } = await bootSession();
+    const errors = collectSessionErrors();
+    startContestWithCutNumbers();
+    releaseAudio();
+    rejectPendingSettings();
+    document.getElementById('minSpeed').value = '30';
+
+    const beforeSend = transcript().length;
+    sendResponse('K0A');
+
+    expect(errors).toEqual([]);
+    expect(transcript().slice(beforeSend)).toEqual([
+      ['N0ME', 'K0A'],
+      ['N0ME', ' 5NN'],
+      ['K0A', '5NN TA TU'],
+    ]);
+    expect(document.getElementById('minSpeed')).toHaveValue(30);
+    expect(document.getElementById('enableCutNumbers')).not.toBeChecked();
+    releaseAudio();
+    setInfoValue('infoField', '01');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(errors).toEqual([]);
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[2]).toHaveTextContent('18');
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('1');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(/^1$/);
+  });
+
+  it('keeps the original fill format and counts after a rejected CQ while settings remain invalid', async () => {
+    const { random, releaseAudio } = await bootSession();
+    const errors = collectSessionErrors();
+    startContestWithCutNumbers();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    rejectPendingSettings();
+
+    const beforeFill = transcript().length;
+    document.getElementById('agnButton').click();
+
+    expect(errors).toEqual([]);
+    expect(transcript().slice(beforeFill)).toEqual([
+      ['N0ME', 'NR?'],
+      ['K0A', 'TA'],
+    ]);
+    expect(resultsRows()).toHaveLength(0);
+    expect(document.getElementById('minSpeed')).toHaveValue(0);
+    releaseAudio();
+    setInfoValue('infoField', '01');
+    random.mockReturnValue(0.9);
+    document.getElementById('tuButton').click();
+
+    expect(errors).toEqual([]);
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('2');
+    expect(resultsRows()[0].cells[5]).toHaveTextContent(/^1 \(1 AGN\)$/);
+  });
+
+  it('finishes TU and schedules a new caller from the old snapshot after a rejected CQ', async () => {
+    const { releaseAudio } = await bootSession();
+    const errors = collectSessionErrors();
+    startContestWithCutNumbers();
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    setInfoValue('infoField', '01');
+    rejectPendingSettings();
+
+    const beforeTu = transcript().length;
+    const beforePlayerCount = audioProbe.players.length;
+    document.getElementById('tuButton').click();
+
+    expect(errors).toEqual([]);
+    expect(resultsRows()).toHaveLength(1);
+    expect(resultsRows()[0].cells[1]).toHaveTextContent('K0A');
+    expect(resultsRows()[0].cells[2]).toHaveTextContent('18');
+    expect(resultsRows()[0].cells[3]).toHaveTextContent('1');
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(audioProbe.players).toHaveLength(beforePlayerCount + 1);
+    expect(audioProbe.players.at(-1)).toMatchObject({
+      callsign: 'K0A',
+      wpm: 18,
+    });
+    expect(transcript().slice(beforeTu)).toEqual([
+      ['N0ME', 'TU N0ME'],
+      ['K0A', 'K0A'],
+    ]);
+    expect(audioProbe.messages.at(-1).start).toBe(
+      audioProbe.messages.at(-2).end
+    );
+
+    releaseAudio();
+    sendResponse('K0A');
+    expect(errors).toEqual([]);
+    expect(transcript().at(-1)).toEqual(['K0A', '5NN TA TU']);
+  });
+
+  it('adopts new settings when a later CQ passes validation', async () => {
+    const { releaseAudio } = await bootSession();
+    const errors = collectSessionErrors();
+    startContestWithCutNumbers();
+    releaseAudio();
+    rejectPendingSettings();
+    document.getElementById('minSpeed').value = '30';
+
+    const beforeCq = transcript().length;
+    document.getElementById('cqButton').click();
+    expect(document.getElementById('minSpeed')).not.toHaveClass('is-invalid');
+    expect(transcript().slice(beforeCq)).toEqual([
+      ['N0ME', 'CQ TEST DE N0ME'],
+      ['K0A', 'K0A'],
+    ]);
+    releaseAudio();
+    sendResponse('K0A');
+    expect(transcript().at(-1)).toEqual(['K0A', '5NN 01 TU']);
+    releaseAudio();
+    setInfoValue('infoField', '01');
+    document.getElementById('tuButton').click();
+
+    expect(errors).toEqual([]);
+    expect(resultsRows()).toHaveLength(1);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(audioProbe.players.at(-1)).toMatchObject({
+      callsign: 'K0A',
+      wpm: 30,
+    });
+    expect(transcript().at(-1)).toEqual(['K0A', 'K0A']);
+    releaseAudio();
+    sendResponse('K0A');
+    expect(errors).toEqual([]);
+    expect(transcript().at(-1)).toEqual(['K0A', '5NN 01 TU']);
+  });
+});
+
 describe('session audio activation', () => {
   it('unlocks both contexts on the first mouse press before an inactive CQ click', async () => {
     const { fetchMock } = await bootSession();
