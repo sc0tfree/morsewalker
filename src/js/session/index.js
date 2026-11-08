@@ -286,7 +286,7 @@ function getExchangeFieldValues(modeConfig) {
 }
 
 /**
- * Selects every exchange component currently marked for a fill.
+ * Selects requested exchange components available from the selected station.
  *
  * @param {Object} modeConfig - The current mode's logic configuration.
  * @returns {Object[]} Eligible components in mode order.
@@ -294,7 +294,8 @@ function getExchangeFieldValues(modeConfig) {
 function getEligibleExchangeComponents(modeConfig) {
   return selectFillComponents(
     modeConfig.exchangeComponents,
-    getExchangeFieldValues(modeConfig)
+    getExchangeFieldValues(modeConfig),
+    currentStations[activeStationIndex]
   );
 }
 

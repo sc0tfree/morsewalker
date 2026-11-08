@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Item 1 is resolved; items 2–11 remain open.
+Reviewed on November 7, 2026. Items 1–2 are resolved; items 3–11 remain open.
 
 ## Scope and merge assessment
 
@@ -84,7 +84,8 @@ native scheduling, not perceived sound quality. Backlog item 3 remains separate.
 
 ### 2. [P2] Enter cannot finish international POTA/SST exchanges
 
-**Status:** Open. **Origin:** new AGN workflow regression in v1.
+**Status:** Resolved on November 7, 2026, in `codex/fix-international-exchange-enter`.
+**Origin:** new AGN workflow regression in v1.
 
 **Location:** [session/index.js, lines 149–154](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L149-L154).
 Fill selection is implemented in `session/fills.js:22`.
@@ -95,14 +96,34 @@ Enter. Every Enter sends `STATE?`, receives no state response, and leaves the QS
 open. Clicking TU succeeds and logs `N/A`. Both modes were reproduced with the
 deterministic caller `YT9ZZ`.
 
-**Cause and correction:** blank input is always considered fillable without
-checking whether the caller has that exchange component. Exclude unavailable
-components from fill eligibility, or define a meaningful transmitted value for
-them consistently across the exchange, fills, and scoring.
+**Cause at review:** blank input was always considered fillable without checking
+whether the caller had that exchange component.
 
 **Acceptance:** international POTA and SST contacts can finish using Enter when
 all available information has been copied, while missing available information
 still requests the appropriate fill.
+
+**Resolution:** fill selection now checks the selected station's canonical
+exchange value as well as the input's existing fill markers. Enter routing, AGN
+availability, and fill resolution share that selection rule. Missing stations and
+null, undefined, empty, or whitespace-only values are unavailable; numeric zero
+remains available. International POTA completes with `N/A`, and SST requests only
+the available name before completing with `NAME / N/A`. Unavailable state fields
+cannot request fills or accumulate AGN counts, even with `AGN` or `?` entered.
+Station generation, transmitted exchange templates, scoring, audio code, and the
+Safari activation fix are unchanged.
+
+**Verification:** before the production fix, 13 new unit cases and seven new
+international integration cases failed; both US-state integration controls
+passed. Both new browser journeys also reproduced the defect: POTA Enter left
+the contact unfinished, and SST requested `AGN?` instead of `NAME?`. Afterward,
+all 400 unit/integration tests and 21 Chromium journeys passed, along with
+formatting, lint, coverage, and the production build. Coverage includes completion
+from either SST field, name-only fills, focus, attempts, AGN counts, and unchanged
+US-state fills. Browser regressions use the actual player implementation with
+the existing Web Audio fake and assert scheduled playback and no page errors.
+Existing audio timing and Safari activation expectations pass unchanged. Items
+3–11 remain follow-up work.
 
 ### 3. [P2] Rejected CQ overwrites the active settings snapshot
 

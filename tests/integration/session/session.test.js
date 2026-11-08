@@ -1450,6 +1450,173 @@ describe('session controls and message flows', () => {
     }
   );
 
+  describe('station-aware exchange fills', () => {
+    function startInternationalSession(mode, random) {
+      configureValidInputs();
+      selectMode(mode);
+      document.getElementById('usOnly').checked = false;
+      document.getElementById('1x1').checked = false;
+      document.getElementById('2x2').checked = true;
+      random.mockReturnValue(0.99);
+      document.getElementById('cqButton').click();
+      expect(transcript().at(-1)).toEqual(['YT9ZZ', 'YT9ZZ']);
+    }
+
+    it.each(['', 'AGN', '?'])(
+      'completes international POTA with unavailable state %j using Enter',
+      async (stateInput) => {
+        const { random, releaseAudio } = await bootSession();
+        startInternationalSession('pota', random);
+        releaseAudio();
+        sendResponse('YT9ZZ');
+        releaseAudio();
+
+        const stateField = setInfoValue('infoField', stateInput);
+        const agnButton = document.getElementById('agnButton');
+        expect(agnButton).toBeDisabled();
+        const beforeAgn = transcript();
+        agnButton.click();
+        expect(transcript()).toEqual(beforeAgn);
+
+        expect(pressEnter(stateField).defaultPrevented).toBe(true);
+
+        expect(resultsRows()).toHaveLength(1);
+        const [row] = resultsRows();
+        expect(row.cells[1]).toHaveTextContent('YT9ZZ');
+        expect(row.cells[3]).toHaveTextContent('1');
+        expect(row.cells[5]).toHaveTextContent(/^N\/A$/);
+        expect(document.getElementById('activeStations')).toHaveTextContent(
+          '0'
+        );
+        expect(transcript().some(([, message]) => message === 'STATE?')).toBe(
+          false
+        );
+        expect(document.activeElement).toBe(
+          document.getElementById('responseField')
+        );
+      }
+    );
+
+    it.each(['infoField', 'infoField2'])(
+      'repeats only the international SST name then completes from %s',
+      async (enterFieldId) => {
+        const { random, releaseAudio } = await bootSession();
+        startInternationalSession('sst', random);
+        releaseAudio();
+        sendResponse('YT9ZZ');
+        releaseAudio();
+
+        const nameField = document.getElementById('infoField');
+        const stateField = document.getElementById('infoField2');
+        const agnButton = document.getElementById('agnButton');
+        expect(nameField).toHaveValue('');
+        expect(stateField).toHaveValue('');
+        expect(agnButton).toBeEnabled();
+        const beforeFill = transcript().length;
+        stateField.focus();
+        expect(pressEnter(stateField).defaultPrevented).toBe(true);
+
+        expect(transcript().slice(beforeFill)).toEqual([
+          ['N0ME', 'NAME?'],
+          ['YT9ZZ', 'Yan'],
+        ]);
+        expect(resultsRows()).toHaveLength(0);
+        expect(document.getElementById('activeStations')).toHaveTextContent(
+          '1'
+        );
+        expect(document.activeElement).toBe(nameField);
+        expect(stateField).toHaveValue('');
+
+        releaseAudio();
+        setInfoValue('infoField', 'Yan');
+        expect(agnButton).toBeDisabled();
+        expect(
+          pressEnter(document.getElementById(enterFieldId)).defaultPrevented
+        ).toBe(true);
+
+        expect(resultsRows()).toHaveLength(1);
+        const [row] = resultsRows();
+        expect(row.cells[1]).toHaveTextContent('YT9ZZ');
+        expect(row.cells[3]).toHaveTextContent('2');
+        expect(row.cells[5]).toHaveTextContent(/^YAN \(1 AGN\) \/ N\/A$/);
+        expect(document.getElementById('activeStations')).toHaveTextContent(
+          '0'
+        );
+        expect(transcript().some(([, message]) => message === 'STATE?')).toBe(
+          false
+        );
+      }
+    );
+
+    it.each(['infoField', 'infoField2'])(
+      'completes international SST from %s when its name is already copied',
+      async (enterFieldId) => {
+        const { random, releaseAudio } = await bootSession();
+        startInternationalSession('sst', random);
+        releaseAudio();
+        sendResponse('YT9ZZ');
+        releaseAudio();
+        setInfoValue('infoField', 'Yan');
+
+        expect(document.getElementById('infoField2')).toHaveValue('');
+        expect(document.getElementById('agnButton')).toBeDisabled();
+        expect(
+          pressEnter(document.getElementById(enterFieldId)).defaultPrevented
+        ).toBe(true);
+
+        expect(resultsRows()).toHaveLength(1);
+        const [row] = resultsRows();
+        expect(row.cells[1]).toHaveTextContent('YT9ZZ');
+        expect(row.cells[3]).toHaveTextContent('1');
+        expect(row.cells[5]).toHaveTextContent(/^YAN \/ N\/A$/);
+        expect(document.getElementById('activeStations')).toHaveTextContent(
+          '0'
+        );
+        expect(transcript().some(([, message]) => message === 'STATE?')).toBe(
+          false
+        );
+      }
+    );
+
+    it.each(['pota', 'sst'])(
+      'still requests an available US state in %s',
+      async (mode) => {
+        const { random, releaseAudio } = await bootSession();
+        startSession(mode);
+        releaseAudio();
+        sendResponse('K0A');
+        releaseAudio();
+        if (mode === 'sst') setInfoValue('infoField', 'Adam');
+        const stateFieldId = mode === 'sst' ? 'infoField2' : 'infoField';
+        const stateField = setInfoValue(stateFieldId, '');
+        expect(document.getElementById('agnButton')).toBeEnabled();
+        const beforeFill = transcript().length;
+        expect(pressEnter(stateField).defaultPrevented).toBe(true);
+
+        expect(transcript().slice(beforeFill)).toEqual([
+          ['N0ME', 'STATE?'],
+          ['K0A', mode === 'sst' ? 'AL' : 'AL AL'],
+        ]);
+        expect(resultsRows()).toHaveLength(0);
+        expect(document.activeElement).toBe(stateField);
+
+        releaseAudio();
+        setInfoValue(stateFieldId, 'AL');
+        expect(document.getElementById('agnButton')).toBeDisabled();
+        random.mockReturnValue(0.9);
+        pressEnter(stateField);
+
+        expect(resultsRows()).toHaveLength(1);
+        const [row] = resultsRows();
+        expect(row.cells[1]).toHaveTextContent('K0A');
+        expect(row.cells[3]).toHaveTextContent('2');
+        expect(row.cells[5]).toHaveTextContent(
+          mode === 'sst' ? /^ADAM \/ AL \(1 AGN\)$/ : /^AL \(1 AGN\)$/
+        );
+      }
+    );
+  });
+
   it('replays only the blank CWT field and preserves the active QSO', async () => {
     const { random, releaseAudio } = await bootSession();
     startSession('cwt');
