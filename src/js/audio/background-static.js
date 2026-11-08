@@ -11,6 +11,13 @@ let backgroundStaticSessionActive = false;
 let currentTrack = null;
 let nextTrackStartTime = 0;
 
+// May be called on pointerdown, before the click starts downloading a track.
+export function resumeBackgroundStatic() {
+  return backgroundStaticContext.state === 'running'
+    ? Promise.resolve()
+    : backgroundStaticContext.resume();
+}
+
 /**
  * Disconnects the nodes owned by one QRN track.
  *
@@ -36,7 +43,9 @@ function disconnectTrack(track) {
  */
 async function loadTrack(track) {
   try {
-    const response = await fetch(staticUrl);
+    // Unlock audio during the CQ/QRN gesture, before loading can outlast it.
+    const resumePromise = resumeBackgroundStatic();
+    const [response] = await Promise.all([fetch(staticUrl), resumePromise]);
     const arrayBuffer = await response.arrayBuffer();
 
     if (currentTrack !== track) return;

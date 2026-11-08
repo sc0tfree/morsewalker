@@ -81,6 +81,7 @@ export class RecordingAudioContext {
 
   constructor() {
     this.currentTime = 0;
+    this.state = 'running';
     this.destination = { type: 'destination' };
     this.oscillators = [];
     this.gains = [];
@@ -111,8 +112,22 @@ export class RecordingAudioContext {
     return Promise.resolve({ arrayBuffer });
   }
 
+  resume() {
+    if (this.state === 'closed') {
+      return Promise.reject(
+        new globalThis.DOMException(
+          'Cannot resume a closed AudioContext.',
+          'InvalidStateError'
+        )
+      );
+    }
+    this.state = 'running';
+    return Promise.resolve();
+  }
+
   close() {
     this.closed = true;
+    this.state = 'closed';
     return Promise.resolve();
   }
 }

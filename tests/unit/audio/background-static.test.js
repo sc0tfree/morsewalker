@@ -59,6 +59,7 @@ describe('background static lifecycle', () => {
     const { arrayBuffer, fetchMock, response } = mockStaticFetch();
     const staticContext = RecordingAudioContext.instances[1];
     const decode = vi.spyOn(staticContext, 'decodeAudioData');
+    const resume = vi.spyOn(staticContext, 'resume');
 
     audio.createBackgroundStatic();
     await settlePromiseChain();
@@ -67,6 +68,7 @@ describe('background static lifecycle', () => {
     const [gain] = staticContext.gains;
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith('../audio/static.mp3');
+    expect(resume).not.toHaveBeenCalled();
     expect(response.arrayBuffer).toHaveBeenCalledOnce();
     expect(decode).toHaveBeenCalledWith(arrayBuffer);
     expect(source.buffer).toEqual({ arrayBuffer });
@@ -102,27 +104,190 @@ describe('background static lifecycle', () => {
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
   });
 
+  it('resumes a suspended context synchronously while the static download is pending', async () => {
+    const pendingFetch = createDeferred();
+    const fetchMock = vi.fn(() => pendingFetch.promise);
+    vi.stubGlobal('fetch', fetchMock);
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const resume = vi.spyOn(staticContext, 'resume');
+
+    audio.createBackgroundStatic();
+
+    expect(resume).toHaveBeenCalledOnce();
+    expect(staticContext.state).toBe('running');
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(staticContext.bufferSources).toHaveLength(0);
+
+    pendingFetch.resolve({
+      arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(4)),
+    });
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources[0].started).toEqual([undefined]);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+  });
+
+  it('waits for a pending resume before starting a downloaded track', async () => {
+    mockStaticFetch();
+    const pendingResume = createDeferred();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    vi.spyOn(staticContext, 'resume').mockImplementationOnce(
+      () => pendingResume.promise
+    );
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources).toHaveLength(0);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+
+    staticContext.state = 'running';
+    pendingResume.resolve();
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources[0].started).toEqual([undefined]);
+  });
+
+  it('clears a failed resume so a later gesture can retry', async () => {
+    const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const error = new Error('Audio resume was blocked');
+    const resume = vi
+      .spyOn(staticContext, 'resume')
+      .mockRejectedValueOnce(error);
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources).toHaveLength(0);
+    expect(audio.isBackgroundStaticPlaying()).toBe(false);
+    expect(console.error).toHaveBeenCalledWith(
+      'Error loading static audio file:',
+      error
+    );
+
+    audio.createBackgroundStatic();
+    await settlePromiseChain();
+
+    expect(resume).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(staticContext.state).toBe('running');
+    expect(staticContext.bufferSources[0].started).toEqual([undefined]);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+  });
+
+  it.each(['stopBackgroundStatic', 'stopAllAudio'])(
+    'does not start a track after %s while resume is pending',
+    async (stopMethod) => {
+      mockStaticFetch();
+      const pendingResume = createDeferred();
+      const staticContext = RecordingAudioContext.instances[1];
+      staticContext.state = 'suspended';
+      vi.spyOn(staticContext, 'resume').mockImplementationOnce(
+        () => pendingResume.promise
+      );
+      const decode = vi.spyOn(staticContext, 'decodeAudioData');
+
+      audio.createBackgroundStatic();
+      await settlePromiseChain();
+      audio[stopMethod]();
+
+      expect(audio.isBackgroundStaticPlaying()).toBe(false);
+
+      staticContext.state = 'running';
+      pendingResume.resolve();
+      await settlePromiseChain();
+
+      expect(decode).not.toHaveBeenCalled();
+      expect(staticContext.bufferSources).toHaveLength(0);
+      expect(audio.isBackgroundStaticPlaying()).toBe(false);
+    }
+  );
+
+  it('does not clear a replacement when the retired track resume rejects', async () => {
+    mockStaticFetch();
+    const pendingResume = createDeferred();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const resume = vi
+      .spyOn(staticContext, 'resume')
+      .mockImplementationOnce(() => pendingResume.promise);
+
+    audio.createBackgroundStatic();
+    document.getElementById('qrnHeavy').checked = true;
+    audio.updateStaticIntensity();
+    await settlePromiseChain();
+
+    const [replacement] = staticContext.bufferSources;
+    expect(resume).toHaveBeenCalledTimes(2);
+    expect(replacement.started).toEqual([undefined]);
+    expect(staticContext.gains[0].gain.value).toBe(3);
+
+    pendingResume.reject(new Error('Retired resume failed'));
+    await settlePromiseChain();
+
+    expect(staticContext.bufferSources).toHaveLength(1);
+    expect(replacement.stopped).toEqual([]);
+    expect(replacement.disconnected).toBe(false);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
   it('does not fetch or start QRN when the selected level is off', async () => {
     document.getElementById('qrnOff').checked = true;
     const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const resume = vi.spyOn(staticContext, 'resume');
 
     audio.createBackgroundStatic();
     await settlePromiseChain();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(RecordingAudioContext.instances[1].bufferSources).toHaveLength(0);
+    expect(resume).not.toHaveBeenCalled();
+    expect(staticContext.bufferSources).toHaveLength(0);
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
   });
 
   it('does not start QRN when intensity changes before a session starts', async () => {
     document.getElementById('qrnHeavy').checked = true;
     const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const resume = vi.spyOn(staticContext, 'resume');
 
     audio.updateStaticIntensity();
     await settlePromiseChain();
 
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(resume).not.toHaveBeenCalled();
     expect(audio.isBackgroundStaticPlaying()).toBe(false);
+  });
+
+  it('resumes a suspended context when QRN is enabled in a session started with Off', async () => {
+    document.getElementById('qrnOff').checked = true;
+    const { fetchMock } = mockStaticFetch();
+    const staticContext = RecordingAudioContext.instances[1];
+    staticContext.state = 'suspended';
+    const resume = vi.spyOn(staticContext, 'resume');
+
+    audio.createBackgroundStatic();
+
+    expect(resume).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    document.getElementById('qrnNormal').checked = true;
+    audio.updateStaticIntensity();
+
+    expect(resume).toHaveBeenCalledOnce();
+    await settlePromiseChain();
+
+    expect(staticContext.state).toBe('running');
+    expect(staticContext.bufferSources[0].started).toEqual([undefined]);
+    expect(audio.isBackgroundStaticPlaying()).toBe(true);
   });
 
   it('replaces every active QRN level and can transition through Off to On', async () => {
@@ -257,6 +422,7 @@ describe('background static lifecycle', () => {
     audio.stopAllAudio();
 
     expect(firstContext.closed).toBe(true);
+    expect(firstContext.state).toBe('closed');
     expect(audio.audioContext).toBe(RecordingAudioContext.instances[2]);
     expect(audio.audioLockUntil).toBe(0);
     expect(audio.getAudioLock()).toBe(false);

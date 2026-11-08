@@ -12,8 +12,8 @@ const audioProbe = vi.hoisted(() => ({
 }));
 let registeredGlobalListeners = [];
 
-vi.mock('../../../src/js/audio.js', async (importOriginal) => {
-  const actual = await importOriginal();
+async function mockAudioModule() {
+  const actual = await vi.importActual('../../../src/js/audio.js');
   const mocked = {
     ...actual,
     createMorsePlayer: vi.fn((station, volumeOverride = null) => {
@@ -54,7 +54,7 @@ vi.mock('../../../src/js/audio.js', async (importOriginal) => {
   });
 
   return mocked;
-});
+}
 
 function createMemoryStorage(initialValues = {}) {
   const values = new Map(
@@ -100,6 +100,7 @@ async function loadSettledAppHtml() {
 
 async function bootSession({ stored = {} } = {}) {
   vi.resetModules();
+  vi.doMock('../../../src/js/audio.js', mockAudioModule);
   audioProbe.messages.length = 0;
   audioProbe.players.length = 0;
 
@@ -246,6 +247,12 @@ function pressEnter(element) {
   });
   element.dispatchEvent(event);
   return event;
+}
+
+function pressPointer(element) {
+  const event = new Event('pointerdown', { bubbles: true });
+  Object.assign(event, { button: 0, isPrimary: true, pointerType: 'mouse' });
+  element.dispatchEvent(event);
 }
 
 function transcript() {
@@ -854,6 +861,104 @@ describe('CQ validation', () => {
         .parentElement.querySelector('.invalid-feedback')
     ).toHaveTextContent('Must be ≤ Max Volume');
     expect(transcript()).toEqual([]);
+  });
+});
+
+describe('session audio activation', () => {
+  it('unlocks both contexts on the first mouse press before an inactive CQ click', async () => {
+    const { fetchMock } = await bootSession();
+    configureValidInputs();
+    document.getElementById('qrnNormal').checked = true;
+    const staticContext = RecordingAudioContext.instances[1];
+    const foregroundContext = RecordingAudioContext.instances.at(-1);
+    let gestureActive = true;
+    const resumeSpies = [foregroundContext, staticContext].map((context) => {
+      context.state = 'suspended';
+      return vi.spyOn(context, 'resume').mockImplementation(() => {
+        if (!gestureActive) {
+          return Promise.reject(new Error('No active user gesture'));
+        }
+        context.state = 'running';
+        return Promise.resolve();
+      });
+    });
+    const cqButton = document.getElementById('cqButton');
+
+    pressPointer(cqButton);
+
+    for (const resume of resumeSpies) expect(resume).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(staticContext.bufferSources).toHaveLength(0);
+    expect(transcript()).toEqual([]);
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+
+    gestureActive = false;
+    cqButton.click();
+    await settlePromiseChain();
+
+    for (const resume of resumeSpies) expect(resume).toHaveBeenCalledOnce();
+    expect(foregroundContext.state).toBe('running');
+    expect(staticContext.state).toBe('running');
+    expect(staticContext.bufferSources[0].started).toEqual([undefined]);
+    expect(transcript()).toEqual([
+      ['N0ME', 'CQ DE N0ME K'],
+      ['K0A', 'K0A'],
+    ]);
+  });
+
+  it.each(['stopButton', 'resetButton'])(
+    'unlocks the replacement foreground context on CQ after %s',
+    async (buttonId) => {
+      await bootSession();
+      startSession();
+      const oldContext = RecordingAudioContext.instances.at(-1);
+
+      document.getElementById(buttonId).click();
+
+      const replacement = RecordingAudioContext.instances.at(-1);
+      replacement.state = 'suspended';
+      const resume = vi.spyOn(replacement, 'resume');
+      const cqButton = document.getElementById('cqButton');
+      pressPointer(cqButton);
+
+      expect(oldContext.state).toBe('closed');
+      expect(replacement).not.toBe(oldContext);
+      expect(resume).toHaveBeenCalledOnce();
+      expect(replacement.state).toBe('running');
+
+      cqButton.click();
+
+      expect(audioProbe.players.at(-1).player.context).toBe(replacement);
+      expect(resume).toHaveBeenCalledOnce();
+    }
+  );
+
+  it('unlocks both contexts when the CQ hotkey bypasses button events', async () => {
+    await bootSession();
+    configureValidInputs();
+    const contexts = [
+      RecordingAudioContext.instances.at(-1),
+      RecordingAudioContext.instances[1],
+    ];
+    const resumes = contexts.map((context) => {
+      context.state = 'suspended';
+      return vi.spyOn(context, 'resume');
+    });
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        ctrlKey: true,
+        shiftKey: true,
+        key: 'C',
+      })
+    );
+
+    for (const resume of resumes) expect(resume).toHaveBeenCalledOnce();
+    expect(transcript()).toEqual([
+      ['N0ME', 'CQ DE N0ME K'],
+      ['K0A', 'K0A'],
+    ]);
   });
 });
 
