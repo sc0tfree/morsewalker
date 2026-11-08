@@ -149,6 +149,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -626,5 +627,254 @@ describe('group persistence', () => {
     callsign.value = 'K1ABC';
     callsign.dispatchEvent(new Event('input', { bubbles: true }));
     expect(storage.peek('yourCallsign')).toBe('K1ABC');
+  });
+});
+
+describe('best-effort storage', () => {
+  const groups = [
+    { groupId: 'respondingStation', custom: respondingValues },
+    { groupId: 'effects', custom: effectsValues },
+  ];
+  const operations = [
+    { name: 'restore', run: restoreSettingsGroup },
+    { name: 'persist', run: persistSettingsGroup },
+    { name: 'reset', run: resetSettingsGroup },
+  ];
+  const unavailable = () => {
+    throw new globalThis.DOMException('Storage blocked', 'SecurityError');
+  };
+
+  it.each(operations)(
+    '$name tolerates a throwing global localStorage getter',
+    ({ name, run }) => {
+      vi.spyOn(globalThis, 'localStorage', 'get').mockImplementation(
+        unavailable
+      );
+
+      const defaults = readGroupValues('respondingStation');
+      applyGroupValues('respondingStation', respondingValues);
+
+      expect(() => run('respondingStation')).not.toThrow();
+      expect(readGroupValues('respondingStation')).toEqual(
+        name === 'persist' ? respondingValues : defaults
+      );
+    }
+  );
+
+  it('wires all fields while the global getter fails and saves after access recovers', () => {
+    const storage = createMemoryStorage();
+    const getter = vi
+      .spyOn(globalThis, 'localStorage', 'get')
+      .mockImplementation(unavailable);
+    const callsign = document.getElementById('yourCallsign');
+    const speed = document.getElementById('yourSpeed');
+
+    expect(() => wireSettingsStorage(callsign, speed)).not.toThrow();
+    expect(callsign).toHaveValue('');
+    expect(speed).toHaveValue(20);
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+
+    getter.mockReturnValue(storage);
+    callsign.value = 'W1AW';
+    callsign.dispatchEvent(new Event('input', { bubbles: true }));
+    speed.value = '32';
+    speed.dispatchEvent(new Event('input', { bubbles: true }));
+    const maxStations = document.getElementById('maxStations');
+    maxStations.value = '7';
+    maxStations.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(storage.peek('yourCallsign')).toBe('W1AW');
+    expect(storage.peek('yourSpeed')).toBe('32');
+    expect(storedPayload(storage, 'respondingStation').values.maxStations).toBe(
+      7
+    );
+  });
+
+  it('isolates failed legacy and grouped reads while restoring other keys', () => {
+    const storage = createMemoryStorage({
+      yourCallsign: 'W1AW',
+      yourSpeed: '37',
+      [PREFERENCE_GROUPS.respondingStation.storageKey]: JSON.stringify({
+        values: respondingValues,
+        version: 1,
+      }),
+      [PREFERENCE_GROUPS.effects.storageKey]: JSON.stringify({
+        values: effectsValues,
+        version: 1,
+      }),
+    });
+    const read = storage.getItem.getMockImplementation();
+    storage.getItem.mockImplementation((key) => {
+      if (
+        key === 'yourCallsign' ||
+        key === PREFERENCE_GROUPS.respondingStation.storageKey
+      ) {
+        return unavailable();
+      }
+      return read(key);
+    });
+    vi.stubGlobal('localStorage', storage);
+    const callsign = document.getElementById('yourCallsign');
+    const speed = document.getElementById('yourSpeed');
+
+    expect(() => wireSettingsStorage(callsign, speed)).not.toThrow();
+    expect(callsign).toHaveValue('');
+    expect(speed).toHaveValue(37);
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    expect(readGroupValues('effects')).toEqual(effectsValues);
+
+    callsign.value = 'K1ABC';
+    callsign.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(storage.peek('yourCallsign')).toBe('K1ABC');
+  });
+
+  it('keeps wired legacy, numeric, and radio edits usable when writes fail', () => {
+    const storage = createMemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    const callsign = document.getElementById('yourCallsign');
+    wireSettingsStorage(callsign);
+    storage.setItem.mockImplementation(() => {
+      throw new globalThis.DOMException('Storage full', 'QuotaExceededError');
+    });
+    const errors = [];
+    const captureError = (event) => {
+      errors.push(event.error);
+      event.preventDefault();
+    };
+    window.addEventListener('error', captureError);
+    try {
+      callsign.value = 'W1AW';
+      callsign.dispatchEvent(new Event('input', { bubbles: true }));
+      const maxStations = document.getElementById('maxStations');
+      maxStations.value = '7';
+      maxStations.dispatchEvent(new Event('input', { bubbles: true }));
+      const qrnOff = document.getElementById('qrnOff');
+      qrnOff.checked = true;
+      qrnOff.dispatchEvent(new Event('change', { bubbles: true }));
+
+      expect(callsign).toHaveValue('W1AW');
+      expect(maxStations).toHaveValue(7);
+      expect(qrnOff).toBeChecked();
+      expect(errors).toEqual([]);
+      expect(storage.setItem).toHaveBeenCalledTimes(3);
+      expect(storage.peek('yourCallsign')).toBeNull();
+      expect(
+        storage.peek(PREFERENCE_GROUPS.respondingStation.storageKey)
+      ).toBeNull();
+      expect(storage.peek(PREFERENCE_GROUPS.effects.storageKey)).toBeNull();
+    } finally {
+      window.removeEventListener('error', captureError);
+    }
+  });
+
+  it.each(groups)(
+    'resets only $groupId in memory when removeItem throws',
+    ({ groupId }) => {
+      const defaults = readGroupValues(groupId);
+      const otherId = groupId === 'effects' ? 'respondingStation' : 'effects';
+      const storage = createMemoryStorage({
+        mode: 'cwt',
+        yourCallsign: 'W1AW',
+      });
+      groups.forEach(({ groupId: id, custom }) => {
+        applyGroupValues(id, custom);
+        persistSettingsGroup(id, storage);
+      });
+      const otherValues = readGroupValues(otherId);
+      const saved = storage.peek(PREFERENCE_GROUPS[groupId].storageKey);
+      getPreferenceGroupElements(groupId).forEach((element) => {
+        element.classList.add('is-invalid');
+      });
+      storage.removeItem.mockImplementation(unavailable);
+
+      expect(() => resetSettingsGroup(groupId, storage)).not.toThrow();
+      expect(readGroupValues(groupId)).toEqual(defaults);
+      expect(readGroupValues(otherId)).toEqual(otherValues);
+      getPreferenceGroupElements(groupId).forEach((element) => {
+        expect(element).not.toHaveClass('is-invalid');
+      });
+      expect(storage.peek(PREFERENCE_GROUPS[groupId].storageKey)).toBe(saved);
+      expect(storage.peek('mode')).toBe('cwt');
+      expect(storage.peek('yourCallsign')).toBe('W1AW');
+    }
+  );
+
+  it('uses explicitly injected storage without accessing the blocked global getter', () => {
+    const getter = vi
+      .spyOn(globalThis, 'localStorage', 'get')
+      .mockImplementation(unavailable);
+    const storage = createMemoryStorage();
+
+    for (const { groupId, custom } of groups) {
+      const defaults = readGroupValues(groupId);
+      applyGroupValues(groupId, custom);
+      persistSettingsGroup(groupId, storage);
+      applyGroupDefaults(groupId);
+      restoreSettingsGroup(groupId, storage);
+      expect(readGroupValues(groupId)).toEqual(custom);
+      resetSettingsGroup(groupId, storage);
+      expect(readGroupValues(groupId)).toEqual(defaults);
+      expect(storage.peek(PREFERENCE_GROUPS[groupId].storageKey)).toBeNull();
+    }
+    expect(getter).not.toHaveBeenCalled();
+  });
+
+  it('retries later operations after transient read, write, and removal failures', () => {
+    const storage = createMemoryStorage();
+    applyGroupValues('respondingStation', respondingValues);
+    storage.setItem.mockImplementationOnce(unavailable);
+    expect(() =>
+      persistSettingsGroup('respondingStation', storage)
+    ).not.toThrow();
+    expect(
+      storage.peek(PREFERENCE_GROUPS.respondingStation.storageKey)
+    ).toBeNull();
+    persistSettingsGroup('respondingStation', storage);
+    expect(storedPayload(storage, 'respondingStation').values).toEqual(
+      respondingValues
+    );
+
+    storage.getItem.mockImplementationOnce(unavailable);
+    expect(() =>
+      restoreSettingsGroup('respondingStation', storage)
+    ).not.toThrow();
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    restoreSettingsGroup('respondingStation', storage);
+    expect(readGroupValues('respondingStation')).toEqual(respondingValues);
+
+    storage.removeItem.mockImplementationOnce(unavailable);
+    expect(() =>
+      resetSettingsGroup('respondingStation', storage)
+    ).not.toThrow();
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    expect(
+      storage.peek(PREFERENCE_GROUPS.respondingStation.storageKey)
+    ).not.toBeNull();
+    resetSettingsGroup('respondingStation', storage);
+    expect(
+      storage.peek(PREFERENCE_GROUPS.respondingStation.storageKey)
+    ).toBeNull();
+  });
+
+  it('keeps unknown groups and unrelated DOM or serialization errors visible', () => {
+    const storage = createMemoryStorage();
+    const brokenForm = new Error('Broken form');
+    const root = {
+      getElementById: () => {
+        throw brokenForm;
+      },
+    };
+    for (const { run } of operations) {
+      expect(() => run('unknown', storage)).toThrow(RangeError);
+      expect(() => run('effects', storage, root)).toThrow(brokenForm);
+    }
+
+    const serializationError = new Error('Broken serialization');
+    vi.spyOn(JSON, 'stringify').mockImplementationOnce(() => {
+      throw serializationError;
+    });
+    expect(() => persistSettingsGroup('effects', storage)).toThrow(
+      serializationError
+    );
   });
 });

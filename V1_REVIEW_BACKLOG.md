@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–7 are resolved; items 8–11 remain open.
+Reviewed on November 7, 2026. Items 1–8 are resolved; items 9–11 remain open.
 
 ## Scope and merge assessment
 
@@ -13,8 +13,8 @@ Reviewed on November 7, 2026. Items 1–7 are resolved; items 8–11 remain open
 The settings feature covers the full current settings inventory. Merging it into
 the development `v1` branch before addressing this backlog is reasonable. This is
 a feature-completeness assessment, not a claim that the broader v1 release is free
-of defects. Storage failure handling remains a known limitation of persistence
-as well as the wider application.
+of defects. The numeric parsing and storage failure findings have since been
+resolved below; the remaining findings concern audio resources and result accounting.
 
 | Area               | Persisted settings                                                                                                                                                      |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -343,8 +343,9 @@ expectations pass unchanged. Items 8–11 remain follow-up work.
 
 ### 8. [P2] Storage failures interrupt application behavior
 
-**Status:** Open. **Origin:** inherited resilience defect; the new persistence
-and defaults paths need the same protection.
+**Status:** Resolved on November 8, 2026, in `codex/fix-storage-failures`.
+**Origin:** inherited resilience defect; the new persistence and defaults paths
+needed the same protection.
 
 **Locations:** [session/index.js, lines 410–414](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L410-L414)
 and [settings/storage.js, lines 440–444](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/settings/storage.js#L440-L444).
@@ -359,6 +360,36 @@ retain the previous mode because the exception skips reset and UI application.
 storage must not prevent initialization, mode changes, practice, or restoring
 defaults in memory. Test throwing reads, writes, and removals in addition to the
 existing malformed-JSON cases.
+
+**Resolution:** three small helpers now guard all eight storage reads, writes,
+and removals. Each resolves `localStorage` inside its own `try` block on every
+operation, including when the property getter itself is blocked. The four eager
+storage defaults were removed, while explicit injected storage remains supported.
+Failed reads use the existing defaults; failed writes and removals do not interrupt
+startup, mode changes, editing, or Defaults. JSON serialization, group validation,
+DOM updates, and session actions stay outside the guards so unrelated application
+errors remain visible. Production changes are limited to `settings/storage.js`
+and the three mode storage calls in `session/index.js`, plus imports and docs.
+Audio code, storage formats, and the Stop/CQ settings policy are unchanged.
+
+**Verification:** nine new unit regressions and seven integration regressions
+failed before the fix with the injected storage exceptions. Two new Chromium
+journeys also failed against the original build: the blocked getter left startup
+unfinished, and failed writes left the Single-mode UI visible after selecting
+Field Day. Afterward, all 498 unit/integration tests and 48 Chromium tests passed,
+along with formatting, lint, coverage, and the production build. Tests cover
+getter/read/write/remove failures, selective readable keys, injected storage,
+recovery on later operations, and propagation of unrelated errors. Both Defaults
+actions reset their section and dependent controls without changing the active
+caller; Stop/CQ adopts the updated responding settings. Actual-player browser
+journeys verify playback scheduling, completed Single and Field Day contacts,
+and no page errors. Existing native audio timing and Safari activation
+expectations pass unchanged.
+
+**Behavior when persistence is unavailable:** continue quietly using current-page
+settings. No fallback store, retry timers, or notifications were added. If a write
+or removal fails, previously saved values may return after reload. Items 9–11
+remain follow-up work.
 
 ### 9. [P2] Replacing players leaves oscillators running
 

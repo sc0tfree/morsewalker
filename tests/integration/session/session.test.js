@@ -98,7 +98,11 @@ async function loadSettledAppHtml() {
   }
 }
 
-async function bootSession({ stored = {} } = {}) {
+async function bootSession({
+  stored = {},
+  prepareStorage,
+  captureWindowErrors = false,
+} = {}) {
   vi.resetModules();
   vi.doMock('../../../src/js/audio.js', mockAudioModule);
   audioProbe.messages.length = 0;
@@ -116,6 +120,7 @@ async function bootSession({ stored = {} } = {}) {
   vi.stubGlobal('AudioContext', RecordingAudioContext);
   vi.stubGlobal('fetch', fetchMock);
   vi.stubGlobal('localStorage', storage);
+  prepareStorage?.(storage);
 
   const random = vi.spyOn(Math, 'random').mockReturnValue(0);
   vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -137,6 +142,13 @@ async function bootSession({ stored = {} } = {}) {
       listeners.push({ listener, options, target: window, type });
       return originalWindowAddEventListener(type, listener, options);
     });
+  const windowErrors = [];
+  if (captureWindowErrors) {
+    window.addEventListener('error', (event) => {
+      windowErrors.push(event.error ?? event.message);
+      event.preventDefault();
+    });
+  }
 
   try {
     await import('../../../src/js/app.js');
@@ -156,6 +168,7 @@ async function bootSession({ stored = {} } = {}) {
     fetchMock,
     random,
     storage,
+    windowErrors,
     releaseAudio() {
       releasedTime += 100;
       RecordingAudioContext.instances.forEach((context) => {
@@ -761,6 +774,309 @@ describe('session initialization and mode UI', () => {
       expect(document.getElementById('activeStations')).toHaveTextContent('0');
     }
   });
+});
+
+describe('storage failure recovery', () => {
+  const respondingKey = 'morsewalker.preferences.respondingStation';
+  const effectsKey = 'morsewalker.preferences.effects';
+  const denyStorage = () => {
+    throw new window.DOMException('Storage access denied', 'SecurityError');
+  };
+  const bootWithStorageFailure = (options = {}) =>
+    bootSession({ ...options, captureWindowErrors: true });
+
+  it.each(['getter', 'getItem'])(
+    'starts in usable Single mode when the localStorage %s throws',
+    async (failure) => {
+      const { releaseAudio, windowErrors } = await bootWithStorageFailure({
+        stored: {
+          mode: 'fd',
+          yourCallsign: 'W1AW',
+          [respondingKey]: preferencePayload({ maxStations: 8 }),
+          [effectsKey]: preferencePayload({ qsb: true, qsbPercentage: 88 }),
+        },
+        prepareStorage: (storage) => {
+          if (failure === 'getter') {
+            Object.defineProperty(globalThis, 'localStorage', {
+              configurable: true,
+              get: denyStorage,
+            });
+          } else {
+            storage.getItem.mockImplementation(denyStorage);
+          }
+        },
+      });
+
+      expect(windowErrors).toEqual([]);
+      expect(document.getElementById('modeSingle')).toBeChecked();
+      expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+        'Single Mode Results'
+      );
+      expect(document.getElementById('yourCallsign')).toHaveValue('');
+      expect(document.getElementById('maxStations')).toHaveValue(3);
+      expect(document.getElementById('farnsworthSpeed')).toBeDisabled();
+      expect(document.getElementById('qsbPercentage')).toBeDisabled();
+      expect(document.getElementById('tuButton')).toHaveStyle({
+        display: 'none',
+      });
+
+      startSession();
+      expect(transcript()).toEqual([
+        ['N0ME', 'CQ DE N0ME K'],
+        ['K0A', 'K0A'],
+      ]);
+      releaseAudio();
+      sendResponse('K0A');
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[1]).toHaveTextContent('K0A');
+      expect(resultsRows()[0].cells[2]).toHaveTextContent('18');
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(audioProbe.players).toHaveLength(3);
+      expect(transcript().at(-1)).toEqual(['K0A', 'K0A']);
+      expect(windowErrors).toEqual([]);
+    }
+  );
+
+  it('restores readable settings when one legacy field and one group cannot be read', async () => {
+    const { windowErrors } = await bootWithStorageFailure({
+      stored: {
+        mode: 'cwt',
+        yourCallsign: 'N0ME',
+        yourName: 'HENRY',
+        yourSpeed: '24',
+        [respondingKey]: preferencePayload({ maxStations: 8 }),
+        [effectsKey]: preferencePayload({
+          qrn: 'heavy',
+          qsb: true,
+          qsbPercentage: 73,
+        }),
+      },
+      prepareStorage: (storage) => {
+        const read = storage.getItem.getMockImplementation();
+        storage.getItem.mockImplementation((key) => {
+          if (key === 'yourName' || key === respondingKey) denyStorage();
+          return read(key);
+        });
+      },
+    });
+
+    expect(windowErrors).toEqual([]);
+    expect(document.getElementById('modeCwt')).toBeChecked();
+    expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+      'CWT Mode Results'
+    );
+    expect(document.getElementById('yourCallsign')).toHaveValue('N0ME');
+    expect(document.getElementById('yourName')).toHaveValue('');
+    expect(document.getElementById('yourSpeed')).toHaveValue(24);
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    expect(document.getElementById('cutA')).toBeDisabled();
+    expect(document.getElementById('qrnHeavy')).toBeChecked();
+    expect(document.getElementById('qsbPercentage')).toHaveValue('73');
+    expect(document.getElementById('qsbPercentage')).toBeEnabled();
+    expect(document.getElementById('qsbValue')).toHaveTextContent('73%');
+  });
+
+  it('keeps mode, controls, and contacts consistent when writes fail after startup', async () => {
+    const { random, releaseAudio, storage, windowErrors } =
+      await bootWithStorageFailure();
+    startSession();
+    releaseAudio();
+    sendResponse('K0A');
+    expect(resultsRows()).toHaveLength(1);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+    storage.setItem.mockImplementation(() => {
+      throw new window.DOMException('Storage is full', 'QuotaExceededError');
+    });
+    setInfoValue('yourCallsign', 'W1AW');
+    setInfoValue('minSpeed', '24');
+    setInfoValue('maxSpeed', '24');
+    selectMode('fd');
+
+    expect(windowErrors).toEqual([]);
+    expect(document.getElementById('modeFieldDay')).toBeChecked();
+    expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+      'Field Day Mode Results'
+    );
+    expect(document.getElementById('infoField')).toHaveAttribute(
+      'placeholder',
+      'Class'
+    );
+    expect(document.getElementById('infoField2')).toHaveAttribute(
+      'placeholder',
+      'Section'
+    );
+    expect(document.getElementById('tuButton')).toHaveStyle({
+      display: 'inline-block',
+    });
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+    expect(document.getElementById('cqButton')).toBeEnabled();
+    expect(resultsRows()).toHaveLength(0);
+
+    document.getElementById('cqButton').click();
+    expect(transcript().slice(-2)).toEqual([
+      ['W1AW', 'CQ FD W1AW'],
+      ['K0A', 'K0A'],
+    ]);
+    releaseAudio();
+    sendResponse('K0A');
+    releaseAudio();
+    random.mockReturnValue(0.9);
+    setInfoValue('infoField', '1D');
+    setInfoValue('infoField2', 'AL');
+    document.getElementById('tuButton').click();
+
+    expect(resultsRows()).toHaveLength(1);
+    const [row] = resultsRows();
+    expect(row.cells[0]).toHaveTextContent('1');
+    expect(row.cells[1]).toHaveTextContent('K0A');
+    expect(row.cells[2]).toHaveTextContent('24');
+    expect(row.cells[5]).toHaveTextContent('1D / AL');
+    expect(transcript().at(-1)).toEqual(['W1AW', 'TU W1AW FD']);
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+    expect(windowErrors).toEqual([]);
+  });
+
+  it('finishes Single startup when removing an invalid stored mode fails', async () => {
+    const { fetchMock, storage, windowErrors } = await bootWithStorageFailure({
+      stored: { mode: 'retired-mode', yourCallsign: 'N0ME' },
+      prepareStorage: (storage) => {
+        storage.removeItem.mockImplementation(denyStorage);
+      },
+    });
+
+    expect(windowErrors).toEqual([]);
+    expect(storage.removeItem).toHaveBeenCalledWith('mode');
+    expect(storage.peek('mode')).toBe('retired-mode');
+    expect(document.getElementById('modeSingle')).toBeChecked();
+    expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+      'Single Mode Results'
+    );
+    expect(document.getElementById('tuButton')).toHaveStyle({
+      display: 'none',
+    });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      callsign: 'N0ME',
+      mode: 'single',
+    });
+    startSession();
+    expect(transcript()).toEqual([
+      ['N0ME', 'CQ DE N0ME K'],
+      ['K0A', 'K0A'],
+    ]);
+    expect(windowErrors).toEqual([]);
+  });
+
+  it.each(['respondingStation', 'effects'])(
+    'applies %s Defaults in memory when removing its saved group fails',
+    async (groupId) => {
+      const { storage, windowErrors } = await bootWithStorageFailure({
+        stored: {
+          mode: 'cwt',
+          yourCallsign: 'W1AW',
+          yourName: 'MAYA',
+          [respondingKey]: preferencePayload({
+            maxStations: 8,
+            minSpeed: 30,
+            maxSpeed: 30,
+            enableFarnsworth: true,
+            farnsworthSpeed: 15,
+            enableCutNumbers: true,
+            cutA: true,
+          }),
+          [effectsKey]: preferencePayload({
+            qrn: 'off',
+            qsb: true,
+            qsbPercentage: 88,
+          }),
+        },
+      });
+      const sectionIds = {
+        respondingStation: 'collapseRespondingStationSettings',
+        effects: 'collapseEffects',
+      };
+      const groupInputs = (id) => [
+        ...document.getElementById(sectionIds[id]).querySelectorAll('input'),
+      ];
+      const snapshot = (id) =>
+        groupInputs(id).map(({ id, value, checked, disabled }) => ({
+          id,
+          value,
+          checked,
+          disabled,
+        }));
+      const otherGroup =
+        groupId === 'respondingStation' ? 'effects' : 'respondingStation';
+      const otherBefore = snapshot(otherGroup);
+      const groupKey =
+        groupId === 'respondingStation' ? respondingKey : effectsKey;
+      const savedBefore = storage.peek(groupKey);
+      const invalidField = document.getElementById(
+        groupId === 'respondingStation' ? 'maxStations' : 'qsbPercentage'
+      );
+      storage.removeItem.mockImplementation(denyStorage);
+
+      document.getElementById('cqButton').click();
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      invalidField.classList.add('is-invalid');
+      const messagesBefore = transcript();
+      const playersBefore = [...audioProbe.players];
+      document
+        .getElementById(`${groupId}DefaultsButton`)
+        .dispatchEvent(new window.MouseEvent('click'));
+      document
+        .getElementById('confirmSettingsDefaults')
+        .dispatchEvent(new window.MouseEvent('click'));
+
+      expect(windowErrors).toEqual([]);
+      expect(storage.removeItem).toHaveBeenCalledWith(groupKey);
+      expect(storage.peek(groupKey)).toBe(savedBefore);
+      groupInputs(groupId).forEach((input) => {
+        if (input.type === 'checkbox' || input.type === 'radio') {
+          expect(input.checked).toBe(input.defaultChecked);
+        } else {
+          expect(input.value).toBe(input.defaultValue);
+        }
+        expect(input).not.toHaveClass('is-invalid');
+      });
+      expect(snapshot(otherGroup)).toEqual(otherBefore);
+      expect(document.getElementById('yourCallsign')).toHaveValue('W1AW');
+      expect(document.getElementById('yourName')).toHaveValue('MAYA');
+      expect(document.getElementById('modeCwt')).toBeChecked();
+      expect(document.getElementById('modeResultsHeader')).toHaveTextContent(
+        'CWT Mode Results'
+      );
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(transcript()).toEqual(messagesBefore);
+      expect(audioProbe.players).toEqual(playersBefore);
+
+      if (groupId === 'respondingStation') {
+        expect(document.getElementById('farnsworthSpeed')).toBeDisabled();
+        expect(document.getElementById('cutA')).toBeDisabled();
+        expect(
+          document.getElementById('enableFarnsworthLabel').innerHTML
+        ).toContain('fa-circle-xmark');
+        expect(audioProbe.players.at(-1)).toMatchObject({
+          wpm: 30,
+          enableFarnsworth: true,
+          farnsworthSpeed: 15,
+        });
+        document.getElementById('stopButton').click();
+        document.getElementById('cqButton').click();
+        expect(audioProbe.players.at(-1)).toMatchObject({
+          wpm: 18,
+          enableFarnsworth: false,
+        });
+      } else {
+        expect(document.getElementById('qsbPercentage')).toBeDisabled();
+        expect(document.getElementById('qsbValue')).toHaveTextContent('50%');
+        expect(document.getElementById('qsbLabel').innerHTML).toContain(
+          'fa-circle-xmark'
+        );
+      }
+      expect(windowErrors).toEqual([]);
+    }
+  );
 });
 
 describe('CQ validation', () => {
