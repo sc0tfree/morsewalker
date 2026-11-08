@@ -10,6 +10,9 @@ class RecordingAudioParam {
   }
 
   exponentialRampToValueAtTime(value, time) {
+    if (value === 0) {
+      throw new RangeError('Exponential ramp targets must not be zero.');
+    }
     this.value = value;
     this.events.push({ type: 'exponentialRamp', value, time });
   }
