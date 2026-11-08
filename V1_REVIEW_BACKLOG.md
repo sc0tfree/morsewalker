@@ -412,7 +412,7 @@ accumulation was measured; CPU cost and audible degradation were not measured.
 
 ### 10. [P3] Re-sending the selected callsign erases fill counts
 
-**Status:** Open. **Origin:** new AGN bookkeeping regression in v1.
+**Status:** Resolved. **Origin:** new AGN bookkeeping regression in v1.
 
 **Location:** [session/index.js, lines 577–580](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L577-L580).
 
@@ -427,6 +427,27 @@ contact and initialize them only when starting a genuinely different contact.
 **Acceptance:** requesting fills and then re-sending the same callsign preserves
 per-field counts; selecting a different caller or finishing/resetting the contact
 does not carry those counts into another QSO.
+
+**Resolution:** initialize counts only when no exchange is selected or the matched
+caller differs from the current selection. Check the previous readiness and index
+before updating them. Re-sending the selected caller preserves accumulated counts;
+the existing exchange replay, attempt increment, and focus behavior are unchanged.
+Switching callers starts fresh without retaining per-caller history.
+
+**Regression evidence:** before the fix, the same-caller integration case lost its
+earlier fills, producing `ADAM (1 AGN) / 1` instead of
+`ADAM (2 AGN) / 1 (1 AGN)`, while its transcript and four attempts remained correct.
+The browser regression likewise lost both existing annotations after a resend.
+Controls for selecting a different caller and completing a contact before a new
+caller reuses the same callsign and index both passed before and after the fix.
+
+**Verification:** `npm run verify` passes all 501 unit/integration tests, and all
+48 Playwright tests pass. The extended CWT browser journey uses the actual player
+and confirms preserved annotations, four attempts, additional scheduled playback,
+correct focus, and no page errors. Existing reset, mode-change, Stop, audio-timing,
+and Safari activation expectations pass unchanged. Only the selection guard and
+its comment changed in production; no audio code or interfaces changed. Item 9
+remains deferred, and item 11 remains separate follow-up work.
 
 ### 11. [P3] First pileup result includes idle time before CQ
 

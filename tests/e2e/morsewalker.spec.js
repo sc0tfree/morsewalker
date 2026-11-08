@@ -632,9 +632,12 @@ for (const mode of ['pota', 'sst']) {
   });
 }
 
-test('Enter and AGN repeat CWT fields and record each count', async ({
+test('Enter and AGN preserve CWT fill counts when resending the selected callsign', async ({
   page,
 }) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
   await openApp(page);
   await configureValidInputs(page);
   await selectMode(page, 'cwt');
@@ -681,6 +684,17 @@ test('Enter and AGN repeat CWT fields and record each count', async ({
     .toBeGreaterThan(allFieldEvents);
 
   await releaseAudio(page);
+  const beforeResend = (await audioSnapshot(page)).scheduledEvents;
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await expect(infoField).toBeFocused();
+  await expect(agnButton).toBeEnabled();
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+    beforeResend
+  );
+
+  await releaseAudio(page);
   await infoField.fill('Adam');
   await infoField2.fill('1');
   await expect(agnButton).toBeDisabled();
@@ -689,8 +703,9 @@ test('Enter and AGN repeat CWT fields and record each count', async ({
   await page.locator('#tuButton').click();
 
   const cells = page.locator('#resultsTable tbody tr').first().locator('td');
-  await expect(cells.nth(3)).toHaveText('3');
+  await expect(cells.nth(3)).toHaveText('4');
   await expect(cells.nth(5)).toContainText('ADAM (1 AGN) / 1 (2 AGN)');
+  expect(pageErrors).toEqual([]);
 });
 
 test('Mode, AGN controls, and Help retain their responsive layout', async ({
