@@ -451,7 +451,7 @@ remains deferred, and item 11 remains separate follow-up work.
 
 ### 11. [P3] First pileup result includes idle time before CQ
 
-**Status:** Open. **Origin:** inherited result-timing defect.
+**Status:** Resolved. **Origin:** inherited result-timing defect.
 
 **Location:** [session/index.js, line 825](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L825).
 The initial pileup CQ does not set the timer, and the first TU initializes it only
@@ -466,6 +466,28 @@ A deterministic probe included 100 seconds of pre-CQ idle in the first result.
 practice begins, using the intended timing convention. Identical contacts should
 produce the same duration regardless of time spent idle before the initial CQ,
 and the summary must use the corrected value.
+
+**Resolution:** the first accepted CQ in a pileup mode initializes a missing
+contact timer immediately after settings validation. The first duration runs from
+that CQ until TU is pressed, including CQ and caller playback but excluding earlier
+idle time. An explicit null check preserves a start time of zero and prevents later
+CQ presses from restarting the timer. Single and subsequent-contact timing remain
+unchanged; Stop, Reset, and mode changes retain their existing timer clearing.
+
+**Regression evidence:** before the fix, 100 seconds of pre-CQ idle time changed a
+20-second first contact into 120 seconds in all five pileup modes. With a second
+40-second contact, the average was 80 seconds instead of 30. The 18 new integration
+cases produced 11 expected failures and seven passing controls before the fix;
+all pass afterward. The actual-player Chromium journey likewise reported 220
+seconds instead of 120 for its first contact and an average of 170 instead of 120.
+Both values are corrected after the fix, with playback scheduled and no page errors.
+
+**Verification:** `npm run verify` passes all 519 unit/integration tests, and all
+49 Playwright tests pass. Coverage includes repeated CQ at zero and nonzero start
+times, rejected and audio-locked initial CQ, fresh starts after Stop/Reset/mode
+changes, and unchanged timing between later contacts even across an empty pileup.
+The only production change is the timer guard and its comment. No audio code,
+interfaces, or test infrastructure changed. Item 9 remains deferred.
 
 ## Validation and remaining release checks
 
