@@ -919,6 +919,99 @@ test('repeat, partial, and QRS requests recover into a completed contact', async
   await expect(cells.nth(3)).toHaveText('4');
 });
 
+for (const mode of ['single', 'contest']) {
+  for (const speed of [5, 6]) {
+    test(`${mode} QRS floor preserves character timing and completes a ${speed} WPM contact`, async ({
+      page,
+    }) => {
+      const pageErrors = [];
+      page.on('pageerror', (error) => pageErrors.push(error.message));
+
+      await openApp(page);
+      await configureValidInputs(page, {
+        minSpeed: String(speed),
+        maxSpeed: String(speed),
+      });
+      await selectMode(page, mode);
+      await page.locator('#cqButton').click();
+      await expect(page.locator('#activeStations')).toHaveText('1');
+
+      const readCallerGains = () =>
+        page.evaluate(() =>
+          globalThis.__morseTest
+            .gainSnapshots()
+            .filter(({ frequency }) => frequency === 400)
+        );
+      const expectCallsignTiming = (events, letterGap) => {
+        // K0A has ten symbols. With QSB off and nonzero volume, each symbol
+        // produces six gain events; event 4 is its nominal end, before the
+        // final zero event at end + 0.001 seconds.
+        const symbols = [...'-.-', ...'-----', ...'.-'];
+        expect(events).toHaveLength(symbols.length * 6);
+        events.forEach(({ time }, index) => {
+          expect(Number.isFinite(time)).toBe(true);
+          expect(time).toBeGreaterThanOrEqual(0);
+          if (index > 0) {
+            expect(time).toBeGreaterThanOrEqual(events[index - 1].time);
+          }
+        });
+
+        const windows = symbols.map((symbol, index) => ({
+          start: events[index * 6].time,
+          end: events[index * 6 + 4].time,
+          duration: (symbol === '-' ? 3 : 1) * (1.2 / speed),
+        }));
+        windows.forEach(({ start, end, duration }, index) => {
+          expect(end - start).toBeCloseTo(duration, 6);
+          if (index > 0) {
+            const gap = index === 3 || index === 8 ? letterGap : 1.2 / speed;
+            expect(start - windows[index - 1].end).toBeCloseTo(gap, 6);
+          }
+        });
+      };
+
+      let callerGains = await readCallerGains();
+      expectCallsignTiming(callerGains.at(-1).events, (3 * 1.2) / speed);
+      for (const request of ['first', 'repeated']) {
+        await test.step(`${request} QRS stays at the 5 WPM floor`, async () => {
+          await releaseAudio(page);
+          await page.locator('#responseField').fill('QRS');
+          await page.locator('#responseField').press('Enter');
+
+          const nextCallerGains = await readCallerGains();
+          expect(nextCallerGains).toHaveLength(callerGains.length + 1);
+          expectCallsignTiming(nextCallerGains.at(-1).events, 0.72);
+          callerGains = nextCallerGains;
+          await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+          await expect(page.locator('#activeStations')).toHaveText('1');
+          expect(pageErrors).toEqual([]);
+        });
+      }
+
+      await releaseAudio(page);
+      await page.locator('#responseField').fill('K0A');
+      await page.locator('#responseField').press('Enter');
+      if (mode === 'contest') {
+        await releaseAudio(page);
+        await page.locator('#infoField').fill('01');
+        await setRandom(page, 0.9);
+        await page.locator('#tuButton').click();
+      }
+
+      const rows = page.locator('#resultsTable tbody tr');
+      await expect(rows).toHaveCount(1);
+      const cells = rows.first().locator('td');
+      await expect(cells.nth(1)).toHaveText('K0A');
+      await expect(cells.nth(2)).toHaveText(`${speed} / 5`);
+      await expect(cells.nth(3)).toHaveText('3');
+      await expect(page.locator('#activeStations')).toHaveText(
+        mode === 'single' ? '1' : '0'
+      );
+      expect(pageErrors).toEqual([]);
+    });
+  }
+}
+
 test('Field Day keeps its active settings snapshot when TU schedules another caller', async ({
   page,
 }) => {

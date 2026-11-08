@@ -2112,45 +2112,100 @@ describe('session controls and message flows', () => {
     }
   );
 
-  it('slows the last responding pileup on repeated QRS requests', async () => {
-    const { releaseAudio } = await bootSession();
-    startSession('contest');
+  describe('QRS effective-speed floor', () => {
+    const configurations = [
+      { wpm: 5, expectedSpeeds: [5, 5, 5] },
+      { wpm: 6, expectedSpeeds: [5, 5, 5] },
+      { wpm: 7, expectedSpeeds: [5, 5, 5] },
+      { wpm: 8, expectedSpeeds: [5, 5, 5] },
+      { wpm: 9, expectedSpeeds: [5, 5, 5] },
+      { wpm: 10, expectedSpeeds: [5, 5, 5] },
+      { wpm: 11, expectedSpeeds: [5, 5, 5] },
+      { wpm: 12, expectedSpeeds: [6, 5, 5] },
+      { wpm: 18, expectedSpeeds: [12, 6, 5, 5] },
+    ].map((configuration) => ({
+      ...configuration,
+      initialEffectiveSpeed: null,
+      label: `Farnsworth initially disabled at ${configuration.wpm} WPM`,
+    }));
+    configurations.push(
+      ...[
+        { initialEffectiveSpeed: 12, expectedSpeeds: [6, 5, 5] },
+        { initialEffectiveSpeed: 10, expectedSpeeds: [5, 5, 5] },
+        { initialEffectiveSpeed: 5, expectedSpeeds: [5, 5, 5] },
+      ].map((configuration) => ({
+        ...configuration,
+        wpm: 18,
+        label: `Farnsworth initially enabled at ${configuration.initialEffectiveSpeed} WPM`,
+      }))
+    );
+    const cases = ['single', 'contest'].flatMap((mode) =>
+      configurations.map((configuration) => ({ ...configuration, mode }))
+    );
 
-    expect(
-      audioProbe.players.filter(({ callsign }) => callsign === 'K0A').at(-1)
-    ).toMatchObject({
-      enableFarnsworth: false,
-      farnsworthSpeed: 10,
-      wpm: 18,
-    });
+    it.each(cases)(
+      'keeps $mode QRS within the floor with $label',
+      async ({ mode, wpm, initialEffectiveSpeed, expectedSpeeds }) => {
+        const { random, releaseAudio } = await bootSession();
+        configureValidInputs();
+        selectMode(mode);
+        document.getElementById('minSpeed').value = String(wpm);
+        document.getElementById('maxSpeed').value = String(wpm);
+        const enableFarnsworth = document.getElementById('enableFarnsworth');
+        enableFarnsworth.checked = initialEffectiveSpeed !== null;
+        enableFarnsworth.dispatchEvent(new Event('change', { bubbles: true }));
+        if (initialEffectiveSpeed !== null) {
+          document.getElementById('farnsworthSpeed').value = String(
+            initialEffectiveSpeed
+          );
+        }
+        document.getElementById('cqButton').click();
+        const latestCaller = () =>
+          audioProbe.players
+            .filter(({ callsign }) => callsign === 'K0A')
+            .at(-1);
+        expect(latestCaller()).toMatchObject({
+          enableFarnsworth: initialEffectiveSpeed !== null,
+          wpm,
+        });
 
-    releaseAudio();
-    sendResponse('QRS');
-    expect(
-      audioProbe.players.filter(({ callsign }) => callsign === 'K0A').at(-1)
-    ).toMatchObject({
-      enableFarnsworth: true,
-      farnsworthSpeed: 12,
-      wpm: 18,
-    });
+        for (const effectiveSpeed of expectedSpeeds) {
+          releaseAudio();
+          const beforeQrs = transcript().length;
+          sendResponse('QRS');
 
-    releaseAudio();
-    sendResponse('QRS');
-    expect(
-      audioProbe.players.filter(({ callsign }) => callsign === 'K0A').at(-1)
-    ).toMatchObject({
-      enableFarnsworth: true,
-      farnsworthSpeed: 6,
-      wpm: 18,
-    });
-    expect(transcript()).toEqual([
-      ['N0ME', 'CQ TEST DE N0ME'],
-      ['K0A', 'K0A'],
-      ['N0ME', 'QRS'],
-      ['K0A', 'K0A'],
-      ['N0ME', 'QRS'],
-      ['K0A', 'K0A'],
-    ]);
+          expect(latestCaller()).toMatchObject({
+            enableFarnsworth: true,
+            farnsworthSpeed: effectiveSpeed,
+            wpm,
+          });
+          expect(transcript().slice(beforeQrs)).toEqual([
+            ['N0ME', 'QRS'],
+            ['K0A', 'K0A'],
+          ]);
+          expect(resultsRows()).toHaveLength(0);
+          expect(document.getElementById('activeStations')).toHaveTextContent(
+            '1'
+          );
+        }
+
+        releaseAudio();
+        sendResponse('K0A');
+        if (mode === 'contest') {
+          releaseAudio();
+          setInfoValue('infoField', '01');
+          random.mockReturnValue(0.9);
+          document.getElementById('tuButton').click();
+        }
+        expect(resultsRows()).toHaveLength(1);
+        const [row] = resultsRows();
+        expect(row.cells[1]).toHaveTextContent('K0A');
+        expect(row.cells[2]).toHaveTextContent(`${wpm} / 5`);
+        expect(row.cells[3]).toHaveTextContent(
+          String(expectedSpeeds.length + 1)
+        );
+      }
+    );
   });
 
   it.each(['single', 'contest'])(

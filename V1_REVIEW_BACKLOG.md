@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–5 are resolved; items 6–11 remain open.
+Reviewed on November 7, 2026. Items 1–6 are resolved; items 7–11 remain open.
 
 ## Scope and merge assessment
 
@@ -250,11 +250,13 @@ schedules only on the replacement context without an old-clock lock. Muted nativ
 Chromium also completes the restarted contact with its real clock and existing
 CQ delay. All 425 unit/integration tests and 38 Chromium tests passed, along with
 formatting, lint, coverage, and the production build. Existing audio timing and
-Safari activation expectations pass unchanged. Items 6–11 remain follow-up work.
+Safari activation expectations pass unchanged. Items 6–11 remained follow-up work
+after this fix.
 
 ### 6. [P2] First QRS can produce negative spacing
 
-**Status:** Open. **Origin:** inherited session defect.
+**Status:** Resolved on November 8, 2026, in `codex/fix-first-qrs-speed-floor`.
+**Origin:** inherited session defect.
 
 **Locations:** [pileup QRS, session/index.js lines 521–523](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L521-L523)
 and [Single QRS, lines 630–632](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L630-L632).
@@ -271,6 +273,29 @@ seconds. No exception was required for the timing to be corrupted.
 **Correction and acceptance:** apply the same lower bound when first enabling
 Farnsworth that subsequent QRS requests already apply. Cover first and repeated
 QRS at low speeds in both Single and pileup modes; scheduling must remain ordered.
+
+**Resolution:** both first-QRS assignments now use
+`Math.max(5, characterWpm - farnsworthLowerBy)`. Those two assignment changes are
+the entire production fix. Character speed, subsequent QRS handling, caller
+selection, player creation, response delays, and attempt counting are unchanged.
+No audio modules, settings, public interfaces, or Safari activation code changed.
+A caller already at 5 WPM repeats at `5 / 5`.
+
+**Verification:** the 24-case integration matrix covers Single and Contest at
+every character speed from 5 through 12 WPM, the ordinary 18 WPM sequence, and
+already-enabled Farnsworth at effective speeds 12, 10, and 5. Before the fix, all
+12 first-QRS cases at 5–10 WPM failed; the 12 remaining controls passed. All six
+new actual-player Chromium regressions also failed before the fix: 5 WPM
+scheduled events out of order (and before the request in native Chromium), while
+6 WPM used 0.60-second letter gaps instead of 0.72 seconds because the old zero
+value triggered the player's fallback. Afterward, all 448 unit/integration tests
+and 44 Chromium tests passed, along with formatting, lint, coverage, and the
+production build. Tests verify first and repeated QRS, unchanged dot/dash and
+intra-character timing, exact letter spacing, attempts, and completed result
+speeds. Muted native Chromium checks both modes at 5 WPM using its real clock and
+the full trailing letter gap. An exact source comparison confirms only the two
+approved assignments changed in production. Existing audio timing and Safari
+activation expectations pass unchanged. Items 7–11 remain follow-up work.
 
 ### 7. [P2] Numeric parsing disagrees with validation
 

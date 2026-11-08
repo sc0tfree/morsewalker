@@ -528,7 +528,7 @@ function send() {
           );
         } else {
           stn.enableFarnsworth = true;
-          stn.farnsworthSpeed = stn.wpm - farnsworthLowerBy;
+          stn.farnsworthSpeed = Math.max(5, stn.wpm - farnsworthLowerBy);
         }
       });
 
@@ -637,7 +637,10 @@ function send() {
         );
       } else {
         currentStation.enableFarnsworth = true;
-        currentStation.farnsworthSpeed = currentStation.wpm - farnsworthLowerBy;
+        currentStation.farnsworthSpeed = Math.max(
+          5,
+          currentStation.wpm - farnsworthLowerBy
+        );
       }
       // Create a new player
       currentStation.player = createMorsePlayer(currentStation);
