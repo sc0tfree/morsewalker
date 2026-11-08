@@ -2215,6 +2215,122 @@ describe('session controls and message flows', () => {
     );
   });
 
+  describe('exchange AGN reselection accounting', () => {
+    it('preserves cumulative field counts when resending the selected CWT callsign', async () => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      document.getElementById('agnButton').click();
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      setInfoValue('infoField2', '1');
+      document.getElementById('agnButton').click();
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      random.mockReturnValue(0.9);
+      document.getElementById('tuButton').click();
+
+      expect(transcript()).toEqual([
+        ['N0ME', 'CQ CWT N0ME'],
+        ['K0A', 'K0A'],
+        ['N0ME', 'K0A'],
+        ['N0ME', ' HENRY CWA'],
+        ['K0A', 'Adam 1 TU'],
+        ['N0ME', 'AGN?'],
+        ['K0A', 'Adam 1'],
+        ['N0ME', 'K0A'],
+        ['N0ME', ' HENRY CWA'],
+        ['K0A', 'Adam 1 TU'],
+        ['N0ME', 'NAME?'],
+        ['K0A', 'Adam'],
+        ['N0ME', 'TU N0ME'],
+      ]);
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[3]).toHaveTextContent('4');
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(
+        /^ADAM \(2 AGN\) \/ 1 \(1 AGN\)$/
+      );
+    });
+
+    it('starts field counts at zero when selecting a different active caller', async () => {
+      const { random, releaseAudio } = await bootSession();
+      configureValidInputs();
+      document.getElementById('maxStations').value = '2';
+      selectMode('cwt');
+      document.getElementById('cqButton').click();
+      releaseAudio();
+      random.mockReturnValue(0.9);
+      document.getElementById('cqButton').click();
+      const otherCallsign = audioProbe.players.at(-1).callsign;
+      expect(otherCallsign).not.toBe('K0A');
+      expect(document.getElementById('activeStations')).toHaveTextContent('2');
+
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      document.getElementById('agnButton').click();
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', 'AGN?'],
+        ['K0A', 'Adam 1'],
+      ]);
+      releaseAudio();
+      sendResponse(otherCallsign);
+      const [callsign, exchange] = transcript().at(-1);
+      expect(callsign).toBe(otherCallsign);
+      const [, name, number] = exchange.match(/^(.+) (\d+) TU$/);
+      releaseAudio();
+      setInfoValue('infoField', name);
+      setInfoValue('infoField2', number);
+      document.getElementById('tuButton').click();
+
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[1]).toHaveTextContent(otherCallsign);
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(
+        `${name.toUpperCase()} / ${number}`
+      );
+      expect(resultsRows()[0].cells[5]).not.toHaveTextContent('AGN');
+    });
+
+    it('starts fresh counts for the same callsign in the first slot after completing a contact', async () => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      document.getElementById('agnButton').click();
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      document.getElementById('tuButton').click();
+
+      expect(resultsRows()).toHaveLength(1);
+      expect(resultsRows()[0].cells[5]).toHaveTextContent(
+        /^ADAM \(1 AGN\) \/ 1 \(1 AGN\)$/
+      );
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(transcript().at(-1)).toEqual(['K0A', 'K0A']);
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      random.mockReturnValue(0.9);
+      document.getElementById('tuButton').click();
+
+      const contacts = resultsRows().filter(
+        ({ id }) => id !== 'resultsTable-summary'
+      );
+      expect(contacts).toHaveLength(2);
+      expect(contacts[0].cells[0]).toHaveTextContent('2');
+      expect(contacts[0].cells[1]).toHaveTextContent('K0A');
+      expect(contacts[0].cells[3]).toHaveTextContent('1');
+      expect(contacts[0].cells[5]).toHaveTextContent(/^ADAM \/ 1$/);
+    });
+  });
+
   it('uses the canonical request and cut numbers for a one-field AGN fill', async () => {
     const { releaseAudio } = await bootSession();
     configureValidInputs();

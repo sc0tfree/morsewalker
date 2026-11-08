@@ -585,9 +585,12 @@ function send() {
         updateAudioLock(theirResponseTimer);
         currentStationAttempts++;
 
+        // Preserve fills already requested for this unfinished contact.
+        if (!readyForTU || activeStationIndex !== matchIndex) {
+          initializeExchangeAgnCounts(modeConfig);
+        }
         readyForTU = true;
         activeStationIndex = matchIndex;
-        initializeExchangeAgnCounts(modeConfig);
         updateAgnButtonAvailability();
 
         if (modeConfig.requiresInfoField) {
