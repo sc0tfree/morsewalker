@@ -160,6 +160,118 @@ describe('settings form parsing and normalization', () => {
     });
   });
 
+  it.each([
+    {
+      id: 'yourSpeed',
+      whole: '0.5e2',
+      value: 50,
+      decimal: '2.79e1',
+      truncated: 27,
+    },
+    {
+      id: 'yourSidetone',
+      whole: '7.25e2',
+      value: 725,
+      decimal: '7.259e2',
+      truncated: 725,
+    },
+    {
+      id: 'maxStations',
+      whole: '1e1',
+      value: 10,
+      decimal: '6.8e0',
+      truncated: 6,
+    },
+    {
+      id: 'minSpeed',
+      whole: '2e1',
+      value: 20,
+      decimal: '1.59e1',
+      truncated: 15,
+    },
+    {
+      id: 'maxSpeed',
+      whole: '6e1',
+      value: 60,
+      decimal: '3.22e1',
+      truncated: 32,
+    },
+    {
+      id: 'minTone',
+      whole: '4.1e2',
+      value: 410,
+      decimal: '4.105e2',
+      truncated: 410,
+    },
+    {
+      id: 'maxTone',
+      whole: '8.9e2',
+      value: 890,
+      decimal: '8.909e2',
+      truncated: 890,
+    },
+    {
+      id: 'qsbPercentage',
+      whole: '7.3e1',
+      value: 73,
+      decimal: '7.39e1',
+      truncated: 73,
+    },
+    {
+      id: 'farnsworthSpeed',
+      whole: '1e1',
+      value: 10,
+      decimal: '1.19e1',
+      truncated: 11,
+    },
+  ])(
+    'parses complete exponent values before truncating integer field $id',
+    ({ id, whole, value, decimal, truncated }) => {
+      setCallsign();
+      element(id).disabled = false;
+
+      element(id).value = whole;
+      expect(getInputs()).toMatchObject({ [id]: value });
+
+      element(id).value = decimal;
+      expect(getInputs()).toMatchObject({ [id]: truncated });
+    }
+  );
+
+  it('preserves exponent fractions for volume and wait settings', () => {
+    setCallsign();
+    element('yourVolume').value = '3.75e1';
+    element('minVolume').value = '1.25e1';
+    element('maxVolume').value = '8.25e1';
+    element('minWait').value = '5e-1';
+    element('maxWait').value = '2.25e0';
+
+    expect(getInputs()).toMatchObject({
+      yourVolume: 0.375,
+      minVolume: 0.125,
+      maxVolume: 0.825,
+      minWait: 0.5,
+      maxWait: 2.25,
+    });
+  });
+
+  it('keeps a blank disabled Farnsworth speed as NaN and requires it when enabled', () => {
+    setCallsign();
+    element('farnsworthSpeed').value = '';
+
+    const inputs = getInputs();
+    expect(inputs).not.toBeNull();
+    expect(inputs.farnsworthSpeed).toBeNaN();
+    expect(element('farnsworthSpeed')).not.toHaveClass('is-invalid');
+
+    element('farnsworthSpeed').disabled = false;
+    expect(getInputs()).toBeNull();
+    expect(element('farnsworthSpeed')).toHaveClass('is-invalid');
+    expect(element('farnsworthSpeed').nextElementSibling).toHaveTextContent(
+      'Required'
+    );
+  });
+
   it.each(['single', 'contest', 'pota'])(
     'allows blank name and state in %s mode',
     (mode) => {
@@ -323,6 +435,53 @@ describe('settings validation and invalid-state behavior', () => {
     {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
+      low: '9',
+      high: '1e1',
+      message: 'Must be ≤ Max Speed',
+    },
+    {
+      minId: 'minTone',
+      maxId: 'maxTone',
+      low: '900',
+      high: '1e3',
+      message: 'Must be ≤ Max Tone',
+    },
+  ])(
+    'rejects reversed $minId and $maxId using their full exponent values',
+    ({ minId, maxId, low, high, message }) => {
+      setCallsign();
+      element(minId).value = high;
+      element(maxId).value = low;
+
+      expect(getInputs()).toBeNull();
+      expect(element(minId)).toHaveClass('is-invalid');
+      expect(element(minId).nextElementSibling).toHaveTextContent(message);
+    }
+  );
+
+  it.each([
+    'yourSidetone',
+    'maxStations',
+    'minSpeed',
+    'maxSpeed',
+    'minTone',
+    'maxTone',
+  ])(
+    'rejects a blank integer field %s instead of treating it as zero',
+    (id) => {
+      setCallsign();
+      element(id).value = '';
+
+      expect(getInputs()).toBeNull();
+      expect(element(id)).toHaveClass('is-invalid');
+      expect(element(id).nextElementSibling).toHaveTextContent('Required');
+    }
+  );
+
+  it.each([
+    {
+      minId: 'minSpeed',
+      maxId: 'maxSpeed',
       low: '10',
       high: '50',
       message: 'Must be ≤ Max Speed',
@@ -368,12 +527,18 @@ describe('settings validation and invalid-state behavior', () => {
   it.each([
     { id: 'yourSpeed', value: '4', message: 'Must be ≥ 5' },
     { id: 'yourSpeed', value: '61', message: 'Must be ≤ 60' },
+    { id: 'yourSpeed', value: '4e0', message: 'Must be ≥ 5' },
+    { id: 'yourSpeed', value: '6.1e1', message: 'Must be ≤ 60' },
+    { id: 'yourSpeed', value: '60.9', message: 'Must be ≤ 60' },
+    { id: 'yourSpeed', value: '6.09e1', message: 'Must be ≤ 60' },
     { id: 'yourSidetone', value: '199', message: 'Must be ≥ 200' },
     { id: 'yourSidetone', value: '1501', message: 'Must be ≤ 1500' },
+    { id: 'yourSidetone', value: '1.99e2', message: 'Must be ≥ 200' },
     { id: 'yourVolume', value: '-1', message: 'Must be ≥ 0' },
     { id: 'yourVolume', value: '101', message: 'Must be ≤ 100' },
     { id: 'maxStations', value: '0', message: 'Must be ≥ 1' },
     { id: 'maxStations', value: '21', message: 'Must be ≤ 20' },
+    { id: 'maxStations', value: '2.09e1', message: 'Must be ≤ 20' },
     { id: 'minSpeed', value: '4', message: 'Must be ≥ 5' },
     { id: 'minSpeed', value: '61', message: 'Must be ≤ 60' },
     { id: 'maxSpeed', value: '4', message: 'Must be ≥ 5' },

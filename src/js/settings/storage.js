@@ -188,11 +188,10 @@ function readControlValue(control, elements) {
   }
 
   if (elements[0].value === '') return undefined;
-  const value =
-    control.type === 'integer'
-      ? parseInt(elements[0].value, 10)
-      : Number(elements[0].value);
-  return isValidNumber(elements[0], value) ? value : undefined;
+  const value = elements[0].valueAsNumber;
+  // Reject out-of-bounds edits before truncation can turn them into valid integers.
+  if (!isValidNumber(elements[0], value)) return undefined;
+  return control.type === 'integer' ? Math.trunc(value) : value;
 }
 
 /**

@@ -3,7 +3,8 @@
  *
  * Collects various input types, including text, dropdowns, checkboxes, and dynamically
  * selected formats. Converts specific fields to standardized formats (e.g., uppercase,
- * float values) to maintain consistency.
+ * float values) to maintain consistency. Integer settings truncate the complete
+ * numeric value, including exponent notation.
  *
  * @returns {Object} An object containing raw input values from the DOM.
  */
@@ -27,15 +28,19 @@ export function getDOMInputs() {
       .getElementById('yourFieldDaySection')
       .value.trim()
       .toUpperCase(),
-    yourSpeed: parseInt(document.getElementById('yourSpeed').value, 10),
-    yourSidetone: parseInt(document.getElementById('yourSidetone').value, 10),
+    yourSpeed: Math.trunc(document.getElementById('yourSpeed').valueAsNumber),
+    yourSidetone: Math.trunc(
+      document.getElementById('yourSidetone').valueAsNumber
+    ),
     // convert volume to a float between 0 and 1
     yourVolume: parseFloat(document.getElementById('yourVolume').value) / 100,
-    maxStations: parseInt(document.getElementById('maxStations').value, 10),
-    minSpeed: parseInt(document.getElementById('minSpeed').value, 10),
-    maxSpeed: parseInt(document.getElementById('maxSpeed').value, 10),
-    minTone: parseInt(document.getElementById('minTone').value, 10),
-    maxTone: parseInt(document.getElementById('maxTone').value, 10),
+    maxStations: Math.trunc(
+      document.getElementById('maxStations').valueAsNumber
+    ),
+    minSpeed: Math.trunc(document.getElementById('minSpeed').valueAsNumber),
+    maxSpeed: Math.trunc(document.getElementById('maxSpeed').valueAsNumber),
+    minTone: Math.trunc(document.getElementById('minTone').valueAsNumber),
+    maxTone: Math.trunc(document.getElementById('maxTone').valueAsNumber),
     // convert volumes to a float between 0 and 1
     minVolume: parseFloat(document.getElementById('minVolume').value) / 100,
     maxVolume: parseFloat(document.getElementById('maxVolume').value) / 100,
@@ -48,14 +53,16 @@ export function getDOMInputs() {
       : false,
     qrn: document.querySelector('input[name="qrn"]:checked').value,
     qsb: document.getElementById('qsb').checked,
-    qsbPercentage: parseInt(document.getElementById('qsbPercentage').value, 10),
+    qsbPercentage: Math.trunc(
+      document.getElementById('qsbPercentage').valueAsNumber
+    ),
 
     // Farnsworth inputs
     enableFarnsworth: document.getElementById('enableFarnsworth')
       ? document.getElementById('enableFarnsworth').checked
       : false,
     farnsworthSpeed: document.getElementById('farnsworthSpeed')
-      ? parseInt(document.getElementById('farnsworthSpeed').value, 10)
+      ? Math.trunc(document.getElementById('farnsworthSpeed').valueAsNumber)
       : null,
 
     // Formats (callsign formats are gathered dynamically)
