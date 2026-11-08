@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  audioContextSnapshots,
   audioSnapshot,
   configureValidInputs,
   installTestEnvironment,
@@ -1304,6 +1305,198 @@ test('invalid CQ is rejected before a station or audio starts', async ({
     bufferSources: 0,
     scheduledEvents: 0,
   });
+});
+
+test('Stop clears an unselected pileup and immediately starts fresh players with new settings', async ({
+  page,
+}) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'contest');
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  const oldContext = (await audioContextSnapshots(page)).at(-1);
+  expect(oldContext.currentTime).toBeGreaterThanOrEqual(1000);
+
+  await configureValidInputs(page, {
+    yourCallsign: 'W1AW',
+    yourSpeed: '30',
+    yourSidetone: '750',
+    minSpeed: '30',
+    maxSpeed: '30',
+    minTone: '800',
+    maxTone: '800',
+  });
+  await page.locator('#stopButton').click();
+
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  await expect(page.locator('#cqButton')).toBeEnabled();
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#minSpeed')).toHaveValue('30');
+  const stoppedContexts = await audioContextSnapshots(page);
+  expect(stoppedContexts[oldContext.id]).toEqual({
+    ...oldContext,
+    state: 'closed',
+  });
+  expect(stoppedContexts.at(-1)).toMatchObject({
+    currentTime: 0,
+    oscillators: 0,
+    gains: 0,
+    scheduledEvents: 0,
+  });
+
+  // Do not advance time: a deadline from the old clock would block this CQ.
+  await page.locator('#cqButton').click();
+  const restartedContexts = await audioContextSnapshots(page);
+  expect(restartedContexts[oldContext.id]).toEqual(
+    stoppedContexts[oldContext.id]
+  );
+  expect(restartedContexts.at(-1)).toMatchObject({
+    id: stoppedContexts.at(-1).id,
+    state: 'running',
+    currentTime: 0,
+    oscillators: 2,
+    frequencies: [750, 800],
+  });
+  expect(restartedContexts.at(-1).scheduledEvents).toBeGreaterThan(0);
+  expect(restartedContexts.at(-1).lastScheduledTime).toBeLessThan(100);
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test('Stop discards a selected exchange and blocks stale actions while preserving completed results', async ({
+  page,
+}) => {
+  const results = page.locator(
+    '#resultsTable tbody tr:not(#resultsTable-summary)'
+  );
+  const readResult = (row) =>
+    row.evaluate((element) =>
+      [...element.cells].map((cell) => ({
+        text: cell.textContent.replace(/\s+/g, ' ').trim(),
+        scoringClasses: [
+          ...cell.querySelectorAll('.text-success, .text-warning'),
+        ].map((mark) => mark.className),
+      }))
+    );
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'contest');
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await releaseAudio(page);
+  await page.locator('#infoField').fill('01');
+  await page.locator('#tuButton').click();
+  await expect(results).toHaveCount(1);
+  const completedResult = await readResult(results.first());
+  expect(completedResult[0].text).toBe('1');
+  expect(completedResult[5]).toEqual({
+    text: '1',
+    scoringClasses: ['text-success'],
+  });
+
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await releaseAudio(page);
+  await page.locator('#agnButton').click();
+  await page.locator('#infoField').fill('01');
+  await page.locator('#stopButton').click();
+
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  await expect(page.locator('#responseField')).toHaveValue('');
+  await expect(page.locator('#infoField')).toHaveValue('');
+  await expect(page.locator('#infoField2')).toHaveValue('');
+  await expect(page.locator('#agnButton')).toBeDisabled();
+  await expect(results).toHaveCount(1);
+  expect(await readResult(results.first())).toEqual(completedResult);
+  const stoppedContexts = await audioContextSnapshots(page);
+
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await page.locator('#responseField').press('Enter');
+  await page.locator('#agnButton').evaluate((button) => button.click());
+  await page.locator('#tuButton').click();
+  await page.locator('#infoField').fill('01');
+  await page.locator('#infoField').press('Enter');
+
+  expect(await audioContextSnapshots(page)).toEqual(stoppedContexts);
+  await expect(results).toHaveCount(1);
+  expect(await readResult(results.first())).toEqual(completedResult);
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  expect(errors).toEqual([]);
+
+  // Restart without advancing the replacement context's zero clock.
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  expect((await audioContextSnapshots(page)).at(-1).oscillators).toBe(2);
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await releaseAudio(page);
+  await page.locator('#infoField').fill('');
+  await page.locator('#agnButton').click();
+  await releaseAudio(page);
+  await page.locator('#infoField').fill('01');
+  await setRandom(page, 0.9);
+  await page.locator('#tuButton').click();
+
+  await expect(results).toHaveCount(2);
+  const latestCells = results.first().locator('td');
+  await expect(latestCells.nth(0)).toHaveText('2');
+  await expect(latestCells.nth(3)).toHaveText('2');
+  await expect(latestCells.nth(5)).toHaveText('1 (1 AGN)');
+  await expect(latestCells.nth(5).locator('.text-success')).toHaveCount(1);
+  await expect(latestCells.nth(5).locator('.text-warning')).toHaveCount(0);
+  expect(await readResult(results.nth(1))).toEqual(completedResult);
+  expect(errors).toEqual([]);
+});
+
+test('Stop keeps invalid restarts silent and allows empty Send to start a validated session', async ({
+  page,
+}) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'contest');
+  await page.locator('#cqButton').click();
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await page.locator('#stopButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  const stoppedContexts = await audioContextSnapshots(page);
+
+  await page.locator('#yourCallsign').fill('');
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#yourCallsign')).toHaveClass(/is-invalid/);
+  await page.locator('#responseField').fill('');
+  await page.locator('#sendButton').click();
+  expect(await audioContextSnapshots(page)).toEqual(stoppedContexts);
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+
+  await page.locator('#yourCallsign').fill('W1AW');
+  await page.locator('#sendButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  await expect(page.locator('#yourCallsign')).not.toHaveClass(/is-invalid/);
+  const restartedContexts = await audioContextSnapshots(page);
+  expect(restartedContexts.slice(0, -1)).toEqual(stoppedContexts.slice(0, -1));
+  expect(restartedContexts.at(-1)).toMatchObject({
+    currentTime: 0,
+    oscillators: 2,
+  });
+  expect(restartedContexts.at(-1).scheduledEvents).toBeGreaterThan(0);
+  expect(restartedContexts.at(-1).lastScheduledTime).toBeLessThan(100);
+  expect(errors).toEqual([]);
 });
 
 test('Reset, mode switching, and persisted station settings survive a reload', async ({

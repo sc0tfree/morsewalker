@@ -894,24 +894,34 @@ function nextSingleStation(responseStartTime) {
 }
 
 /**
- * Stops all audio playback and resets the CQ button.
+ * Stops playback and discards unfinished contacts in every mode.
  *
- * Clears the game state for single mode, ensuring no active station remains.
- * Leaves multi-station mode state untouched.
+ * Clears callers, exchange state, and references to stopped players while
+ * preserving completed results, contact numbering, and form settings.
+ * Enables CQ to start fresh with newly validated settings.
  */
 function stop() {
   stopAllAudio();
+
+  currentStation = null;
+  currentStations = [];
+  activeStationIndex = null;
+  readyForTU = false;
+  currentStationAttempts = 0;
+  currentStationStartTime = null;
+  yourStation = null;
+  lastRespondingStations = null;
   clearExchangeAgnCounts();
+  lastFocusedInfoFieldId = null;
+
+  document.getElementById('responseField').value = '';
+  document.getElementById('infoField').value = '';
+  document.getElementById('infoField2').value = '';
+  updateActiveStations(0);
+  updateAgnButtonAvailability();
+
   const cqButton = document.getElementById('cqButton');
   cqButton.disabled = false;
-
-  // Modes without a TU step track a single station, which must be cleared too
-  if (!getModeConfig().showTuStep) {
-    currentStation = null;
-    currentStationAttempts = 0;
-    currentStationStartTime = null;
-    updateActiveStations(0);
-  }
 }
 
 /**

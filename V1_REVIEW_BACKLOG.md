@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–4 are resolved; items 5–11 remain open.
+Reviewed on November 7, 2026. Items 1–5 are resolved; items 6–11 remain open.
 
 ## Scope and merge assessment
 
@@ -202,12 +202,13 @@ for all eight muted configurations; audible controls produced sound samples with
 identical end times. All three mute combinations (sidetone, caller, both) completed
 contacts without page errors using both the fake and native Web Audio in muted
 Chromium; the Single journeys also scheduled the next caller. Existing audio
-timing and Safari activation expectations pass unchanged. Items 5–11 remain
-follow-up work.
+timing and Safari activation expectations pass unchanged. Items 5–11 remained
+follow-up work after this fix.
 
 ### 5. [P2] Stop leaves usable controls attached to closed players
 
-**Status:** Open. **Origin:** inherited audio/session lifecycle defect.
+**Status:** Resolved on November 7, 2026, in `codex/fix-stop-session-state`.
+**Origin:** inherited audio/session lifecycle defect.
 
 **Location:** [session/index.js, lines 894–901](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L894-L901).
 Players capture their context in `audio/player.js:37` and use its clock at line
@@ -222,10 +223,34 @@ running context. AGN and TU can likewise retain old players.
 can also lock the new context for approximately the elapsed pre-Stop session
 duration, which may be minutes.
 
-**Correction and acceptance:** require CQ before further session actions after
-Stop, or rebuild retained players against the replacement context. Verify that
-Send, AGN, and TU cannot schedule on closed players or apply old-clock deadlines,
-and that Stop/CQ immediately starts a usable session.
+**Confirmed behavior and acceptance:** Stop discards unfinished callers and copied
+exchange fields in every mode while preserving completed results, contact
+numbering, mode, and settings. Subsequent nonempty Send, AGN, TU, and exchange-field
+Enter must not schedule on closed players or add results. CQ starts fresh with
+validated settings; empty Send or callsign-field Enter retains its existing
+shortcut to a fresh CQ.
+
+**Resolution:** expanded `stop()` to clear callers, selection, TU readiness,
+attempts, contact timing, AGN counts, remembered field focus, and references to
+the operator and last responding stations. It clears response/exchange fields,
+shows zero callers, disables AGN through the existing availability helper, and
+enables CQ. The existing `stopAllAudio()` call and action guards are unchanged.
+Updated the Stop documentation and Help sentence. No audio modules, player
+envelopes, scheduling, context lifecycle, or Safari activation code changed.
+
+**Verification:** 15 new integration cases and four actual-player Chromium cases
+failed before the fix and passed afterward. The native Chromium regression
+observed 252 additional gain events on the closed foreground context before the
+fix; afterward, its event count stays unchanged through stopped actions and
+restart. Coverage includes caller playback in all six modes, selected exchanges
+in all five exchange modes, ignored stopped actions, preserved results and
+numbering, repeated Stop, Reset, fresh settings, rejected-CQ recovery, and empty
+Send/Enter restarts. Browser records retain closed contexts and verify fresh CQ
+schedules only on the replacement context without an old-clock lock. Muted native
+Chromium also completes the restarted contact with its real clock and existing
+CQ delay. All 425 unit/integration tests and 38 Chromium tests passed, along with
+formatting, lint, coverage, and the production build. Existing audio timing and
+Safari activation expectations pass unchanged. Items 6–11 remain follow-up work.
 
 ### 6. [P2] First QRS can produce negative spacing
 

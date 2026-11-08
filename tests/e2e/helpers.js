@@ -193,6 +193,27 @@ export async function installTestEnvironment(page) {
             })
           );
         },
+        contextSnapshots() {
+          return contexts.map((context, id) => {
+            const events = context.gains.flatMap((gain) => gain.gain.events);
+            return {
+              id,
+              state: context.state,
+              currentTime: context.currentTime,
+              oscillators: context.oscillators.length,
+              gains: context.gains.length,
+              bufferSources: context.bufferSources.length,
+              scheduledEvents: events.length,
+              lastScheduledTime:
+                events.length > 0
+                  ? Math.max(...events.map(({ time }) => time))
+                  : null,
+              frequencies: context.oscillators.map(
+                (oscillator) => oscillator.frequency.value
+              ),
+            };
+          });
+        },
         snapshot() {
           return {
             bufferSources: contexts.reduce(
@@ -335,4 +356,8 @@ export async function setRandom(page, value) {
 
 export async function audioSnapshot(page) {
   return page.evaluate(() => globalThis.__morseTest.snapshot());
+}
+
+export async function audioContextSnapshots(page) {
+  return page.evaluate(() => globalThis.__morseTest.contextSnapshots());
 }
