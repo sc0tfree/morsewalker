@@ -76,36 +76,57 @@
     <meta name="msapplication-TileColor" content="#fafafa" />
   </head>
 
-  <body class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <div>
-        <h1 class="mb-0" style="display: inline-block; line-height: 1">
+  <body class="container pt-4 release-page">
+    <header class="app-header mb-4">
+      <div class="app-brand">
+        <h1 class="app-title">
           Morse Walker
-          <img
-            src="img/morsewalker-logo.png"
-            alt="Morse Walker Logo"
-            style="height: 1em; vertical-align: bottom"
-          />
+          <img src="img/morsewalker-logo.png" alt="" class="app-logo" />
         </h1>
-        <p class="fw-bold fst-italic">Walk before you run!</p>
+        <p class="app-tagline">Walk before you run!</p>
       </div>
-      <div class="alert alert-dismissible alert-danger" style="max-width: 35em">
+      <section
+        class="release-welcome alert alert-dismissible"
+        aria-labelledby="release-welcome-title"
+      >
         <button
           type="button"
           class="btn-close"
           data-bs-dismiss="alert"
+          aria-label="Dismiss welcome message"
         ></button>
-        Morse Walker is currently in <strong>beta</strong> and
-        <i>your feedback is invaluable!</i><br />
-        <a
-          href="https://github.com/sc0tfree/morsewalker/issues/new/choose"
-          class="alert-link"
-          >Submit an issue</a
-        >
-        for bugs or feature requests, or
-        <a href="mailto:henry@w6nyc.com" class="alert-link">email me</a>.
-      </div>
-    </div>
+        <h2 class="release-welcome-title" id="release-welcome-title">
+          Welcome to Morse Walker v1 <em class="release-beta">Beta</em>!
+        </h2>
+        <p>
+          A huge
+          <a
+            href="#thankyou-modal"
+            data-bs-toggle="modal"
+            aria-haspopup="dialog"
+            >thank you</a
+          >
+          to everyone who helped shape this app. Explore
+          <a
+            href="#whats-new-modal"
+            data-bs-toggle="modal"
+            aria-haspopup="dialog"
+            >What’s New</a
+          >
+          to see the latest features.
+        </p>
+        <p class="mb-0">
+          Found a bug?
+          <a
+            href="https://github.com/sc0tfree/morsewalker/issues/new/choose"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Submit an issue</a
+          >
+          or <a href="mailto:henry@w6nyc.com">email me</a>.
+        </p>
+      </section>
+    </header>
 
     <hr />
 
@@ -567,11 +588,7 @@
                   <div class="invalid-feedback"></div>
                 </div>
                 <div class="col-12 col-md-6 col-lg-2">
-                  <label for="minWait" class="form-label">
-                    <span class="badge bg-success me-2">NEW!</span>
-                    <br class="d-none d-lg-block d-xl-none" />
-                    Min Wait (s)</label
-                  >
+                  <label for="minWait" class="form-label">Min Wait (s)</label>
                   <input
                     type="number"
                     id="minWait"
@@ -586,11 +603,7 @@
                   <div class="invalid-feedback"></div>
                 </div>
                 <div class="col-12 col-md-6 col-lg-2">
-                  <label for="maxWait" class="form-label">
-                    <span class="badge bg-success me-2">NEW!</span>
-                    <br class="d-none d-lg-block d-xl-none" />
-                    Max Wait (s)</label
-                  >
+                  <label for="maxWait" class="form-label">Max Wait (s)</label>
                   <input
                     type="number"
                     id="maxWait"
@@ -695,9 +708,6 @@
               <div class="row g-3 mt-3 align-items-end">
                 <!-- Enable Cut Numbers -->
                 <div class="col-12 col-md-4">
-                  <label class="form-label"
-                    ><span class="badge bg-success me-2">NEW!</span></label
-                  >
                   <input
                     type="checkbox"
                     class="btn-check"
@@ -1348,6 +1358,25 @@
               </div>
             </div>
             <!-- End of Cards Row -->
+            <div class="card border-secondary mt-3">
+              <div class="card-header">
+                <strong>Settings and results</strong>
+              </div>
+              <div class="card-body">
+                <p class="card-text">
+                  Your responding-station and effects preferences are saved in
+                  this browser for your next visit. Use
+                  <strong>Defaults</strong>
+                  in either section to restore just that section’s settings.
+                </p>
+                <p class="card-text mb-0">
+                  After completing a contact, use <strong>Export</strong> beside
+                  Results to download the current session’s completed contacts
+                  as a CSV file. Export before Reset, changing modes, or leaving
+                  the page if you want to keep those results.
+                </p>
+              </div>
+            </div>
           </div>
           <div class="modal-footer">
             <button
@@ -1363,6 +1392,269 @@
     </div>
 
     <hr />
+
+    <!-- What's New Modal -->
+    <div
+      class="modal fade release-modal"
+      id="whats-new-modal"
+      tabindex="-1"
+      aria-labelledby="whats-new-title"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
+      >
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <p class="release-eyebrow">Morse Walker · v1 Beta</p>
+              <h2 class="modal-title" id="whats-new-title">What’s New</h2>
+            </div>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close What’s New"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p class="release-intro">
+              More ways to practice. More of the details that matter on the air.
+            </p>
+            <div class="release-features">
+              <article class="release-feature">
+                <span class="release-feature-icon" aria-hidden="true">
+                  <i class="fa-solid fa-tower-broadcast"></i>
+                </span>
+                <h3>Practice Field Day</h3>
+                <p>Work through class-and-section exchanges, from CQ to TU.</p>
+              </article>
+              <article class="release-feature">
+                <span class="release-feature-icon" aria-hidden="true">
+                  <i class="fa-solid fa-repeat"></i>
+                </span>
+                <h3>Repeat just what you missed</h3>
+                <p>
+                  Ask for missing exchange details with AGN, keep what you
+                  already copied, and see repeat counts in your results.
+                </p>
+              </article>
+              <article class="release-feature">
+                <span class="release-feature-icon" aria-hidden="true">
+                  <i class="fa-solid fa-sliders"></i>
+                </span>
+                <h3>Keep your preferred setup</h3>
+                <p>
+                  Your responding-station and effects settings are remembered
+                  between visits. Restore either section with its Defaults
+                  control.
+                </p>
+              </article>
+              <article class="release-feature">
+                <span class="release-feature-icon" aria-hidden="true">
+                  <i class="fa-solid fa-file-arrow-down"></i>
+                </span>
+                <h3>Take your results with you</h3>
+                <p>
+                  Export completed contacts from your current session as CSV to
+                  review your practice in a spreadsheet.
+                </p>
+              </article>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Back to practice
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thank You Modal -->
+    <div
+      class="modal fade release-modal"
+      id="thankyou-modal"
+      tabindex="-1"
+      aria-labelledby="thankyou-title"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"
+      >
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <p class="release-eyebrow">Made better, together</p>
+              <h2 class="modal-title" id="thankyou-title">Thank You</h2>
+            </div>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close Thank You"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p class="release-intro">
+              Morse Walker has grown through the generosity of operators who
+              shared their ideas, their work, and their experience on the air.
+              These additions to v1 have many people behind them.
+            </p>
+            <div class="release-credits">
+              <section class="release-credit">
+                <h3>Field Day practice</h3>
+                <p>
+                  A special thank-you to
+                  <a
+                    href="https://github.com/johnsonm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@johnsonm</a
+                  >
+                  for the original implementation and design groundwork that
+                  informed v1, to
+                  <a
+                    href="https://github.com/ny4i"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@ny4i</a
+                  >
+                  for testing and operating feedback, and to
+                  <a
+                    href="https://github.com/jhollowe"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@jhollowe</a
+                  >
+                  for guidance on realistic class weighting.
+                </p>
+                <p>
+                  Thank you to WU7H, NB7O, AI5BE, KQ4BFO, K0CEP,
+                  <a
+                    href="https://github.com/priceguncowboy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@priceguncowboy</a
+                  >, and an anonymous contributor for requesting and refining
+                  Field Day practice.
+                </p>
+              </section>
+              <section class="release-credit">
+                <h3>Exchange repeats</h3>
+                <p>
+                  W1NV, KQ4LEA, NB7O, WU7H, KD2YMM, PA3GGX, S53OM, WO9B,
+                  <a
+                    href="https://github.com/VincentVolmer"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@VincentVolmer</a
+                  >,
+                  <a
+                    href="https://github.com/slowrunner"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@slowrunner</a
+                  >, and
+                  <a
+                    href="https://github.com/jameth"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@jameth</a
+                  >
+                  shared concrete examples of how targeted repeats work on the
+                  air. Thank you for helping make it easier to ask for just the
+                  details you missed.
+                </p>
+              </section>
+              <section class="release-credit">
+                <h3>Saved preferences</h3>
+                <p>
+                  Thank you to KK7NNC, 2E0IIK,
+                  <a
+                    href="https://github.com/ke4nhd"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@ke4nhd</a
+                  >,
+                  <a
+                    href="https://github.com/Phoenix-64"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@Phoenix-64</a
+                  >, and
+                  <a
+                    href="https://github.com/madgoat"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@madgoat</a
+                  >
+                  for requesting a setup that remembers your preferences and
+                  sharing feedback on how it should work.
+                </p>
+                <p>
+                  @Phoenix-64 also contributed an earlier implementation of
+                  saved settings and reset controls. Thank you for putting time
+                  and care into that work.
+                </p>
+              </section>
+              <section class="release-credit">
+                <h3>Exporting results</h3>
+                <p>
+                  Thank you to F8BQQ, K7BXI,
+                  <a
+                    href="https://github.com/gregsutliff"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@gregsutliff</a
+                  >, and
+                  <a
+                    href="https://github.com/evidenweb"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@evidenweb</a
+                  >
+                  for ideas about exporting practice results, and to K8XCO,
+                  OZ1THC,
+                  <a
+                    href="https://github.com/WrathPak"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@WrathPak</a
+                  >, and
+                  <a
+                    href="https://github.com/m1geo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@m1geo</a
+                  >
+                  for asking for ways to follow your progress. Those ideas
+                  helped shape this first step: taking your results with you as
+                  CSV.
+                </p>
+              </section>
+            </div>
+            <p class="release-thanks-closing">
+              And to everyone who shared their time and operating experience:
+              thank you for helping Morse Walker grow. See you on the air!
+            </p>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-bs-dismiss="modal"
+            >
+              Back to practice
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Results Table -->
     <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
@@ -1393,22 +1685,58 @@
     </table>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white text-center py-2 fixed-bottom">
-      <span>
-        Crafted with <i class="fas fa-coffee text-warning"></i> and
-        <i class="fas fa-broadcast-tower text-primary"></i> by
-        <a href="https://www.qrz.com/db/W6NYC"><strong>W6NYC</strong></a
-        >.
-        <span class="d-none d-md-inline">
-          Check out
+    <footer class="app-footer fixed-bottom">
+      <div class="container app-footer-inner">
+        <div class="app-footer-credit">
+          <span class="app-footer-version">v1 Beta</span>
+          <span>
+            <span class="app-footer-crafted">
+              Crafted with
+              <i class="fas fa-coffee" aria-label="coffee" role="img"></i>
+              and
+              <i
+                class="fas fa-broadcast-tower"
+                aria-label="radio"
+                role="img"
+              ></i>
+            </span>
+            by
+            <a
+              href="https://www.qrz.com/db/W6NYC"
+              target="_blank"
+              rel="noopener noreferrer"
+              >W6NYC</a
+            >
+          </span>
           <a
             href="https://github.com/sc0tfree/morsewalker"
-            class="text-primary"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Source</a
           >
-            the source code</a
-          >!
-        </span>
-      </span>
+        </div>
+        <nav class="app-footer-links" aria-label="Release and feedback">
+          <a
+            href="#whats-new-modal"
+            data-bs-toggle="modal"
+            aria-haspopup="dialog"
+            >What’s New</a
+          >
+          <a
+            href="#thankyou-modal"
+            data-bs-toggle="modal"
+            aria-haspopup="dialog"
+            >Thank You</a
+          >
+          <a
+            href="https://github.com/sc0tfree/morsewalker/issues/new/choose"
+            target="_blank"
+            rel="noopener noreferrer"
+            >Report a bug</a
+          >
+          <a href="mailto:henry@w6nyc.com">Email</a>
+        </nav>
+      </div>
     </footer>
   </body>
 </html>
