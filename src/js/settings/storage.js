@@ -80,6 +80,50 @@ const yourStationKeys = {
 };
 
 /**
+ * Reads optional browser storage without interrupting the current visit.
+ *
+ * @param {string} key - Storage key.
+ * @param {Storage} [storage] - Injected storage, otherwise browser localStorage.
+ * @returns {string|null} Stored value, or null when absent or unavailable.
+ */
+export function safeGetItem(key, storage) {
+  try {
+    return (storage === undefined ? localStorage : storage).getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Saves a preference when browser storage is available.
+ *
+ * @param {string} key - Storage key.
+ * @param {string} value - Serialized preference.
+ * @param {Storage} [storage] - Injected storage, otherwise browser localStorage.
+ */
+export function safeSetItem(key, value, storage) {
+  try {
+    (storage === undefined ? localStorage : storage).setItem(key, value);
+  } catch {
+    // Current settings remain usable even when they cannot be saved.
+  }
+}
+
+/**
+ * Removes a saved preference when browser storage is available.
+ *
+ * @param {string} key - Storage key.
+ * @param {Storage} [storage] - Injected storage, otherwise browser localStorage.
+ */
+export function safeRemoveItem(key, storage) {
+  try {
+    (storage === undefined ? localStorage : storage).removeItem(key);
+  } catch {
+    // Defaults and mode recovery must still finish for the current visit.
+  }
+}
+
+/**
  * Returns a registered preference group or rejects a programming error.
  *
  * @param {string} groupId - Registry key for a preference group.
@@ -244,7 +288,7 @@ function applyControlDefault(control, elements) {
  * @returns {Object|null} Stored values, or null for absent/unreadable data.
  */
 function readStoredValues(storage, group) {
-  const serialized = storage.getItem(group.storageKey);
+  const serialized = safeGetItem(group.storageKey, storage);
   if (serialized === null) return null;
 
   try {
@@ -325,14 +369,10 @@ function repairRequiredSelections(group, root = document) {
  * Restores one preference group, using HTML defaults for absent or invalid data.
  *
  * @param {string} groupId - Registry key for a preference group.
- * @param {Storage} storage - Storage implementation.
+ * @param {Storage} [storage] - Storage implementation; defaults to browser storage.
  * @param {Document} root - Document containing the settings form.
  */
-export function restoreSettingsGroup(
-  groupId,
-  storage = localStorage,
-  root = document
-) {
+export function restoreSettingsGroup(groupId, storage, root = document) {
   const group = getPreferenceGroup(groupId);
   const storedValues = readStoredValues(storage, group);
 
@@ -357,14 +397,10 @@ export function restoreSettingsGroup(
  * defaults if the page is reloaded before the edit is completed.
  *
  * @param {string} groupId - Registry key for a preference group.
- * @param {Storage} storage - Storage implementation.
+ * @param {Storage} [storage] - Storage implementation; defaults to browser storage.
  * @param {Document} root - Document containing the settings form.
  */
-export function persistSettingsGroup(
-  groupId,
-  storage = localStorage,
-  root = document
-) {
+export function persistSettingsGroup(groupId, storage, root = document) {
   const group = getPreferenceGroup(groupId);
   const values = {};
 
@@ -380,9 +416,10 @@ export function persistSettingsGroup(
     }
   });
 
-  storage.setItem(
+  safeSetItem(
     group.storageKey,
-    JSON.stringify({ values, version: group.version })
+    JSON.stringify({ values, version: group.version }),
+    storage
   );
 }
 
@@ -390,16 +427,12 @@ export function persistSettingsGroup(
  * Clears one saved group and restores its controls to their HTML defaults.
  *
  * @param {string} groupId - Registry key for a preference group.
- * @param {Storage} storage - Storage implementation.
+ * @param {Storage} [storage] - Storage implementation; defaults to browser storage.
  * @param {Document} root - Document containing the settings form.
  */
-export function resetSettingsGroup(
-  groupId,
-  storage = localStorage,
-  root = document
-) {
+export function resetSettingsGroup(groupId, storage, root = document) {
   const group = getPreferenceGroup(groupId);
-  storage.removeItem(group.storageKey);
+  safeRemoveItem(group.storageKey, storage);
 
   group.controls.forEach((control) => {
     const elements = getControlElements(group, control, root);
@@ -414,16 +447,16 @@ export function resetSettingsGroup(
  * Loads and persists the existing Your Station settings with their legacy keys.
  *
  * @param {HTMLInputElement[]} elements - Your Station controls.
- * @param {Storage} storage - Storage implementation.
+ * @param {Storage} [storage] - Storage implementation; defaults to browser storage.
  */
-function wireYourStationStorage(elements, storage = localStorage) {
+function wireYourStationStorage(elements, storage) {
   elements.forEach((element) => {
     const key = yourStationKeys[element.id];
     if (!key) return;
 
-    element.value = storage.getItem(key) || element.value;
+    element.value = safeGetItem(key, storage) || element.value;
     element.addEventListener('input', () => {
-      storage.setItem(key, element.value);
+      safeSetItem(key, element.value, storage);
     });
   });
 }

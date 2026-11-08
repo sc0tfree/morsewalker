@@ -28,6 +28,9 @@ import {
 } from '../settings/controls.js';
 import {
   resetSettingsGroup,
+  safeGetItem,
+  safeRemoveItem,
+  safeSetItem,
   wireSettingsStorage,
 } from '../settings/storage.js';
 import { submitStartupStats } from '../telemetry/stats.js';
@@ -195,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Restore a registered mode or recover from stale storage in Single mode
-  const storedMode = localStorage.getItem('mode');
+  const storedMode = safeGetItem('mode');
   currentMode = modeIds.includes(storedMode) ? storedMode : 'single';
   if (storedMode !== null && storedMode !== currentMode) {
-    localStorage.removeItem('mode');
+    safeRemoveItem('mode');
   }
 
   modeRadios.forEach((radio) => {
@@ -210,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Reset state to ensure no leftover stations when loading
   resetGameState();
 
-  // Apply mode settings now that currentMode matches the dropdown and local storage
+  // Apply mode settings now that currentMode matches the selected radio.
   applyModeSettings(currentMode);
 });
 
@@ -404,7 +407,7 @@ function resetGameState() {
 /**
  * Handles changes to the operating mode.
  *
- * Updates the `currentMode` variable, saves the new mode to local storage,
+ * Updates the `currentMode` variable, attempts to save the new mode to local storage,
  * resets the game state, clears invalid states, and applies the new mode's settings.
  */
 function changeMode() {
@@ -412,7 +415,7 @@ function changeMode() {
     'input[name="mode"]:checked'
   ).value;
   currentMode = selectedMode;
-  localStorage.setItem('mode', currentMode);
+  safeSetItem('mode', currentMode);
   resetGameState();
   clearAllInvalidStates();
   applyModeSettings(currentMode);

@@ -1669,6 +1669,190 @@ test('Reset, mode switching, and persisted station settings survive a reload', a
   await expect(page.locator('#yourVolume')).toHaveValue('55');
 });
 
+test('storage failures at the localStorage getter still allow default startup and Single practice', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new globalThis.DOMException(
+          'Storage access blocked',
+          'SecurityError'
+        );
+      },
+    });
+  });
+  await openApp(page);
+  await expect(page.locator('#modeSingle')).toBeChecked();
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: defaultRespondingPreferences,
+    effects: defaultEffectsPreferences,
+  });
+  await expect(page.locator('#farnsworthSpeed')).toBeDisabled();
+  await expect(page.locator('#cutA')).toBeDisabled();
+  await expect(page.locator('#qsbPercentage')).toBeDisabled();
+  expect(pageErrors).toEqual([]);
+
+  await configureValidInputs(page, { yourCallsign: 'W1AW', yourSpeed: '24' });
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourSpeed')).toHaveValue('24');
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  const afterCq = await audioSnapshot(page);
+  expect(afterCq.oscillators).toBe(2);
+  expect(afterCq.scheduledEvents).toBeGreaterThan(0);
+
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  const rows = page.locator('#resultsTable tbody tr');
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first().locator('td').nth(1)).toHaveText('K0A');
+  await expect(rows.first().locator('td').nth(2)).toHaveText('18');
+  await expect(rows.first().locator('td').nth(3)).toHaveText('1');
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  const completed = await audioSnapshot(page);
+  expect(completed.oscillators).toBe(afterCq.oscillators + 1);
+  expect(completed.scheduledEvents).toBeGreaterThan(afterCq.scheduledEvents);
+  expect(pageErrors).toEqual([]);
+});
+
+test('storage failures after startup preserve edits, mode changes, Defaults, and Field Day practice', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await openApp(page);
+  await configureValidInputs(page);
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  await page.locator('#responseField').fill('stale');
+  const oldContext = (await audioContextSnapshots(page)).find(
+    (context) => context.state === 'running' && context.oscillators > 0
+  );
+  expect(pageErrors).toEqual([]);
+
+  await page.evaluate(() => {
+    globalThis.Storage.prototype.setItem = () => {
+      throw new globalThis.DOMException(
+        'Storage writes blocked',
+        'QuotaExceededError'
+      );
+    };
+    globalThis.Storage.prototype.removeItem = () => {
+      throw new globalThis.DOMException(
+        'Storage removal blocked',
+        'SecurityError'
+      );
+    };
+  });
+  await page.locator('#yourCallsign').fill('W1AW');
+  await page.locator('#yourFieldDayClass').fill('3A');
+  await page.locator('#yourFieldDaySection').fill('CT');
+  const customEffects = { ...customEffectsPreferences, qrn: 'off' };
+  await setPracticePreferences(
+    page,
+    customRespondingPreferences,
+    customEffects
+  );
+  expect(await practicePreferencesSnapshot(page)).toEqual({
+    responding: customRespondingPreferences,
+    effects: customEffects,
+  });
+  await expect(page.locator('#farnsworthSpeed')).toBeEnabled();
+  await expect(page.locator('#cutA')).toBeEnabled();
+  await expect(page.locator('#qsbPercentage')).toBeEnabled();
+  await expect(page.locator('#qsbValue')).toHaveText('82%');
+
+  await selectMode(page, 'fd');
+  await expect(page.locator('#modeResultsHeader')).toHaveText(
+    'Field Day Mode Results'
+  );
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  await expect(page.locator('#responseField')).toHaveValue('');
+  await expect(page.locator('#infoField')).toHaveValue('');
+  await expect(page.locator('#infoField2')).toHaveValue('');
+  await expect(page.locator('#infoField')).toHaveAttribute(
+    'placeholder',
+    'Class'
+  );
+  await expect(page.locator('#infoField2')).toHaveAttribute(
+    'placeholder',
+    'Section'
+  );
+  await expect(page.locator('#infoField')).toBeVisible();
+  await expect(page.locator('#infoField2')).toBeVisible();
+  await expect(page.locator('#tuButton')).toBeVisible();
+  await expect(page.locator('#agnButton')).toBeDisabled();
+  await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+  expect(
+    (await audioContextSnapshots(page)).find(({ id }) => id === oldContext.id)
+      .state
+  ).toBe('closed');
+
+  const defaultsModal = page.locator('#settingsDefaultsModal');
+  for (const group of ['Responding Station', 'Effects']) {
+    await page
+      .getByRole('button', { name: `Restore ${group} defaults` })
+      .click();
+    await expect(defaultsModal).toBeVisible();
+    await defaultsModal
+      .getByRole('button', { name: 'Restore defaults' })
+      .click();
+    await expect(defaultsModal).toBeHidden();
+    expect(await practicePreferencesSnapshot(page)).toEqual({
+      responding: defaultRespondingPreferences,
+      effects: group === 'Effects' ? defaultEffectsPreferences : customEffects,
+    });
+  }
+  await expect(page.locator('#farnsworthSpeed')).toBeDisabled();
+  await expect(page.locator('#cutA')).toBeDisabled();
+  await expect(page.locator('#qsbPercentage')).toBeDisabled();
+  await expect(page.locator('#qsbValue')).toHaveText('50%');
+  await expect(page.locator('#yourCallsign')).toHaveValue('W1AW');
+  await expect(page.locator('#yourFieldDayClass')).toHaveValue('3A');
+  await expect(page.locator('#yourFieldDaySection')).toHaveValue('CT');
+  await expect(page.locator('#modeFieldDay')).toBeChecked();
+  expect(pageErrors).toEqual([]);
+
+  await configureValidInputs(page, {
+    yourCallsign: 'W1AW',
+    yourFieldDayClass: '3A',
+    yourFieldDaySection: 'CT',
+  });
+  const beforeCq = await audioSnapshot(page);
+  await page.locator('#cqButton').click();
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  const afterCq = await audioSnapshot(page);
+  expect(afterCq.oscillators).toBe(beforeCq.oscillators + 2);
+  expect(afterCq.scheduledEvents).toBeGreaterThan(beforeCq.scheduledEvents);
+  await releaseAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await expect(page.locator('#infoField')).toBeFocused();
+  await releaseAudio(page);
+  await page.locator('#infoField').fill('1D');
+  await page.locator('#infoField2').fill('AL');
+  await setRandom(page, 0.9);
+  await page.locator('#tuButton').click();
+
+  const rows = page.locator('#resultsTable tbody tr');
+  await expect(rows).toHaveCount(1);
+  const cells = rows.first().locator('td');
+  await expect(cells.nth(1)).toHaveText('K0A');
+  await expect(cells.nth(2)).toHaveText('18');
+  await expect(cells.nth(3)).toHaveText('1');
+  await expect(cells.nth(5)).toHaveText('1D / AL');
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+    afterCq.scheduledEvents
+  );
+  expect(pageErrors).toEqual([]);
+});
+
 test('exponent-form settings preserve numeric playback and saved values across reload', async ({
   page,
 }) => {
