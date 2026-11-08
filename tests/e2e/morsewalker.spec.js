@@ -551,6 +551,63 @@ for (const journey of modeJourneys) {
   });
 }
 
+test('Contest excludes pre-CQ idle time from the first result and average', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+
+  await openApp(page);
+  await configureValidInputs(page);
+  await selectMode(page, 'contest');
+  await page.evaluate(() => globalThis.__morseTest.advance(100));
+
+  const beforeCq = await audioSnapshot(page);
+  await page.locator('#cqButton').click();
+  expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+    beforeCq.scheduledEvents
+  );
+
+  for (let contact = 1; contact <= 2; contact++) {
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    // Keep both contacts identical: 60 seconds to Send, then 60 to TU.
+    await page.evaluate(() => globalThis.__morseTest.advance(60));
+    const beforeSend = await audioSnapshot(page);
+    await page.locator('#responseField').fill('K0A');
+    await page.locator('#sendButton').click();
+    expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+      beforeSend.scheduledEvents
+    );
+
+    await page.evaluate(() => globalThis.__morseTest.advance(60));
+    await page.locator('#infoField').fill('01');
+    // Generate a second caller after the first contact only.
+    await setRandom(page, contact === 1 ? 0 : 0.9);
+    const beforeTu = await audioSnapshot(page);
+    await page.locator('#tuButton').click();
+    expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+      beforeTu.scheduledEvents
+    );
+
+    const rows = page.locator(
+      '#resultsTable tbody tr:not(#resultsTable-summary)'
+    );
+    await expect(rows).toHaveCount(contact);
+    const cells = rows.first().locator('td');
+    await expect(cells.nth(0)).toHaveText(String(contact));
+    await expect(cells.nth(1)).toHaveText('K0A');
+    await expect(cells.nth(3)).toHaveText('1');
+    await expect.soft(cells.nth(4)).toHaveText('120.00');
+    await expect(cells.nth(5)).toHaveText('1');
+  }
+
+  await expect
+    .soft(page.locator('#resultsTable-summary td').nth(4))
+    .toHaveText('120.00');
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  expect(pageErrors).toEqual([]);
+});
+
 for (const mode of ['pota', 'sst']) {
   test(`${mode.toUpperCase()} international Enter completion skips unavailable state`, async ({
     page,

@@ -1079,6 +1079,151 @@ describe('storage failure recovery', () => {
   );
 });
 
+describe('pileup contact timing', () => {
+  const exchangeFields = {
+    contest: ['01', ''],
+    fd: ['1D', 'AL'],
+    pota: ['AL', ''],
+    sst: ['Adam', 'AL'],
+    cwt: ['Adam', '1'],
+  };
+
+  function setAudioTime(time) {
+    RecordingAudioContext.instances.forEach((context) => {
+      if (!context.closed) context.currentTime = time;
+    });
+  }
+
+  function completeContact(mode, sendTime, tuTime) {
+    setAudioTime(sendTime);
+    sendResponse('K0A');
+    const [info1, info2] = exchangeFields[mode];
+    document.getElementById('infoField').value = info1;
+    document.getElementById('infoField2').value = info2;
+    setAudioTime(tuTime);
+    document.getElementById('tuButton').click();
+  }
+
+  it.each(
+    Object.keys(exchangeFields).flatMap((mode) =>
+      [0, 100].map((idle) => ({ idle, mode }))
+    )
+  )(
+    'excludes $idle seconds before CQ from $mode results and averages',
+    async ({ idle, mode }) => {
+      await bootSession();
+      configureValidInputs();
+      selectMode(mode);
+      setAudioTime(idle);
+      document.getElementById('cqButton').click();
+
+      // The first contact includes CQ and its existing startup delay.
+      expect(audioProbe.messages[0].start).toBe(idle + 2);
+      completeContact(mode, idle + 10, idle + 20);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      completeContact(mode, idle + 30, idle + 60);
+
+      const rows = resultsRows();
+      expect(rows.map((row) => row.cells[4].textContent)).toEqual([
+        '40.00',
+        '20.00',
+        '30.00',
+      ]);
+      expect(rows[2].cells[1]).toHaveTextContent('Avg');
+    }
+  );
+
+  it.each([0, 100])(
+    'preserves the first accepted CQ at time %s when CQ is repeated',
+    async (startTime) => {
+      await bootSession();
+      configureValidInputs();
+      selectMode('contest');
+      setAudioTime(startTime);
+      document.getElementById('cqButton').click();
+      setAudioTime(startTime + 10);
+      document.getElementById('cqButton').click();
+      expect(
+        transcript().filter(([, message]) => message.startsWith('CQ'))
+      ).toHaveLength(2);
+
+      completeContact('contest', startTime + 20, startTime + 40);
+      expect(resultsRows()[0].cells[4].textContent).toBe('40.00');
+    }
+  );
+
+  it.each(['invalid', 'locked'])(
+    'does not start timing when the initial CQ is %s',
+    async (rejection) => {
+      await bootSession();
+      configureValidInputs();
+      selectMode('contest');
+      setAudioTime(10);
+      if (rejection === 'invalid') {
+        document.getElementById('minSpeed').value = '0';
+      } else {
+        const { updateAudioLock } = await import('../../../src/js/audio.js');
+        updateAudioLock(20);
+      }
+      document.getElementById('cqButton').click();
+      expect(transcript()).toEqual([]);
+      expect(audioProbe.players).toHaveLength(0);
+      expect(resultsRows()).toHaveLength(0);
+      if (rejection === 'invalid') {
+        expect(document.getElementById('minSpeed')).toHaveClass('is-invalid');
+        document.getElementById('minSpeed').value = '18';
+      }
+
+      setAudioTime(100);
+      document.getElementById('cqButton').click();
+      completeContact('contest', 110, 120);
+      expect(resultsRows()[0].cells[4].textContent).toBe('20.00');
+    }
+  );
+
+  it.each(['Stop', 'Reset', 'mode change'])(
+    'starts a fresh timer after %s',
+    async (action) => {
+      await bootSession();
+      startSession('contest');
+      completeContact('contest', 10, 20);
+      let mode = 'contest';
+      if (action === 'mode change') {
+        mode = 'cwt';
+        selectMode(mode);
+      } else {
+        document.getElementById(`${action.toLowerCase()}Button`).click();
+      }
+      expect(resultsRows()).toHaveLength(action === 'Stop' ? 1 : 0);
+
+      setAudioTime(100);
+      document.getElementById('cqButton').click();
+      completeContact(mode, 110, 120);
+      const [row] = resultsRows();
+      expect(row.cells[4].textContent).toBe('20.00');
+      expect(row.cells[0].textContent).toBe(action === 'Stop' ? '2' : '1');
+    }
+  );
+
+  it('keeps later-contact timing from the previous TU across an empty pileup and another CQ', async () => {
+    const { random } = await bootSession();
+    startSession('contest');
+    random.mockReturnValue(0.9);
+    completeContact('contest', 10, 20);
+    expect(document.getElementById('activeStations')).toHaveTextContent('0');
+
+    random.mockReturnValue(0);
+    setAudioTime(100);
+    document.getElementById('cqButton').click();
+    completeContact('contest', 110, 120);
+    expect(resultsRows().map((row) => row.cells[4].textContent)).toEqual([
+      '100.00',
+      '20.00',
+      '60.00',
+    ]);
+  });
+});
+
 describe('CQ validation', () => {
   it.each([
     {

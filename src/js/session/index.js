@@ -445,6 +445,11 @@ function cq() {
   if (candidateInputs === null) return;
   inputs = candidateInputs;
 
+  // Exclude pre-CQ idle time from the first pileup contact.
+  if (modeConfig.showTuStep && currentStationStartTime === null) {
+    currentStationStartTime = audioContext.currentTime;
+  }
+
   let backgroundStaticDelay = 0;
   if (!isBackgroundStaticPlaying()) {
     createBackgroundStatic();
