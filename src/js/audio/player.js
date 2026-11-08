@@ -245,6 +245,12 @@ export function createMorsePlayer(station, volumeOverride = null) {
     const symbolMidTime = time + attackTime;
     const symbolVolume = qsbAmplitude(symbolMidTime);
 
+    // Silent symbols keep their duration without scheduling exponential ramps.
+    if (symbolVolume === 0) {
+      gainNode.gain.setValueAtTime(0, time);
+      return time + duration;
+    }
+
     // Schedule gain to ramp up smoothly (attack)
     gainNode.gain.setValueAtTime(minGain, time);
     gainNode.gain.exponentialRampToValueAtTime(symbolVolume, symbolMidTime);

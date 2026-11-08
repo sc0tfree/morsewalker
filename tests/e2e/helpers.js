@@ -28,6 +28,9 @@ export async function installTestEnvironment(page) {
       }
 
       exponentialRampToValueAtTime(value, time) {
+        if (value === 0) {
+          throw new RangeError('Exponential ramp target must not be zero');
+        }
         this.value = value;
         this.events.push({ type: 'exponentialRamp', value, time });
       }
@@ -175,6 +178,20 @@ export async function installTestEnvironment(page) {
         },
         setRandom(value) {
           randomValue = value;
+        },
+        gainSnapshots() {
+          return contexts.flatMap((context) =>
+            context.oscillators.map((oscillator) => {
+              const gain = oscillator.connections.find(
+                (node) => node.type === 'gain'
+              ).gain;
+              return {
+                frequency: oscillator.frequency.value,
+                value: gain.value,
+                events: gain.events.map((event) => ({ ...event })),
+              };
+            })
+          );
         },
         snapshot() {
           return {

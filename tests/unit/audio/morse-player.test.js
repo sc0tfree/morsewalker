@@ -201,6 +201,74 @@ describe('createMorsePlayer v1 characterization', () => {
     expect(round(endTime)).toBe(2.24);
   });
 
+  for (const timing of [
+    {
+      name: 'standard',
+      station: {},
+      starts: [2, 2.12, 2.48, 2.96],
+      end: 3.2,
+    },
+    {
+      name: 'Farnsworth',
+      station: { enableFarnsworth: true, farnsworthSpeed: 10 },
+      starts: [2, 2.12, 2.66, 3.56],
+      end: 3.98,
+    },
+  ]) {
+    it.each([
+      ['zero station volume', { volume: 0 }, null],
+      ['zero volume override', {}, 0],
+      ['zero station volume with QSB', { volume: 0, qsb: true }, null],
+      ['zero volume override with QSB', { qsb: true }, 0],
+    ])(
+      `mutes %s while preserving ${timing.name} timing`,
+      (_label, stationOverrides, volumeOverride) => {
+        vi.spyOn(Math, 'random').mockReturnValue(0);
+        const station = buildStation({
+          wpm: 20,
+          ...timing.station,
+          ...stationOverrides,
+        });
+        const audiblePlayer = audio.createMorsePlayer({
+          ...station,
+          volume: 0.7,
+        });
+        const mutedPlayer = audio.createMorsePlayer(station, volumeOverride);
+
+        const audibleEnd = audiblePlayer.playSentence('AE E', 2);
+        const mutedEnd = mutedPlayer.playSentence('AE E', 2);
+
+        expect(mutedEnd).toBe(audibleEnd);
+        expect(round(mutedEnd)).toBe(timing.end);
+        expect(gainTrace(mutedPlayer.context, 1)).toEqual(
+          timing.starts.map((time) => ({ type: 'set', value: 0, time }))
+        );
+        expect(mutedPlayer.context.gains[1].gain.value).toBe(0);
+      }
+    );
+  }
+
+  it('keeps the positive envelope unchanged after an exactly silent QSB symbol', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const player = audio.createMorsePlayer(
+      buildStation({ qsb: true, qsbDepth: 1, qsbFrequency: 1 })
+    );
+
+    // The first dot samples QSB at 0.25 s, where sin(2πt) is exactly 1.
+    const endTime = player.playSentence('EE', 0.244);
+
+    expect(gainTrace(player.context)).toEqual([
+      { type: 'set', value: 0, time: 0.244 },
+      { type: 'set', value: 0.001, time: 0.484 },
+      { type: 'exponentialRamp', value: 0.328023, time: 0.49 },
+      { type: 'set', value: 0.328023, time: 0.49 },
+      { type: 'set', value: 0.328023, time: 0.538 },
+      { type: 'exponentialRamp', value: 0.001, time: 0.544 },
+      { type: 'set', value: 0, time: 0.545 },
+    ]);
+    expect(round(endTime)).toBe(0.724);
+  });
+
   it.each([
     ['period', '.', '.-.-.-'],
     ['comma', ',', '--..--'],

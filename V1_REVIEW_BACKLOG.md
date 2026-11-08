@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–3 are resolved; items 4–11 remain open.
+Reviewed on November 7, 2026. Items 1–4 are resolved; items 5–11 remain open.
 
 ## Scope and merge assessment
 
@@ -161,11 +161,12 @@ speed despite pending edits. A later valid CQ control passes before and after th
 fix and confirms that newly valid settings are adopted. All 404 unit/integration
 tests and 24 Chromium journeys passed, along with formatting, lint, coverage, and
 the production build. Existing audio timing and Safari activation expectations
-pass unchanged. Items 4–11 remain follow-up work.
+pass unchanged. Items 4–11 remained follow-up work after this fix.
 
 ### 4. [P2] Zero volume throws instead of muting
 
-**Status:** Open. **Origin:** inherited audio defect.
+**Status:** Resolved on November 7, 2026, in `codex/fix-zero-volume-muting`.
+**Origin:** inherited audio defect.
 
 **Location:** [audio/player.js, lines 247–251](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/audio/player.js#L247-L251).
 
@@ -173,12 +174,36 @@ pass unchanged. Items 4–11 remain follow-up work.
 Native Chromium throws because `exponentialRampToValueAtTime` rejects a zero
 target. Zero caller volume reaches the same code path.
 
-**Correction:** handle muted symbols without passing zero into an exponential
-ramp, preserving their timing and the existing envelope for audible symbols.
+**Cause at review:** a zero symbol amplitude was passed into an exponential ramp,
+which native Web Audio rejects.
 
 **Acceptance:** zero sidetone and caller volumes are silent and exception-free,
 and contacts still advance with the expected scheduling. Use native Web Audio or
-a test double that enforces the same constraints; the existing fake accepts zero.
+a test double that enforces the same constraints; the fake accepted zero at review.
+
+**Resolution:** immediately after calculating symbol volume, an exact-zero guard
+sets gain to zero at the symbol start and returns its normal end time. This skips
+both ramps for silent symbols, including an exact-zero QSB fade. The guard and its
+comment are the entire production change. Oscillator setup, nonzero envelopes,
+Morse timing, Farnsworth spacing, QSB calculations, scheduling, and the player
+interface are unchanged.
+
+**Verification:** before the fix, nine new unit cases, three actual-player browser
+journeys with the stricter fake, and seven native Chromium checks failed on zero
+exponential targets. Both unit and browser AudioParam doubles now enforce that
+constraint. Afterward, all 413 unit/integration tests and 34 Chromium tests passed,
+along with formatting, lint, coverage, and the production build. Coverage includes
+zero station volume and overrides with standard/Farnsworth timing, QSB on/off,
+zero-only gain events, unchanged end times, and an exact-zero QSB symbol followed
+by a normal audible symbol. Before/after comparisons of 20 nonzero configurations
+matched every unrounded gain event and end time, including low volumes, QSB, and
+Farnsworth. Native OfflineAudioContext renders produced only zero-valued samples
+for all eight muted configurations; audible controls produced sound samples with
+identical end times. All three mute combinations (sidetone, caller, both) completed
+contacts without page errors using both the fake and native Web Audio in muted
+Chromium; the Single journeys also scheduled the next caller. Existing audio
+timing and Safari activation expectations pass unchanged. Items 5–11 remain
+follow-up work.
 
 ### 5. [P2] Stop leaves usable controls attached to closed players
 

@@ -1212,6 +1212,80 @@ for (const action of ['Send', 'AGN', 'TU']) {
   });
 }
 
+for (const scenario of [
+  {
+    label: 'sidetone',
+    mutedFrequencies: [600],
+    settings: { yourVolume: '0' },
+  },
+  {
+    label: 'caller',
+    mutedFrequencies: [400],
+    settings: { minVolume: '0', maxVolume: '0' },
+  },
+  {
+    label: 'sidetone and caller',
+    mutedFrequencies: [600, 400],
+    settings: { yourVolume: '0', minVolume: '0', maxVolume: '0' },
+  },
+]) {
+  test(`zero volume for ${scenario.label} preserves a complete Single contact and next caller`, async ({
+    page,
+  }) => {
+    const pageErrors = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    await openApp(page);
+    await configureValidInputs(page, scenario.settings);
+    await expect(page.locator('#qrnOff')).toBeChecked();
+    await page.locator('#cqButton').click();
+
+    expect(pageErrors).toEqual([]);
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    const afterCq = await audioSnapshot(page);
+    expect(afterCq.oscillators).toBe(2);
+    expect(afterCq.scheduledEvents).toBeGreaterThan(0);
+    expect(afterCq.bufferSources).toBe(0);
+
+    await releaseAudio(page);
+    await page.locator('#responseField').fill('K0A');
+    await page.locator('#sendButton').click();
+
+    expect(pageErrors).toEqual([]);
+    const rows = page.locator('#resultsTable tbody tr');
+    await expect(rows).toHaveCount(1);
+    const cells = rows.first().locator('td');
+    await expect(cells.nth(1)).toHaveText('K0A');
+    await expect(cells.nth(2)).toHaveText('18');
+    await expect(cells.nth(3)).toHaveText('1');
+    await expect(page.locator('#responseField')).toHaveValue('');
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    const afterContact = await audioSnapshot(page);
+    expect(afterContact.oscillators).toBe(afterCq.oscillators + 1);
+    expect(afterContact.scheduledEvents).toBeGreaterThan(
+      afterCq.scheduledEvents
+    );
+
+    const gains = await page.evaluate(() =>
+      globalThis.__morseTest.gainSnapshots()
+    );
+    expect(gains).toHaveLength(3);
+    for (const gain of gains) {
+      expect(gain.events.length).toBeGreaterThan(0);
+      expect(gain.events.every((event) => Number.isFinite(event.time))).toBe(
+        true
+      );
+      if (scenario.mutedFrequencies.includes(gain.frequency)) {
+        expect(gain.value).toBe(0);
+        expect(gain.events.every((event) => event.value === 0)).toBe(true);
+      } else {
+        expect(gain.events.some((event) => event.value > 0)).toBe(true);
+      }
+    }
+    expect(gains.at(-1).events.some((event) => event.time >= 1000)).toBe(true);
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('invalid CQ is rejected before a station or audio starts', async ({
   page,
 }) => {
