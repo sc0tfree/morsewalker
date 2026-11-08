@@ -22,6 +22,7 @@ import { updateStaticIntensity } from '../audio.js';
 import { modeIds, modeLogicConfig } from '../modes/index.js';
 import { applyModeSettings } from '../modes/view.js';
 import { compareExtraInfo } from '../results/scoring.js';
+import { downloadResultsCsv } from '../results/export.js';
 import {
   syncSettingsControls,
   wireSettingsControls,
@@ -108,6 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
   tuButton.addEventListener('click', tu);
   resetButton.addEventListener('click', reset);
   stopButton.addEventListener('click', stop);
+  document.getElementById('exportCsvButton').addEventListener('click', () => {
+    downloadResultsCsv(currentMode);
+  });
   modeRadios.forEach((radio) => {
     radio.addEventListener('change', changeMode);
   });

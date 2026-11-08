@@ -37,6 +37,7 @@ export function addTableRow(
 
   // Update the summary row at the bottom
   updateSummaryRow(tableName, extra);
+  updateExportButton(tableName);
 }
 
 /**
@@ -53,6 +54,16 @@ export function clearTable(tableName) {
   while (tableBody.firstChild) {
     tableBody.removeChild(tableBody.firstChild);
   }
+  updateExportButton(tableName);
+}
+
+/** Keep export availability in sync with completed results. */
+function updateExportButton(tableName) {
+  if (tableName !== 'resultsTable') return;
+
+  document.getElementById('exportCsvButton').disabled = !document.querySelector(
+    '#resultsTable tbody tr:not(#resultsTable-summary)'
+  );
 }
 
 /**

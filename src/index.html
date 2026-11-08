@@ -1365,7 +1365,17 @@
     <hr />
 
     <!-- Results Table -->
-    <h3 id="modeResultsHeader">Results</h3>
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+      <h3 id="modeResultsHeader" class="mb-0">Results</h3>
+      <button
+        type="button"
+        id="exportCsvButton"
+        class="btn btn-outline-primary btn-sm flex-shrink-0"
+        disabled
+      >
+        <i class="fa-solid fa-download me-1" aria-hidden="true"></i>Export
+      </button>
+    </div>
     <table class="table table-hover mb-5" id="resultsTable">
       <thead>
         <tr>
