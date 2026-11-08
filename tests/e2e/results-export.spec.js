@@ -24,7 +24,10 @@ test('downloads a dated CSV snapshot without changing the active session', async
   await configureValidInputs(page);
   await selectMode(page, 'contest');
 
-  const exportButton = page.getByRole('button', { name: 'Export CSV' });
+  const exportButton = page.getByRole('button', {
+    name: 'Export',
+    exact: true,
+  });
   await expect(exportButton).toBeDisabled();
   await page.locator('#cqButton').click();
 
@@ -41,6 +44,8 @@ test('downloads a dated CSV snapshot without changing the active session', async
 
   await expect(page.locator('#resultsTable-summary')).toBeVisible();
   await expect(page.locator('#activeStations')).toHaveText('1');
+  // Settle Font Awesome's asynchronous icon replacement before the snapshot.
+  await expect(page.locator('#resultsTable tbody svg.fa-check')).toHaveCount(2);
   const beforeRows = await page.locator('#resultsTable tbody').innerHTML();
   const beforeAudio = await audioSnapshot(page);
   const beforeCqDisabled = await page.locator('#cqButton').isDisabled();
@@ -98,7 +103,10 @@ for (const width of [320, 375]) {
     await openApp(page);
     await selectMode(page, 'fd');
     const heading = page.locator('#modeResultsHeader');
-    const exportButton = page.getByRole('button', { name: 'Export CSV' });
+    const exportButton = page.getByRole('button', {
+      name: 'Export',
+      exact: true,
+    });
     await expect(heading).toBeVisible();
     await expect(exportButton).toBeVisible();
     await exportButton.scrollIntoViewIfNeeded();

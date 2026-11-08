@@ -75,7 +75,7 @@ function resultTable() {
 
 beforeEach(() => {
   document.body.innerHTML = `
-    <button id="exportCsvButton" disabled>Export CSV</button>
+    <button id="exportCsvButton" disabled>Export</button>
     <table id="resultsTable">
       <thead><tr>
         <th>#</th><th>Callsign</th><th>WPM</th><th>Attempts</th>

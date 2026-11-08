@@ -3306,7 +3306,7 @@ describe('CSV results export session lifecycle', () => {
         observeCsvDownloads();
       const button = document.getElementById('exportCsvButton');
       const table = document.getElementById('resultsTable');
-      expect(button).toHaveAccessibleName('Export CSV');
+      expect(button).toHaveAccessibleName('Export');
       expect(button).toBeDisabled();
       button.click();
       expect(downloads).toHaveLength(0);
@@ -3330,6 +3330,7 @@ describe('CSV results export session lifecycle', () => {
       expect(document.getElementById('activeStations')).toHaveTextContent('1');
 
       const beforeTable = table.innerHTML;
+      const beforeTableText = table.textContent;
       const beforeTranscript = transcript();
       const beforePlayers = [...audioProbe.players];
       const beforeContexts = [...RecordingAudioContext.instances];
@@ -3366,9 +3367,12 @@ describe('CSV results export session lifecycle', () => {
 
       document.getElementById('stopButton').click();
       expect(button).toBeEnabled();
+      expect(table.textContent).toBe(beforeTableText);
+      // Font Awesome may replace icons while the cleanup timer runs.
+      const beforeStoppedExport = table.innerHTML;
       button.click();
       expect(downloads).toHaveLength(2);
-      expect(table.innerHTML).toBe(beforeTable);
+      expect(table.innerHTML).toBe(beforeStoppedExport);
 
       document.getElementById('resetButton').click();
       expect(resultsRows()).toHaveLength(0);
