@@ -12,12 +12,14 @@ const components = [
   {
     id: 'name',
     inputId: 'infoField',
+    fieldKey: 'name',
     request: 'NAME?',
     reply: (station) => station.name,
   },
   {
     id: 'state',
     inputId: 'infoField2',
+    fieldKey: 'state',
     request: 'STATE?',
     reply: (station) => station.state,
   },
@@ -45,11 +47,53 @@ describe('fill field qualification', () => {
 
   it('selects eligible components in mode order', () => {
     expect(
-      selectFillComponents(components, {
-        infoField: 'ALICE',
-        infoField2: '',
-      })
+      selectFillComponents(
+        components,
+        { infoField: 'ALICE', infoField2: '' },
+        station
+      )
     ).toEqual([components[1]]);
+  });
+
+  it.each(['', ' \t ', null, undefined])(
+    'skips unavailable state %j while keeping a missing name eligible',
+    (state) => {
+      expect(
+        selectFillComponents(
+          components,
+          { infoField: '', infoField2: '?' },
+          { ...station, state }
+        )
+      ).toEqual([components[0]]);
+    }
+  );
+
+  it.each([null, undefined])(
+    'has no eligible fills without a selected station (%j)',
+    (selectedStation) => {
+      expect(
+        selectFillComponents(
+          components,
+          { infoField: '', infoField2: '' },
+          selectedStation
+        )
+      ).toEqual([]);
+    }
+  );
+
+  it('preserves mode order when an unavailable component is skipped', () => {
+    const number = {
+      id: 'number',
+      inputId: 'infoField3',
+      fieldKey: 'serialNumber',
+    };
+    expect(
+      selectFillComponents(
+        [...components, number],
+        { infoField: 'AGN', infoField2: '', infoField3: '?' },
+        { ...station, state: '', serialNumber: '01' }
+      )
+    ).toEqual([components[0], number]);
   });
 });
 
@@ -70,6 +114,7 @@ describe('fill request composition', () => {
     const section = {
       id: 'section',
       inputId: 'infoField3',
+      fieldKey: 'section',
       request: 'SEC?',
       reply: (callingStation) => callingStation.section,
     };
@@ -85,6 +130,67 @@ describe('fill request composition', () => {
 });
 
 describe('fill resolution', () => {
+  it.each(['', 'AGN', '?'])(
+    'does not request unavailable state even when its input is %j',
+    (value) => {
+      expect(
+        resolveFill(
+          components,
+          { infoField: 'ALICE', infoField2: value },
+          { ...station, state: '' }
+        )
+      ).toBeNull();
+    }
+  );
+
+  it('requests only the available name when both fields are blank', () => {
+    expect(
+      resolveFill(
+        components,
+        { infoField: '', infoField2: '' },
+        { ...station, state: '' }
+      )
+    ).toEqual({
+      components: [components[0]],
+      request: 'NAME?',
+      response: 'ALICE',
+    });
+  });
+
+  it('checks the canonical field before formatting a repeated reply', () => {
+    const repeatedState = {
+      ...components[1],
+      reply: (callingStation) =>
+        `${callingStation.state} ${callingStation.state}`,
+    };
+    expect(
+      resolveFill([repeatedState], { infoField2: '' }, { name: 'ALICE' })
+    ).toBeNull();
+  });
+
+  it('preserves zero as an available numeric exchange value', () => {
+    const number = {
+      id: 'number',
+      inputId: 'infoField',
+      fieldKey: 'serialNumber',
+      request: 'NR?',
+      reply: (callingStation) => callingStation.serialNumber,
+    };
+    expect(
+      resolveFill([number], { infoField: '' }, { serialNumber: 0 })
+    ).toEqual({
+      components: [number],
+      request: 'NR?',
+      response: '0',
+    });
+  });
+
+  it('returns null without a selected station', () => {
+    expect(
+      resolveFill(components, { infoField: '', infoField2: '' }, null)
+    ).toBeNull();
+  });
+
   it('builds a component-only response in mode order', () => {
     expect(buildFillResponse(components, station)).toBe('ALICE AK');
   });

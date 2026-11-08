@@ -550,6 +550,87 @@ for (const journey of modeJourneys) {
   });
 }
 
+for (const mode of ['pota', 'sst']) {
+  test(`${mode.toUpperCase()} international Enter completion skips unavailable state`, async ({
+    page,
+  }) => {
+    const pageErrors = [];
+    const sentRequests = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('console', (message) => {
+      const sentRequest = message.text().match(/^--> Sending "(.*)"$/);
+      if (sentRequest) sentRequests.push(sentRequest[1]);
+    });
+
+    await openApp(page);
+    await configureValidInputs(page);
+    await selectMode(page, mode);
+    await page.evaluate(() => {
+      const setChecked = (id, checked) => {
+        const input = document.getElementById(id);
+        input.checked = checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+      setChecked('usOnly', false);
+      for (const format of ['1x1', '1x2', '1x3', '2x1', '2x2', '2x3']) {
+        setChecked(format, format === '2x2');
+      }
+    });
+    await setRandom(page, 0.99);
+    await page.locator('#cqButton').click();
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    await releaseAudio(page);
+
+    const responseField = page.locator('#responseField');
+    const infoField = page.locator('#infoField');
+    const stateField = page.locator(
+      mode === 'sst' ? '#infoField2' : '#infoField'
+    );
+    await responseField.fill('YT9ZZ');
+    await responseField.press('Enter');
+    await expect(infoField).toBeFocused();
+    await expect(stateField).toHaveValue('');
+    await releaseAudio(page);
+
+    if (mode === 'sst') {
+      const beforeFill = await audioSnapshot(page);
+      await stateField.press('Enter');
+
+      await expect.poll(() => sentRequests.at(-1)).toBe('NAME?');
+      await expect(infoField).toBeFocused();
+      await expect(stateField).toHaveValue('');
+      await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+      expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+        beforeFill.scheduledEvents
+      );
+      await releaseAudio(page);
+      await infoField.fill('Yan');
+    }
+
+    const beforeCompletion = await audioSnapshot(page);
+    await infoField.press('Enter');
+
+    const cells = page.locator('#resultsTable tbody tr').first().locator('td');
+    await expect(page.locator('#resultsTable tbody tr')).toHaveCount(1);
+    await expect(cells.nth(1)).toHaveText('YT9ZZ');
+    await expect(cells.nth(3)).toHaveText(mode === 'sst' ? '2' : '1');
+    await expect(cells.nth(5)).toHaveText(
+      mode === 'sst' ? 'YAN (1 AGN) / N/A' : 'N/A'
+    );
+    await expect(page.locator('#activeStations')).toHaveText('0');
+    await expect(page.locator('#agnButton')).toBeDisabled();
+    await expect(responseField).toHaveValue('');
+    await expect(responseField).toBeFocused();
+    expect((await audioSnapshot(page)).scheduledEvents).toBeGreaterThan(
+      beforeCompletion.scheduledEvents
+    );
+    expect(sentRequests).toEqual(
+      mode === 'sst' ? ['YT9ZZ', 'NAME?'] : ['YT9ZZ']
+    );
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('Enter and AGN repeat CWT fields and record each count', async ({
   page,
 }) => {

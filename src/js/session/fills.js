@@ -13,15 +13,18 @@ export function isFillCandidate(value) {
 }
 
 /**
- * Selects fillable components in their mode-defined order.
+ * Selects requested components that the selected station can provide, in mode order.
  *
  * @param {Object[]} components - Ordered exchange component descriptors.
  * @param {Object<string, string>} valuesByInputId - Input values keyed by DOM id.
- * @returns {Object[]} The components whose fields request a fill.
+ * @param {Object|null|undefined} station - The selected calling station, if any.
+ * @returns {Object[]} Available components whose fields request a fill.
  */
-export function selectFillComponents(components, valuesByInputId) {
-  return components.filter((component) =>
-    isFillCandidate(valuesByInputId[component.inputId])
+export function selectFillComponents(components, valuesByInputId, station) {
+  return components.filter(
+    (component) =>
+      String(station?.[component.fieldKey] ?? '').trim() !== '' &&
+      isFillCandidate(valuesByInputId[component.inputId])
   );
 }
 
@@ -65,11 +68,15 @@ export function buildFillResponse(selectedComponents, station) {
  *
  * @param {Object[]} components - Ordered exchange component descriptors.
  * @param {Object<string, string>} valuesByInputId - Current exchange input values.
- * @param {Object} station - The selected calling station.
+ * @param {Object|null|undefined} station - The selected calling station, if any.
  * @returns {Object|null} The selected components and transmission messages.
  */
 export function resolveFill(components, valuesByInputId, station) {
-  const selectedComponents = selectFillComponents(components, valuesByInputId);
+  const selectedComponents = selectFillComponents(
+    components,
+    valuesByInputId,
+    station
+  );
   if (selectedComponents.length === 0) return null;
 
   return {
