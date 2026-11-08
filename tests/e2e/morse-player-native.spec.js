@@ -170,14 +170,15 @@ async function observeNativeAudio(page) {
           ),
         };
       },
-      idle() {
+      idle(tailSeconds = 0.2) {
         // A muted event marks symbol start. At 60 WPM, allow the final dash
         // (60 ms) plus its inter-letter gap (60 ms), with a small margin.
+        // Slower callers need a longer tail before another session action.
         return records.every(
           ({ context, lastScheduledTime }) =>
             context.state === 'closed' ||
             lastScheduledTime === null ||
-            context.currentTime >= lastScheduledTime + 0.2
+            context.currentTime >= lastScheduledTime + tailSeconds
         );
       },
     };
@@ -187,8 +188,124 @@ async function observeNativeAudio(page) {
   );
 }
 
-async function waitForNativeAudio(page) {
-  await page.waitForFunction(() => globalThis.__nativeMorseTest.idle());
+async function waitForNativeAudio(page, tailSeconds = 0.2) {
+  await page.waitForFunction(
+    (tail) => globalThis.__nativeMorseTest.idle(tail),
+    tailSeconds
+  );
+}
+
+function expectFiveWpmCallsign(events, earliestTime) {
+  const characters = ['-.-', '-----', '.-']; // K0A
+  expect(events).toHaveLength(60);
+  for (const [index, event] of events.entries()) {
+    expect(Number.isFinite(event.value)).toBe(true);
+    expect(Number.isFinite(event.time)).toBe(true);
+    expect(event.time).toBeGreaterThanOrEqual(earliestTime);
+    if (index > 0) {
+      expect(event.time).toBeGreaterThanOrEqual(events[index - 1].time);
+    }
+  }
+
+  let symbolIndex = 0;
+  let previousEnd = null;
+  for (const character of characters) {
+    for (const [index, symbol] of [...character].entries()) {
+      const envelope = events.slice(symbolIndex * 6, (symbolIndex + 1) * 6);
+      const start = envelope[0].time;
+      // The final zero is 1 ms after the nominal end of the symbol.
+      const end = envelope[4].time;
+      expect(envelope.map(({ method }) => method)).toEqual([
+        'setValueAtTime',
+        'exponentialRampToValueAtTime',
+        'setValueAtTime',
+        'setValueAtTime',
+        'exponentialRampToValueAtTime',
+        'setValueAtTime',
+      ]);
+      expect(envelope.map(({ value }) => value)).toEqual([
+        0.001, 0.5, 0.5, 0.5, 0.001, 0,
+      ]);
+      expect(end - start).toBeCloseTo(symbol === '-' ? 0.72 : 0.24, 8);
+      if (previousEnd !== null) {
+        expect(start - previousEnd).toBeCloseTo(index === 0 ? 0.72 : 0.24, 8);
+      }
+      previousEnd = end;
+      symbolIndex++;
+    }
+  }
+}
+
+for (const mode of ['single', 'contest']) {
+  test(`native Web Audio QRS floor preserves ordered five-WPM timing in ${mode}`, async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await observeNativeAudio(page);
+    await page.goto('/');
+    await configureValidInputs(page, {
+      yourCallsign: 'E',
+      yourSpeed: '60',
+      minSpeed: '5',
+      maxSpeed: '5',
+    });
+    await selectMode(page, mode);
+    await page.locator('#cqButton').click();
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    const afterCq = await page.evaluate(() =>
+      globalThis.__nativeMorseTest.snapshot()
+    );
+    expect(afterCq.gains).toHaveLength(2);
+    expectFiveWpmCallsign(afterCq.gains[1], 0);
+
+    for (const request of ['first', 'repeated']) {
+      await test.step(`${request} QRS`, async () => {
+        // Keep the real clock and wait through the full 720 ms final letter gap.
+        await waitForNativeAudio(page, 0.75);
+        await page.locator('#responseField').fill('QRS');
+        const before = await page.evaluate(() =>
+          globalThis.__nativeMorseTest.snapshot()
+        );
+        const foreground = before.contexts.find(
+          (context) => context.state === 'running' && context.oscillators > 0
+        );
+        await page.locator('#sendButton').click();
+        const after = await page.evaluate(() =>
+          globalThis.__nativeMorseTest.snapshot()
+        );
+
+        expect(after.contexts).toHaveLength(before.contexts.length);
+        expect(
+          after.contexts.find(({ id }) => id === foreground.id)
+        ).toMatchObject({
+          state: 'running',
+          oscillators: foreground.oscillators + 1,
+          gainCount: foreground.gainCount + 1,
+        });
+        expect(after.gains).toHaveLength(before.gains.length + 1);
+        // Earlier caller players retain their original schedules.
+        expect(after.gains.slice(1, -1)).toEqual(before.gains.slice(1));
+        const callerEvents = after.gains.at(-1);
+        expectFiveWpmCallsign(callerEvents, foreground.currentTime);
+
+        const operatorEvents = after.gains[0].slice(before.gains[0].length);
+        expect(operatorEvents).toHaveLength(60);
+        const operatorSymbolEnd = operatorEvents.at(-2).time;
+        expect(callerEvents[0].time - operatorSymbolEnd).toBeCloseTo(
+          0.06 + (mode === 'single' ? 0.25 : 0),
+          8
+        );
+        await expect(page.locator('#activeStations')).toHaveText('1');
+        await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+        expect(errors).toEqual([]);
+      });
+    }
+
+    await page.locator('#stopButton').click();
+    expect(errors).toEqual([]);
+  });
 }
 
 test('native Web Audio Stop discards a selected exchange and immediately accepts fresh CQ', async ({
