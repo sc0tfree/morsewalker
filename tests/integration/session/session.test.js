@@ -279,6 +279,29 @@ function resultsRows() {
   return [...document.querySelectorAll('#resultsTable tbody tr')];
 }
 
+function observeCsvDownloads() {
+  const createObjectURL = vi.fn(() => 'blob:results-export');
+  const revokeObjectURL = vi.fn();
+  vi.stubGlobal(
+    'URL',
+    class extends window.URL {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = revokeObjectURL;
+    }
+  );
+  const downloads = [];
+  vi.spyOn(window.HTMLAnchorElement.prototype, 'click').mockImplementation(
+    function () {
+      downloads.push({
+        connected: this.isConnected,
+        filename: this.download,
+        href: this.href,
+      });
+    }
+  );
+  return { createObjectURL, downloads, revokeObjectURL };
+}
+
 afterEach(() => {
   registeredGlobalListeners.forEach(({ listener, options, target, type }) => {
     target.removeEventListener(type, listener, options);
@@ -3263,6 +3286,103 @@ describe('Stop ends unfinished activity', () => {
       expect(audioProbe.players).toHaveLength(beforePlayerCount + 2);
       expect(document.getElementById('activeStations')).toHaveTextContent('1');
       expect(resultsRows()).toHaveLength(0);
+    }
+  );
+});
+
+describe('CSV results export session lifecycle', () => {
+  it.each([
+    { mode: 'single', filenameMode: 'single' },
+    { mode: 'contest', filenameMode: 'contest', info1: '01' },
+    { mode: 'fd', filenameMode: 'field-day', info1: '1D', info2: 'AL' },
+    { mode: 'pota', filenameMode: 'pota', info1: 'AL' },
+    { mode: 'cwt', filenameMode: 'cwt', info1: 'Adam', info2: '1' },
+    { mode: 'sst', filenameMode: 'sst', info1: 'Adam', info2: 'AL' },
+  ])(
+    'exports completed $mode contacts during practice and after Stop, then clears on Reset or a mode change',
+    async ({ filenameMode, info1, info2, mode }) => {
+      const { releaseAudio } = await bootSession();
+      const { createObjectURL, downloads, revokeObjectURL } =
+        observeCsvDownloads();
+      const button = document.getElementById('exportCsvButton');
+      const table = document.getElementById('resultsTable');
+      expect(button).toHaveAccessibleName('Export CSV');
+      expect(button).toBeDisabled();
+      button.click();
+      expect(downloads).toHaveLength(0);
+
+      const completeContact = () => {
+        startSession(mode);
+        expect(button).toBeDisabled();
+        releaseAudio();
+        sendResponse('K0A');
+        if (mode !== 'single') {
+          expect(button).toBeDisabled();
+          releaseAudio();
+          setInfoValue('infoField', info1);
+          if (info2) setInfoValue('infoField2', info2);
+          document.getElementById('tuButton').click();
+        }
+      };
+      completeContact();
+      expect(resultsRows()).toHaveLength(1);
+      expect(button).toBeEnabled();
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+      const beforeTable = table.innerHTML;
+      const beforeTranscript = transcript();
+      const beforePlayers = [...audioProbe.players];
+      const beforeContexts = [...RecordingAudioContext.instances];
+      const beforeCqDisabled = document.getElementById('cqButton').disabled;
+      button.click();
+
+      expect(createObjectURL).toHaveBeenCalledExactlyOnceWith(
+        expect.any(window.Blob)
+      );
+      expect(downloads).toEqual([
+        {
+          connected: true,
+          filename: expect.stringMatching(
+            new RegExp(
+              `^\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}_${filenameMode}_morsewalker\\.csv$`
+            )
+          ),
+          href: 'blob:results-export',
+        },
+      ]);
+      expect(table.innerHTML).toBe(beforeTable);
+      expect(transcript()).toEqual(beforeTranscript);
+      expect(audioProbe.players).toEqual(beforePlayers);
+      expect(RecordingAudioContext.instances).toEqual(beforeContexts);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(document.getElementById('cqButton').disabled).toBe(
+        beforeCqDisabled
+      );
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(revokeObjectURL).toHaveBeenCalledExactlyOnceWith(
+        'blob:results-export'
+      );
+      expect(document.querySelector('a[download]')).toBeNull();
+
+      document.getElementById('stopButton').click();
+      expect(button).toBeEnabled();
+      button.click();
+      expect(downloads).toHaveLength(2);
+      expect(table.innerHTML).toBe(beforeTable);
+
+      document.getElementById('resetButton').click();
+      expect(resultsRows()).toHaveLength(0);
+      expect(button).toBeDisabled();
+      button.click();
+      expect(downloads).toHaveLength(2);
+
+      completeContact();
+      expect(button).toBeEnabled();
+      selectMode(mode === 'single' ? 'contest' : 'single');
+      expect(resultsRows()).toHaveLength(0);
+      expect(button).toBeDisabled();
+      button.click();
+      expect(downloads).toHaveLength(2);
     }
   );
 });
