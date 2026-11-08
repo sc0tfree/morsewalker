@@ -1092,6 +1092,126 @@ for (const request of ['AGN', 'QRS']) {
   });
 }
 
+for (const action of ['Send', 'AGN', 'TU']) {
+  test(`Contest retains its snapshot for ${action} after rejected CQ`, async ({
+    page,
+  }) => {
+    const pageErrors = [];
+    const sentRequests = [];
+    const initializations = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('console', (message) => {
+      const text = message.text();
+      const sentRequest = text.match(/^--> Sending "(.*)"$/);
+      if (sentRequest) sentRequests.push(sentRequest[1]);
+      if (text.startsWith('/ Initializing K0A:')) initializations.push(text);
+    });
+
+    await openApp(page);
+    await configureValidInputs(page);
+    await selectMode(page, 'contest');
+    await page.locator('#cqButton').click();
+    await releaseAudio(page);
+
+    const responseField = page.locator('#responseField');
+    const infoField = page.locator('#infoField');
+    if (action !== 'Send') {
+      await responseField.fill('K0A');
+      await page.locator('#sendButton').click();
+      await releaseAudio(page);
+    }
+    if (action === 'TU') await infoField.fill('01');
+
+    await page.evaluate(() => {
+      for (const [id, value] of Object.entries({
+        minSpeed: '0',
+        maxSpeed: '30',
+      })) {
+        const input = document.getElementById(id);
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      for (const id of ['enableCutNumbers', 'cutT', 'cutA']) {
+        const input = document.getElementById(id);
+        input.checked = true;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+    const beforeRejectedCq = await audioSnapshot(page);
+    const initializationsBeforeRejection = initializations.length;
+    await page.locator('#cqButton').click();
+
+    await expect(page.locator('#minSpeed')).toHaveClass(/is-invalid/);
+    await expect(page.locator('#minSpeed + .invalid-feedback')).toHaveText(
+      'Must be ≥ 5'
+    );
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+    await expect(infoField).toHaveValue(action === 'TU' ? '01' : '');
+    expect(await audioSnapshot(page)).toEqual(beforeRejectedCq);
+    expect(initializations).toHaveLength(initializationsBeforeRejection);
+    expect(pageErrors).toEqual([]);
+
+    if (action === 'Send') {
+      await page.locator('#minSpeed').fill('30');
+      await responseField.fill('K0A');
+      await page.locator('#sendButton').click();
+      expect(pageErrors).toEqual([]);
+      await expect(infoField).toBeFocused();
+      await expect(page.locator('#agnButton')).toBeEnabled();
+    } else if (action === 'AGN') {
+      await page.locator('#agnButton').click();
+      expect(pageErrors).toEqual([]);
+      await expect.poll(() => sentRequests.at(-1)).toBe('NR?');
+      await expect(page.locator('#minSpeed')).toHaveValue('0');
+      await expect(page.locator('#minSpeed')).toHaveClass(/is-invalid/);
+      await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+    } else {
+      await setRandom(page, 0);
+      await page.locator('#tuButton').click();
+      expect(pageErrors).toEqual([]);
+    }
+
+    const afterAction = await audioSnapshot(page);
+    expect(afterAction.scheduledEvents).toBeGreaterThan(
+      beforeRejectedCq.scheduledEvents
+    );
+    expect(afterAction.oscillators).toBe(
+      beforeRejectedCq.oscillators + (action === 'TU' ? 1 : 0)
+    );
+
+    if (action !== 'TU') {
+      await releaseAudio(page);
+      await infoField.fill('01');
+      await setRandom(page, 0.9);
+      await page.locator('#tuButton').click();
+    } else {
+      await expect
+        .poll(() => initializations.length)
+        .toBe(initializationsBeforeRejection + 1);
+      expect(initializations.at(-1)).toContain('400Hz@18wpm');
+    }
+
+    const cells = page.locator('#resultsTable tbody tr').first().locator('td');
+    await expect(page.locator('#resultsTable tbody tr')).toHaveCount(1);
+    await expect(cells.nth(1)).toHaveText('K0A');
+    await expect(cells.nth(2)).toHaveText('18');
+    await expect(cells.nth(3)).toHaveText(action === 'AGN' ? '2' : '1');
+    await expect(cells.nth(5)).toHaveText(action === 'AGN' ? '1 (1 AGN)' : '1');
+    await expect(page.locator('#activeStations')).toHaveText(
+      action === 'TU' ? '1' : '0'
+    );
+    await expect(page.locator('#minSpeed')).toHaveValue(
+      action === 'Send' ? '30' : '0'
+    );
+    await expect(page.locator('#maxSpeed')).toHaveValue('30');
+    await expect(page.locator('#enableCutNumbers')).toBeChecked();
+    await expect(page.locator('#cutT')).toBeChecked();
+    await expect(page.locator('#cutA')).toBeChecked();
+    expect(pageErrors).toEqual([]);
+  });
+}
+
 test('invalid CQ is rejected before a station or audio starts', async ({
   page,
 }) => {

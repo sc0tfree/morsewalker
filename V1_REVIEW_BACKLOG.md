@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–2 are resolved; items 3–11 remain open.
+Reviewed on November 7, 2026. Items 1–3 are resolved; items 4–11 remain open.
 
 ## Scope and merge assessment
 
@@ -123,12 +123,12 @@ from either SST field, name-only fills, focus, attempts, AGN counts, and unchang
 US-state fills. Browser regressions use the actual player implementation with
 the existing Web Audio fake and assert scheduled playback and no page errors.
 Existing audio timing and Safari activation expectations pass unchanged. Items
-3–11 remain follow-up work.
+3–11 remained follow-up work after this fix.
 
 ### 3. [P2] Rejected CQ overwrites the active settings snapshot
 
-**Status:** Open. **Origin:** inherited; the new AGN action adds another affected
-path.
+**Status:** Resolved on November 7, 2026, in `codex/fix-rejected-cq-snapshot`.
+**Origin:** inherited; the new AGN action adds another affected path.
 
 **Location:** [session/index.js, lines 434–435](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/session/index.js#L434-L435).
 
@@ -138,12 +138,30 @@ exact callsign. The handler throws because `inputs` is now null. If the caller w
 already selected, requesting an AGN fill has the same problem. A successful CQ
 recovers.
 
-**Cause and correction:** CQ assigns `inputs = getInputs()` before checking
-validation. Validate into a local candidate and update the session snapshot only
-after success.
+**Cause at review:** CQ assigned `inputs = getInputs()` before checking
+validation, replacing the last validated session settings with `null` when the
+form was invalid.
 
 **Acceptance:** a rejected CQ leaves the previous validated session data intact;
 subsequent Send, AGN, and TU actions do not dereference a null snapshot.
+
+**Resolution:** CQ now validates into a local `candidateInputs` variable and
+assigns it to the active snapshot only after validation succeeds. The block stays
+in its original position, preserving validation feedback and successful CQ
+behavior. The approved block and its explanatory comment are the only production
+changes; audio code, Safari activation, and Stop behavior are unchanged.
+
+**Verification:** three independent Contest integration regressions and three
+actual-player Chromium regressions failed before the fix and passed afterward.
+Send and component AGN previously threw on `null.enableCutNumbers`; TU threw on
+`null.maxStations` after logging the contact. Tests assert that rejected CQ
+preserves transmissions, players, callers, results, and copied fields, then verify
+continued playback, original cut-number formatting, AGN counts, and new-caller
+speed despite pending edits. A later valid CQ control passes before and after the
+fix and confirms that newly valid settings are adopted. All 404 unit/integration
+tests and 24 Chromium journeys passed, along with formatting, lint, coverage, and
+the production build. Existing audio timing and Safari activation expectations
+pass unchanged. Items 4–11 remain follow-up work.
 
 ### 4. [P2] Zero volume throws instead of muting
 
