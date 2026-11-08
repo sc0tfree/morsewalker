@@ -223,6 +223,180 @@ describe('group persistence', () => {
     expect(storedPayload(storage, 'effects').values.qsbPercentage).toBe(71);
   });
 
+  it('persists complete exponent values and truncates only integer preferences', () => {
+    const storage = createMemoryStorage();
+    applyGroupValues('respondingStation', {
+      ...respondingValues,
+      maxStations: '1e1',
+      minSpeed: '1.59e1',
+      maxSpeed: '6e1',
+      farnsworthSpeed: '1.19e1',
+      minTone: '4.105e2',
+      maxTone: '8.909e2',
+      minVolume: '1.25e1',
+      maxVolume: '8.25e1',
+      minWait: '5e-1',
+      maxWait: '2.25e0',
+    });
+    applyGroupValues('effects', { ...effectsValues, qsbPercentage: '7.39e1' });
+
+    persistSettingsGroup('respondingStation', storage);
+    persistSettingsGroup('effects', storage);
+
+    const expectedResponding = {
+      ...respondingValues,
+      maxStations: 10,
+      minSpeed: 15,
+      maxSpeed: 60,
+      farnsworthSpeed: 11,
+      minTone: 410,
+      maxTone: 890,
+      minVolume: 12.5,
+      maxVolume: 82.5,
+      minWait: 0.5,
+      maxWait: 2.25,
+    };
+    const expectedEffects = { ...effectsValues, qsbPercentage: 73 };
+    expect(storedPayload(storage, 'respondingStation')).toEqual({
+      values: expectedResponding,
+      version: 1,
+    });
+    expect(storedPayload(storage, 'effects')).toEqual({
+      values: expectedEffects,
+      version: 1,
+    });
+
+    applyGroupDefaults('respondingStation');
+    applyGroupDefaults('effects');
+    restoreSettingsGroup('respondingStation', storage);
+    restoreSettingsGroup('effects', storage);
+
+    expect(readGroupValues('respondingStation')).toEqual(expectedResponding);
+    expect(readGroupValues('effects')).toEqual(expectedEffects);
+  });
+
+  it.each(['60.9', '6.09e1', '6.1e1'])(
+    'omits out-of-bounds speed %s before integer truncation',
+    (value) => {
+      const storage = createMemoryStorage();
+      document.getElementById('maxSpeed').value = value;
+
+      persistSettingsGroup('respondingStation', storage);
+
+      expect(
+        storedPayload(storage, 'respondingStation').values
+      ).not.toHaveProperty('maxSpeed');
+      restoreSettingsGroup('respondingStation', storage);
+      expect(document.getElementById('maxSpeed')).toHaveValue(25);
+    }
+  );
+
+  it('omits blank numeric preferences, including disabled Farnsworth, instead of saving zero', () => {
+    const storage = createMemoryStorage();
+    const ids = ['maxStations', 'farnsworthSpeed', 'minWait'];
+    ids.forEach((id) => {
+      document.getElementById(id).value = '';
+    });
+
+    persistSettingsGroup('respondingStation', storage);
+
+    const values = storedPayload(storage, 'respondingStation').values;
+    ids.forEach((id) => expect(values).not.toHaveProperty(id));
+    restoreSettingsGroup('respondingStation', storage);
+    expect(document.getElementById('maxStations')).toHaveValue(3);
+    expect(document.getElementById('farnsworthSpeed')).toHaveValue(10);
+    expect(document.getElementById('minWait')).toHaveValue(0.25);
+  });
+
+  it('repairs reversed exponent ranges after restoring their numeric values', () => {
+    const storage = createMemoryStorage();
+    document.getElementById('minSpeed').value = '1e1';
+    document.getElementById('maxSpeed').value = '9';
+
+    persistSettingsGroup('respondingStation', storage);
+
+    expect(storedPayload(storage, 'respondingStation').values).toMatchObject({
+      minSpeed: 10,
+      maxSpeed: 9,
+    });
+    restoreSettingsGroup('respondingStation', storage);
+    expect(document.getElementById('minSpeed')).toHaveValue(18);
+    expect(document.getElementById('maxSpeed')).toHaveValue(25);
+  });
+
+  it('keeps the runtime snapshot consistent across legacy and grouped exponent save/reload', async () => {
+    const { getInputs } = await import('../../../src/js/settings/index.js');
+    const storage = createMemoryStorage();
+    vi.stubGlobal('localStorage', storage);
+    const wireStorage = () => {
+      wireSettingsStorage(
+        ...[
+          'yourCallsign',
+          'yourName',
+          'yourState',
+          'yourFieldDayClass',
+          'yourFieldDaySection',
+          'yourSpeed',
+          'yourSidetone',
+          'yourVolume',
+        ].map((id) => document.getElementById(id))
+      );
+    };
+    wireStorage();
+    const edits = {
+      yourCallsign: 'W1AW',
+      yourSpeed: '0.5e2',
+      yourSidetone: '7.25e2',
+      yourVolume: '3.75e1',
+      maxStations: '6.8e0',
+      minSpeed: '1.59e1',
+      maxSpeed: '6e1',
+      farnsworthSpeed: '1.19e1',
+      minTone: '4.105e2',
+      maxTone: '8.909e2',
+      minVolume: '1.25e1',
+      maxVolume: '8.25e1',
+      minWait: '5e-1',
+      maxWait: '2.25e0',
+      qsbPercentage: '7.39e1',
+    };
+    Object.entries(edits).forEach(([id, value]) => {
+      const input = document.getElementById(id);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const beforeReload = getInputs();
+
+    await loadAppHtml();
+    wireStorage();
+    const afterReload = getInputs();
+
+    expect(beforeReload).toMatchObject({
+      yourCallsign: 'W1AW',
+      yourSpeed: 50,
+      yourSidetone: 725,
+      yourVolume: 0.375,
+      maxStations: 6,
+      minSpeed: 15,
+      maxSpeed: 60,
+      farnsworthSpeed: 11,
+      minTone: 410,
+      maxTone: 890,
+      minVolume: 0.125,
+      maxVolume: 0.825,
+      minWait: 0.5,
+      maxWait: 2.25,
+      qsbPercentage: 73,
+    });
+    expect(afterReload).toEqual(beforeReload);
+    // Your Station keeps its legacy string format; grouped values are numeric.
+    expect(storage.peek('yourSpeed')).toBe('0.5e2');
+    expect(storage.peek('yourSidetone')).toBe('7.25e2');
+    expect(storedPayload(storage, 'respondingStation').values.maxSpeed).toBe(
+      60
+    );
+  });
+
   it('preserves dependent values while their enabling controls are off', () => {
     const storage = createMemoryStorage();
     const responding = {

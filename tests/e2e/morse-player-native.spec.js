@@ -308,6 +308,87 @@ for (const mode of ['single', 'contest']) {
   });
 }
 
+test('native Web Audio numeric parsing schedules scientific-notation speeds and completes a contact', async ({
+  page,
+}) => {
+  const errors = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  await observeNativeAudio(page);
+  await page.goto('/');
+  await configureValidInputs(page, {
+    yourCallsign: 'E',
+    yourSpeed: '0.5e2',
+    minSpeed: '6e1',
+    maxSpeed: '6e1',
+  });
+  await selectMode(page, 'contest');
+  await expect(page.locator('#yourSpeed')).toHaveValue('0.5e2');
+  await expect(page.locator('#minSpeed')).toHaveValue('6e1');
+  await expect(page.locator('#maxSpeed')).toHaveValue('6e1');
+  await page.locator('#cqButton').click();
+
+  expect(errors).toEqual([]);
+  await expect(page.locator('#activeStations')).toHaveText('1');
+  const afterCq = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  expect(afterCq.gains).toHaveLength(2);
+  const expectOrderedFiniteEvents = (events) => {
+    expect(events.length).toBeGreaterThan(0);
+    events.forEach(({ value, time }, index) => {
+      expect(Number.isFinite(value)).toBe(true);
+      expect(Number.isFinite(time)).toBe(true);
+      expect(time).toBeGreaterThanOrEqual(0);
+      if (index > 0) {
+        expect(time).toBeGreaterThanOrEqual(events[index - 1].time);
+      }
+    });
+  };
+  for (const [index, symbols, wpm] of [
+    [0, ['-.-.', '--.-', '-', '.', '...', '-', '-..', '.', '.'].join(''), 50],
+    [1, ['-.-', '-----', '.-'].join(''), 60],
+  ]) {
+    // CQ TEST DE E and K0A: six gain events per audible symbol.
+    const events = afterCq.gains[index];
+    expectOrderedFiniteEvents(events);
+    expect(events).toHaveLength(symbols.length * 6);
+    [...symbols].forEach((symbol, symbolIndex) => {
+      const start = events[symbolIndex * 6].time;
+      const nominalEnd = events[symbolIndex * 6 + 4].time;
+      expect(nominalEnd - start).toBeCloseTo(
+        ((symbol === '-' ? 3 : 1) * 1.2) / wpm,
+        8
+      );
+    });
+  }
+
+  await waitForNativeAudio(page);
+  await page.locator('#responseField').fill('K0A');
+  await page.locator('#sendButton').click();
+  await expect(page.locator('#infoField')).toBeFocused();
+  await waitForNativeAudio(page);
+  await page.locator('#infoField').fill('01');
+  await page.evaluate(() => {
+    Math.random = () => 0.9;
+  });
+  await page.locator('#tuButton').click();
+
+  const rows = page.locator('#resultsTable tbody tr');
+  await expect(rows).toHaveCount(1);
+  const cells = rows.first().locator('td');
+  await expect(cells.nth(1)).toHaveText('K0A');
+  await expect(cells.nth(2)).toHaveText('60');
+  await expect(cells.nth(3)).toHaveText('1');
+  await expect(cells.nth(5)).toHaveText('1');
+  await expect(page.locator('#activeStations')).toHaveText('0');
+  const completed = await page.evaluate(() =>
+    globalThis.__nativeMorseTest.snapshot()
+  );
+  expect(completed.eventCount).toBeGreaterThan(afterCq.eventCount);
+  completed.gains.forEach(expectOrderedFiniteEvents);
+  expect(errors).toEqual([]);
+});
+
 test('native Web Audio Stop discards a selected exchange and immediately accepts fresh CQ', async ({
   page,
 }) => {

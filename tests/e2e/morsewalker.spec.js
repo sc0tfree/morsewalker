@@ -1669,6 +1669,111 @@ test('Reset, mode switching, and persisted station settings survive a reload', a
   await expect(page.locator('#yourVolume')).toHaveValue('55');
 });
 
+test('exponent-form settings preserve numeric playback and saved values across reload', async ({
+  page,
+}) => {
+  const pageErrors = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await openApp(page);
+  await configureValidInputs(page, {
+    yourSpeed: '0.5e2',
+    yourSidetone: '6e2',
+    minSpeed: '6e1',
+    maxSpeed: '6e1',
+    minTone: '4e2',
+    maxTone: '4e2',
+  });
+
+  const expectTiming = (gain, speed, frequency) => {
+    expect(gain.events.length).toBeGreaterThanOrEqual(12);
+    expect(gain.events.every(({ time }) => Number.isFinite(time))).toBe(true);
+    expect(gain.frequency).toBe(frequency);
+    // Both the CQ's initial C and the caller's initial K start with dash-dot.
+    // Each symbol has six events; event 4 is its nominal end.
+    const dash = gain.events[4].time - gain.events[0].time;
+    const dot = gain.events[10].time - gain.events[6].time;
+    expect(dash).toBeCloseTo((3 * 1.2) / speed, 10);
+    expect(dot).toBeCloseTo(1.2 / speed, 10);
+    return { dash, dot, frequency: gain.frequency };
+  };
+
+  const completeContact = async () => {
+    await page.locator('#cqButton').click();
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    expect(pageErrors).toEqual([]);
+    const gains = await page.evaluate(() =>
+      globalThis.__morseTest.gainSnapshots()
+    );
+    expect(gains).toHaveLength(2);
+    const timing = {
+      operator: expectTiming(gains[0], 50, 600),
+      caller: expectTiming(gains[1], 60, 400),
+    };
+    const afterCq = await audioSnapshot(page);
+    expect(afterCq.bufferSources).toBe(0);
+
+    await releaseAudio(page);
+    await page.locator('#responseField').fill('K0A');
+    await page.locator('#sendButton').click();
+    const rows = page.locator('#resultsTable tbody tr');
+    await expect(rows).toHaveCount(1);
+    const cells = rows.first().locator('td');
+    await expect(cells.nth(1)).toHaveText('K0A');
+    await expect(cells.nth(2)).toHaveText('60');
+    await expect(cells.nth(3)).toHaveText('1');
+    await expect(page.locator('#activeStations')).toHaveText('1');
+    await expect(page.locator('#responseField')).toHaveValue('');
+    const afterContact = await audioSnapshot(page);
+    expect(afterContact.oscillators).toBe(afterCq.oscillators + 1);
+    expect(afterContact.scheduledEvents).toBeGreaterThan(
+      afterCq.scheduledEvents
+    );
+    const nextCaller = await page.evaluate(() =>
+      globalThis.__morseTest.gainSnapshots().at(-1)
+    );
+    expectTiming(nextCaller, 60, 400);
+    expect(pageErrors).toEqual([]);
+    return timing;
+  };
+
+  const initialTiming = await completeContact();
+  const stored = await page.evaluate(() => ({
+    yourSpeed: localStorage.getItem('yourSpeed'),
+    yourSidetone: localStorage.getItem('yourSidetone'),
+    responding: JSON.parse(
+      localStorage.getItem('morsewalker.preferences.respondingStation')
+    ),
+  }));
+  expect(stored).toMatchObject({
+    yourSpeed: '0.5e2',
+    yourSidetone: '6e2',
+    responding: {
+      version: 1,
+      values: {
+        minSpeed: 60,
+        maxSpeed: 60,
+        minTone: 400,
+        maxTone: 400,
+      },
+    },
+  });
+
+  await page.reload();
+  await expect(page.locator('#modeResultsHeader')).toHaveText(
+    'Single Mode Results'
+  );
+  await expect(page.locator('#yourSpeed')).toHaveValue('0.5e2');
+  await expect(page.locator('#yourSidetone')).toHaveValue('6e2');
+  for (const id of ['minSpeed', 'maxSpeed']) {
+    await expect(page.locator(`#${id}`)).toHaveValue('60');
+  }
+  for (const id of ['minTone', 'maxTone']) {
+    await expect(page.locator(`#${id}`)).toHaveValue('400');
+  }
+  expect(await completeContact()).toEqual(initialTiming);
+  expect(pageErrors).toEqual([]);
+});
+
 test('practice preferences persist and each Defaults action remains section-scoped', async ({
   page,
 }) => {

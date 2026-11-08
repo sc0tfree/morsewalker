@@ -1,6 +1,6 @@
 # Morsewalker v1 review backlog
 
-Reviewed on November 7, 2026. Items 1–6 are resolved; items 7–11 remain open.
+Reviewed on November 7, 2026. Items 1–7 are resolved; items 8–11 remain open.
 
 ## Scope and merge assessment
 
@@ -13,8 +13,8 @@ Reviewed on November 7, 2026. Items 1–6 are resolved; items 7–11 remain open
 The settings feature covers the full current settings inventory. Merging it into
 the development `v1` branch before addressing this backlog is reasonable. This is
 a feature-completeness assessment, not a claim that the broader v1 release is free
-of defects. Numeric parsing and storage failure handling remain known limitations
-of persistence as well as the wider application.
+of defects. Storage failure handling remains a known limitation of persistence
+as well as the wider application.
 
 | Area               | Persisted settings                                                                                                                                                      |
 | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -299,8 +299,8 @@ activation expectations pass unchanged. Items 7–11 remain follow-up work.
 
 ### 7. [P2] Numeric parsing disagrees with validation
 
-**Status:** Open. **Origin:** inherited parsing defect, repeated by the new
-preference writer.
+**Status:** Resolved on November 8, 2026, in `codex/fix-numeric-settings-parsing`.
+**Origin:** inherited parsing defect, repeated by the new preference writer.
 
 **Locations:** [settings/read.js, lines 30–38](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/settings/read.js#L30-L38),
 [validation.js, lines 99–105](https://github.com/sc0tfree/morsewalker/blob/1b092df263e4d8577f7b254cb12cfe39e96b4d02/src/js/settings/validation.js#L99-L105),
@@ -316,6 +316,30 @@ misread: `6e1` becomes 6 instead of 60.
 numeric value. If integer truncation remains intended, apply it to the parsed
 number rather than a text prefix. Cover exponent notation, ordinary integers,
 decimal settings, and save/reload consistency.
+
+**Resolution:** the nine integer reads now use
+`Math.trunc(element.valueAsNumber)`, interpreting the complete numeric value
+before applying the existing truncation. The preference writer reads the same
+numeric value and checks its bounds before truncating integer preferences, so
+`60.9` and `6.09e1` cannot be saved as valid 60-WPM values. Blank inputs, disabled
+Farnsworth behavior, fractional volume/wait settings, volume scaling, legacy
+Your Station keys, and versioned preference formats are preserved. Production
+changes are confined to `settings/read.js` and `settings/storage.js`; validation,
+session logic, and audio modules are unchanged.
+
+**Verification:** 17 new settings regressions failed before the fix, with 81
+passing controls. Both new actual-player Chromium journeys also failed against
+the original build: the deterministic test found non-finite gain times, and muted
+native Chromium threw the reported non-finite `AudioParam` scheduling error.
+Afterward, all 480 unit/integration tests and 46 Chromium tests passed, along with
+formatting, lint, coverage, and the production build. Coverage includes all nine
+integer fields, exponent notation, decimal truncation, blanks, bounds, reversed
+ranges, and runtime snapshot agreement across legacy and grouped save/reload.
+Browser assertions verify 50-WPM operator and 60-WPM caller symbol timing,
+frequencies, completed contacts, next-caller scheduling, and reload consistency.
+The native journey retains the real audio clock and checks finite, ordered
+scheduling without page errors. Existing audio timing and Safari activation
+expectations pass unchanged. Items 8–11 remain follow-up work.
 
 ### 8. [P2] Storage failures interrupt application behavior
 
