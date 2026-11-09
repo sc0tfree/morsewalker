@@ -83,16 +83,16 @@ input[type='text']::placeholder {
   --bs-alert-border-color: #d5e6f2;
   width: 100%;
   margin-bottom: 0;
-  padding: 1.35rem 3rem 1.35rem 1.35rem;
+  padding: 0.75rem 3rem 0.75rem 1rem;
   border-radius: 0.85rem;
 }
 
 .release-welcome-title {
-  margin-bottom: 0.65rem;
+  margin-bottom: 0.25rem;
   color: var(--release-ink);
   font-size: 1.125rem;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .release-beta {
@@ -104,7 +104,7 @@ input[type='text']::placeholder {
   margin-bottom: 0;
   color: var(--release-muted);
   font-size: 0.9375rem;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .release-welcome a,
