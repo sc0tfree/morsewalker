@@ -79,8 +79,8 @@ input[type='text']::placeholder {
 
 .release-welcome {
   --bs-alert-color: var(--release-ink);
-  --bs-alert-bg: #f0f7fc;
-  --bs-alert-border-color: #d5e6f2;
+  --bs-alert-bg: #f5f9fc;
+  --bs-alert-border-color: #e2ecf3;
   width: 100%;
   margin-bottom: 0;
   padding: 0.75rem 3rem 0.75rem 1rem;
@@ -93,11 +93,6 @@ input[type='text']::placeholder {
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.35;
-}
-
-.release-beta {
-  color: var(--release-blue);
-  font-weight: 400;
 }
 
 .release-welcome p {
@@ -116,7 +111,7 @@ input[type='text']::placeholder {
 }
 
 .release-welcome a {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .release-welcome a:hover,
@@ -283,11 +278,22 @@ input[type='text']::placeholder {
   left: 0;
   z-index: 1020;
   padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--release-border);
-  color: var(--release-muted);
-  background: #f7fafc;
-  font-size: 0.8125rem;
+  color: #fff;
+  background: var(--bs-dark);
+  font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.app-footer a {
+  color: #79d0f2;
+}
+
+.app-footer a:hover {
+  color: #c3edff;
+}
+
+.app-footer :focus-visible {
+  outline-color: #79d0f2;
 }
 
 .app-footer-inner,
@@ -309,15 +315,19 @@ input[type='text']::placeholder {
 }
 
 .app-footer-version {
-  color: var(--release-ink);
-  font-weight: 600;
+  color: #ced4da;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
+.app-footer-source {
   white-space: nowrap;
 }
 
 .app-footer-credit a {
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 24px;
 }
 
 .app-footer-links {
@@ -340,15 +350,7 @@ input[type='text']::placeholder {
   text-decoration: underline;
 }
 
-.app-footer-crafted {
-  display: none;
-}
-
 @media (min-width: 576px) {
-  .app-footer-crafted {
-    display: inline;
-  }
-
   .app-footer-links {
     gap: 0 1.5rem;
     width: auto;
