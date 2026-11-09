@@ -312,6 +312,7 @@ input[type='text']::placeholder {
   display: inline-flex;
   align-items: center;
   min-height: 24px;
+  font-family: var(--bs-font-monospace);
   font-size: 0.8125rem;
   white-space: nowrap;
   text-decoration: none;
