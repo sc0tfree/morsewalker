@@ -415,12 +415,31 @@
         >
           <div class="accordion-body">
             <div class="container">
-              <!-- Farnsworth Row -->
+              <!-- Station Count, Speed, and Farnsworth Row -->
               <div class="row g-3 align-items-end">
+                <!-- Min Stations -->
+                <div class="col-12 col-md-3 col-lg">
+                  <label for="minStations" class="form-label"
+                    >Min Station</label
+                  >
+                  <input
+                    type="number"
+                    id="minStations"
+                    name="minStations"
+                    class="form-control"
+                    value="0"
+                    min="0"
+                    max="20"
+                    step="1"
+                    required
+                  />
+                  <div class="invalid-feedback"></div>
+                </div>
+
                 <!-- Max Stations -->
-                <div class="col-12 col-md-4 col-lg">
+                <div class="col-12 col-md-3 col-lg">
                   <label for="maxStations" class="form-label"
-                    >Maximum Stations</label
+                    >Max Station</label
                   >
                   <input
                     type="number"
@@ -437,7 +456,7 @@
                 </div>
 
                 <!-- Min Speed -->
-                <div class="col-12 col-md-4 col-lg">
+                <div class="col-12 col-md-3 col-lg">
                   <label for="minSpeed" class="form-label">Min Speed</label>
                   <input
                     type="number"
@@ -454,7 +473,7 @@
                 </div>
 
                 <!-- Max Speed -->
-                <div class="col-12 col-md-4 col-lg">
+                <div class="col-12 col-md-3 col-lg">
                   <label for="maxSpeed" class="form-label">Max Speed</label>
                   <input
                     type="number"

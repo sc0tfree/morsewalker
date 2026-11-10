@@ -74,6 +74,7 @@ const modeInfoLabels = {
 };
 
 const respondingNumberIds = [
+  'minStations',
   'maxStations',
   'minSpeed',
   'maxSpeed',
@@ -107,6 +108,7 @@ const respondingCheckboxIds = [
 ];
 
 const customRespondingPreferences = {
+  minStations: 2,
   maxStations: 7,
   minSpeed: 12,
   maxSpeed: 36,
@@ -137,6 +139,7 @@ const customRespondingPreferences = {
 };
 
 const defaultRespondingPreferences = {
+  minStations: 0,
   maxStations: 3,
   minSpeed: 18,
   maxSpeed: 25,
@@ -364,6 +367,77 @@ test('Your Station settings preserve their responsive information groups', async
     });
 
     expect(rows, `${width}px station rows`).toEqual(expected);
+  }
+});
+
+test('Responding Station controls wrap from six to four to one per row', async ({
+  page,
+}) => {
+  await openApp(page);
+  await page
+    .locator('#headingRespondingStationSettings .accordion-button')
+    .click();
+  await expect(page.locator('#collapseRespondingStationSettings')).toHaveClass(
+    /show/
+  );
+
+  const firstRow = page
+    .locator('#collapseRespondingStationSettings .row')
+    .first();
+  const stationInputs = firstRow.locator('input');
+  const expectedOrder = [
+    'minStations',
+    'maxStations',
+    'minSpeed',
+    'maxSpeed',
+    'enableFarnsworth',
+    'farnsworthSpeed',
+  ];
+  expect(
+    await stationInputs.evaluateAll((inputs) => inputs.map(({ id }) => id))
+  ).toEqual(expectedOrder);
+  await expect(firstRow.locator('label')).toHaveText([
+    'Min Station',
+    'Max Station',
+    'Min Speed',
+    'Max Speed',
+    'Farnsworth',
+    'Effective Speed (WPM)',
+  ]);
+  await expect(page.getByLabel('Min Station', { exact: true })).toHaveValue(
+    '0'
+  );
+
+  const singleColumnRows = expectedOrder.map((id) => [id]);
+  const tabletRows = [expectedOrder.slice(0, 4), expectedOrder.slice(4)];
+  const expectedRows = new Map([
+    [390, singleColumnRows],
+    [767, singleColumnRows],
+    [768, tabletRows],
+    [991, tabletRows],
+    [992, [expectedOrder]],
+    [1280, [expectedOrder]],
+  ]);
+
+  for (const [width, expected] of expectedRows) {
+    await page.setViewportSize({ width, height: 900 });
+    const rows = await stationInputs.evaluateAll((inputs) => {
+      const grouped = new Map();
+
+      for (const input of inputs) {
+        // Columns align at the bottom even when a label wraps above its input.
+        const bottom = Math.round(
+          input.parentElement.getBoundingClientRect().bottom
+        );
+        const row = grouped.get(bottom) ?? [];
+        row.push(input.id);
+        grouped.set(bottom, row);
+      }
+
+      return [...grouped.values()];
+    });
+
+    expect(rows, `${width}px responding station rows`).toEqual(expected);
   }
 });
 
