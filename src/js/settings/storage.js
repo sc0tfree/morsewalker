@@ -15,6 +15,7 @@ const radioControl = (name) => ({ key: name, name, type: 'radio' });
 export const PREFERENCE_GROUPS = {
   respondingStation: {
     controls: [
+      integerControl('minStations'),
       integerControl('maxStations'),
       integerControl('minSpeed'),
       integerControl('maxSpeed'),
@@ -44,6 +45,7 @@ export const PREFERENCE_GROUPS = {
       checkboxControl('cutN'),
     ],
     orderedPairs: [
+      ['minStations', 'maxStations'],
       ['minSpeed', 'maxSpeed'],
       ['minTone', 'maxTone'],
       ['minVolume', 'maxVolume'],

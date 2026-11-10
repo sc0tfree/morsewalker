@@ -868,8 +868,8 @@ function tu() {
   updateAgnButtonAvailability();
   responseField.focus();
 
-  // Chance of a new station joining
-  if (Math.random() < 0.4) {
+  // Replenish the minimum pileup, retaining the usual chance of more callers.
+  if (Math.random() < 0.4 || currentStations.length < inputs.minStations) {
     addStations(currentStations, inputs);
   }
 

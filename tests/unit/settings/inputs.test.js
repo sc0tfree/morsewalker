@@ -77,6 +77,13 @@ beforeEach(async () => {
 });
 
 describe('settings form parsing and normalization', () => {
+  it('defaults to no minimum station floor', () => {
+    setCallsign();
+
+    expect(element('minStations')).toHaveValue(0);
+    expect(getInputs()).toMatchObject({ minStations: 0, maxStations: 3 });
+  });
+
   it('uses wait defaults that preserve the existing response timing', () => {
     expect(element('minWait')).toHaveValue(0.25);
     expect(element('maxWait')).toHaveValue(2);
@@ -91,6 +98,7 @@ describe('settings form parsing and normalization', () => {
     element('yourSpeed').value = '27.9';
     element('yourSidetone').value = '725';
     element('yourVolume').value = '37.5';
+    element('minStations').value = '2.9';
     element('maxStations').value = '6.8';
     element('minSpeed').value = '15.9';
     element('maxSpeed').value = '32.2';
@@ -139,6 +147,7 @@ describe('settings form parsing and normalization', () => {
       yourSpeed: 27,
       yourSidetone: 725,
       yourVolume: 0.375,
+      minStations: 2,
       maxStations: 6,
       minSpeed: 15,
       maxSpeed: 32,
@@ -174,6 +183,13 @@ describe('settings form parsing and normalization', () => {
       value: 725,
       decimal: '7.259e2',
       truncated: 725,
+    },
+    {
+      id: 'minStations',
+      whole: '2e0',
+      value: 2,
+      decimal: '2.9e0',
+      truncated: 2,
     },
     {
       id: 'maxStations',
@@ -433,6 +449,13 @@ describe('settings form parsing and normalization', () => {
 describe('settings validation and invalid-state behavior', () => {
   it.each([
     {
+      minId: 'minStations',
+      maxId: 'maxStations',
+      low: '9',
+      high: '1e1',
+      message: 'Must be ≤ Max Stations',
+    },
+    {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
       low: '9',
@@ -461,6 +484,7 @@ describe('settings validation and invalid-state behavior', () => {
 
   it.each([
     'yourSidetone',
+    'minStations',
     'maxStations',
     'minSpeed',
     'maxSpeed',
@@ -479,6 +503,13 @@ describe('settings validation and invalid-state behavior', () => {
   );
 
   it.each([
+    {
+      minId: 'minStations',
+      maxId: 'maxStations',
+      low: '3',
+      high: '4',
+      message: 'Must be ≤ Max Stations',
+    },
     {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
@@ -536,6 +567,10 @@ describe('settings validation and invalid-state behavior', () => {
     { id: 'yourSidetone', value: '1.99e2', message: 'Must be ≥ 200' },
     { id: 'yourVolume', value: '-1', message: 'Must be ≥ 0' },
     { id: 'yourVolume', value: '101', message: 'Must be ≤ 100' },
+    { id: 'minStations', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'minStations', value: '-0.1', message: 'Must be ≥ 0' },
+    { id: 'minStations', value: '21', message: 'Must be ≤ 20' },
+    { id: 'minStations', value: '2.09e1', message: 'Must be ≤ 20' },
     { id: 'maxStations', value: '0', message: 'Must be ≥ 1' },
     { id: 'maxStations', value: '21', message: 'Must be ≤ 20' },
     { id: 'maxStations', value: '2.09e1', message: 'Must be ≤ 20' },
