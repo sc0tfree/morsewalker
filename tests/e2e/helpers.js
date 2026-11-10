@@ -259,7 +259,7 @@ export async function openApp(page) {
 
   expect(response?.ok()).toBe(true);
   await expect(
-    page.getByRole('heading', { name: /Morse Walker/ })
+    page.getByRole('heading', { name: 'Morse Walker', level: 1, exact: true })
   ).toBeVisible();
   await expect(page.locator('#modeResultsHeader')).toHaveText(
     'Single Mode Results'
