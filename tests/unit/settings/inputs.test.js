@@ -453,7 +453,7 @@ describe('settings validation and invalid-state behavior', () => {
       maxId: 'maxStations',
       low: '9',
       high: '1e1',
-      message: 'Must be ≤ Max Station',
+      message: 'Must be ≤ Max Stations',
     },
     {
       minId: 'minSpeed',
@@ -508,7 +508,7 @@ describe('settings validation and invalid-state behavior', () => {
       maxId: 'maxStations',
       low: '3',
       high: '4',
-      message: 'Must be ≤ Max Station',
+      message: 'Must be ≤ Max Stations',
     },
     {
       minId: 'minSpeed',

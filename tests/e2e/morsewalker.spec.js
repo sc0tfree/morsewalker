@@ -397,14 +397,14 @@ test('Responding Station controls wrap from six to four to one per row', async (
     await stationInputs.evaluateAll((inputs) => inputs.map(({ id }) => id))
   ).toEqual(expectedOrder);
   await expect(firstRow.locator('label')).toHaveText([
-    'Min Station',
-    'Max Station',
+    'Min Stations',
+    'Max Stations',
     'Min Speed',
     'Max Speed',
     'Farnsworth',
     'Effective Speed (WPM)',
   ]);
-  await expect(page.getByLabel('Min Station', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Min Stations', { exact: true })).toHaveValue(
     '0'
   );
 

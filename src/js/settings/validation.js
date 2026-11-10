@@ -26,7 +26,7 @@ const NUMERIC_FIELDS = [
  * Field pairs that describe a range, as `[minId, maxId, message]`.
  */
 const ORDERED_PAIRS = [
-  ['minStations', 'maxStations', 'Must be ≤ Max Station'],
+  ['minStations', 'maxStations', 'Must be ≤ Max Stations'],
   ['minSpeed', 'maxSpeed', 'Must be ≤ Max Speed'],
   ['minTone', 'maxTone', 'Must be ≤ Max Tone'],
   ['minVolume', 'maxVolume', 'Must be ≤ Max Volume'],
