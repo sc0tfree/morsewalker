@@ -123,7 +123,13 @@ test('mobile NIL feedback explains idle and ambiguous targets without transmitti
   await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
   expect(await audioSnapshot(page)).toEqual(beforeAmbiguous);
 
-  const bounds = await feedback.boundingBox();
+  // Measure rendered text, excluding the Bootstrap column gutters.
+  const bounds = await feedback.evaluate((element) => {
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const { x, width } = range.getBoundingClientRect();
+    return { x, width };
+  });
   expect(bounds.x).toBeGreaterThanOrEqual(0);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
   expect(
