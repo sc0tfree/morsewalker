@@ -372,6 +372,7 @@ describe('session initialization and mode UI', () => {
       'Send',
       'Send',
       'Send',
+      'Send',
       'AGN',
       'TU',
       'TU',
