@@ -2,7 +2,7 @@
  * Inserts a new row at the top of a specified HTML table body with provided data.
  *
  * @param {string} tableName - The ID of the HTML table element.
- * @param {number} index - A numeric index or sequence number.
+ * @param {number|'NIL'} index - A completed-contact number or dismissed-contact marker.
  * @param {string} callsign - The callsign or identifier to display.
  * @param {string} wpm - The words per minute speed (and Farnsworth spacing) to display.
  * @param {number} attempts - The number of attempts to record.
@@ -26,7 +26,12 @@ export function addTableRow(
   const newRow = table.insertRow(0);
 
   // Add cells and populate them
-  newRow.insertCell(0).textContent = index;
+  const indexCell = newRow.insertCell(0);
+  indexCell.textContent = index;
+  if (index === 'NIL') {
+    indexCell.title = 'Unsuccessful contact';
+    indexCell.setAttribute('aria-label', 'NIL: unsuccessful contact');
+  }
   newRow.insertCell(1).textContent = callsign;
   newRow.insertCell(2).textContent = wpm;
   newRow.insertCell(3).textContent = attempts;
@@ -57,7 +62,7 @@ export function clearTable(tableName) {
   updateExportButton(tableName);
 }
 
-/** Keep export availability in sync with completed results. */
+/** Keep export availability in sync with recorded results. */
 function updateExportButton(tableName) {
   if (tableName !== 'resultsTable') return;
 
@@ -67,8 +72,8 @@ function updateExportButton(tableName) {
 }
 
 /**
- * Computes averages for all current data rows and inserts/updates a summary row
- * at the bottom. If there are fewer than 2 data rows, no summary row is shown.
+ * Computes averages for completed contacts and inserts/updates a summary row
+ * at the bottom. Fewer than 2 completed contacts do not produce a summary.
  *
  * @param {string} tableName - The ID of the HTML table element.
  * @param {string|null} [extra=null] - Optional additional information to include in a fifth cell.
@@ -83,10 +88,12 @@ function updateSummaryRow(tableName, extra = null) {
     existingSummary.remove();
   }
 
-  // Gather row data
-  let rows = Array.from(tableBody.rows);
+  // Dismissed callers remain in results without affecting completed averages.
+  const rows = Array.from(tableBody.rows).filter(
+    (row) => row.cells[0].textContent !== 'NIL'
+  );
 
-  // Show a summary only after at least 2 results
+  // Show a summary only after at least 2 completed contacts.
   if (rows.length < 2) {
     return;
   }

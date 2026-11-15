@@ -15,3 +15,10 @@ export function updateActiveStations(numStations) {
 export function setAgnButtonEnabled(enabled) {
   document.getElementById('agnButton').disabled = !enabled;
 }
+
+/** Show a response hint, or clear it after the operator continues. */
+export function setResponseFeedback(message = '') {
+  const feedback = document.getElementById('responseFeedback');
+  feedback.textContent = message;
+  feedback.hidden = message === '';
+}

@@ -58,7 +58,7 @@ function escapeCell(value) {
 }
 
 /**
- * Build a CSV snapshot of completed contacts, or null when the table is empty.
+ * Build a CSV snapshot of completed and NIL results, or null when empty.
  *
  * @param {HTMLTableElement} table - The current results table.
  * @param {string} modeId - The active mode's registry id.

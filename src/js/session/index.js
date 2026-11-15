@@ -37,7 +37,7 @@ import {
 import { submitStartupStats } from '../telemetry/stats.js';
 import { resolveFill, selectFillComponents } from './fills.js';
 import { applyCutNumbers } from './message-format.js';
-import { setAgnButtonEnabled } from './view.js';
+import { setAgnButtonEnabled, setResponseFeedback } from './view.js';
 import { resumeAllAudio } from '../audio/lifecycle.js';
 import { wireAudioActivation } from './audio-activation.js';
 
@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sendButton.click();
     }
   });
+  responseField.addEventListener('input', () => setResponseFeedback());
 
   [infoField, infoField2].forEach((field) => {
     field.addEventListener('keydown', (event) => {
@@ -359,6 +360,7 @@ function requestFill({ focusFirstComponent = false } = {}) {
   }
 
   console.log(`--> Sending "${fill.request}"`);
+  setResponseFeedback();
 
   const yourResponseTimer = yourStation.player.playSentence(fill.request);
   updateAudioLock(yourResponseTimer);
@@ -370,6 +372,7 @@ function requestFill({ focusFirstComponent = false } = {}) {
       yourResponseTimer + 0.5
     );
     updateAudioLock(theirResponseTimer);
+    lastRespondingStations = [selectedStation];
   }
 
   recordExchangeAgn(fill.components);
@@ -394,8 +397,10 @@ function resetGameState() {
   currentStationAttempts = 0;
   currentStationStartTime = null;
   totalContacts = 0;
+  lastRespondingStations = null;
   clearExchangeAgnCounts();
   lastFocusedInfoFieldId = null;
+  setResponseFeedback();
 
   updateActiveStations(0);
   clearTable('resultsTable');
@@ -448,6 +453,7 @@ function cq() {
   const candidateInputs = getInputs();
   if (candidateInputs === null) return;
   inputs = candidateInputs;
+  setResponseFeedback();
 
   // Exclude pre-CQ idle time from the first pileup contact.
   if (modeConfig.showTuStep && currentStationStartTime === null) {
@@ -507,11 +513,17 @@ function send() {
     return;
   }
 
+  if (responseFieldText === 'NIL') {
+    dismissCaller();
+    return;
+  }
+
   console.log(`--> Sending "${responseFieldText}"`);
 
   if (modeConfig.showTuStep) {
     // Multi-station scenario
     if (currentStations.length === 0) return;
+    setResponseFeedback();
 
     let yourResponseTimer = yourStation.player.playSentence(responseFieldText);
     updateAudioLock(yourResponseTimer);
@@ -562,6 +574,7 @@ function send() {
           matchIndex
         ].player.playSentence('RR', yourResponseTimer + 0.25);
         updateAudioLock(theirResponseTimer);
+        lastRespondingStations = [currentStations[matchIndex]];
         currentStationAttempts++;
         return;
       } else {
@@ -600,6 +613,7 @@ function send() {
         }
         readyForTU = true;
         activeStationIndex = matchIndex;
+        lastRespondingStations = [currentStations[matchIndex]];
         updateAgnButtonAvailability();
 
         if (modeConfig.requiresInfoField) {
@@ -625,6 +639,7 @@ function send() {
   } else {
     // Single mode
     if (currentStation === null) return;
+    setResponseFeedback();
 
     let yourResponseTimer = yourStation.player.playSentence(responseFieldText);
     updateAudioLock(yourResponseTimer);
@@ -774,6 +789,7 @@ function tu() {
   if (getAudioLock()) return;
   const modeConfig = getModeConfig();
   if (!modeConfig.showTuStep || !readyForTU) return;
+  setResponseFeedback();
 
   const infoField = document.getElementById('infoField');
   const infoField2 = document.getElementById('infoField2');
@@ -852,8 +868,17 @@ function tu() {
     extraInfo
   );
 
-  // Remove the worked station
-  currentStations.splice(activeStationIndex, 1);
+  continuePileup(activeStationIndex, responseTimerToUse);
+}
+
+/**
+ * Removes one caller and resumes the usual pileup after TU or NIL.
+ *
+ * @param {number} stationIndex - The caller to remove from the active pileup.
+ * @param {number} responseEndTime - When the operator's final transmission ends.
+ */
+function continuePileup(stationIndex, responseEndTime) {
+  currentStations.splice(stationIndex, 1);
   activeStationIndex = null;
   currentStationAttempts = 0;
   readyForTU = false;
@@ -862,8 +887,8 @@ function tu() {
 
   const responseField = document.getElementById('responseField');
   responseField.value = '';
-  infoField.value = '';
-  infoField2.value = '';
+  document.getElementById('infoField').value = '';
+  document.getElementById('infoField2').value = '';
   lastFocusedInfoFieldId = null;
   updateAgnButtonAvailability();
   responseField.focus();
@@ -873,9 +898,56 @@ function tu() {
     addStations(currentStations, inputs);
   }
 
-  respondWithAllStations(currentStations, responseTimerToUse, inputs);
+  respondWithAllStations(currentStations, responseEndTime, inputs);
   lastRespondingStations = currentStations;
   currentStationStartTime = audioContext.currentTime;
+}
+
+/** Dismiss the last lone caller without recording a completed contact. */
+function dismissCaller() {
+  const modeConfig = getModeConfig();
+  const respondingStations = modeConfig.showTuStep
+    ? [...new Set(lastRespondingStations ?? [])].filter((station) =>
+        currentStations.includes(station)
+      )
+    : currentStation
+      ? [currentStation]
+      : [];
+
+  if (respondingStations.length !== 1) {
+    setResponseFeedback(
+      respondingStations.length > 1
+        ? 'Several callers answered. Send a partial callsign to isolate one, then NIL.'
+        : 'No caller to dismiss. Call CQ first.'
+    );
+    document.getElementById('responseField').focus();
+    return;
+  }
+
+  const station = respondingStations[0];
+  setResponseFeedback();
+  console.log('--> Sending "NIL"');
+  const responseEndTime = yourStation.player.playSentence('NIL');
+  updateAudioLock(responseEndTime);
+
+  const wpmString =
+    `${station.wpm}` +
+    (station.enableFarnsworth ? ` / ${station.farnsworthSpeed}` : '');
+  addTableRow(
+    'resultsTable',
+    'NIL',
+    station.callsign,
+    wpmString,
+    currentStationAttempts,
+    audioContext.currentTime - currentStationStartTime,
+    ''
+  );
+
+  if (modeConfig.showTuStep) {
+    continuePileup(currentStations.indexOf(station), responseEndTime);
+  } else {
+    nextSingleStation(responseEndTime);
+  }
 }
 
 /**
@@ -931,6 +1003,7 @@ function stop() {
   lastRespondingStations = null;
   clearExchangeAgnCounts();
   lastFocusedInfoFieldId = null;
+  setResponseFeedback();
 
   document.getElementById('responseField').value = '';
   document.getElementById('infoField').value = '';
@@ -956,6 +1029,7 @@ function reset() {
   currentStationAttempts = 0;
   currentStationStartTime = null;
   currentStations = [];
+  lastRespondingStations = null;
   activeStationIndex = null;
   readyForTU = false;
   clearExchangeAgnCounts();
@@ -971,6 +1045,7 @@ function reset() {
   infoField.value = '';
   infoField2.value = '';
   lastFocusedInfoFieldId = null;
+  setResponseFeedback();
   updateAgnButtonAvailability();
   responseField.focus();
 
