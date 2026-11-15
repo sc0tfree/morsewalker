@@ -194,6 +194,7 @@ function configureValidInputs() {
   document.getElementById('yourSidetone').value = '600';
   document.getElementById('yourVolume').value = '70';
 
+  document.getElementById('minStations').value = '0';
   document.getElementById('maxStations').value = '1';
   document.getElementById('minSpeed').value = '18';
   document.getElementById('maxSpeed').value = '18';
@@ -2965,6 +2966,67 @@ describe('session controls and message flows', () => {
     expect(result).toHaveTextContent('BOB (ADAM) / 999 (1)');
     expect(result.querySelectorAll('.text-warning')).toHaveLength(2);
     expect(result.querySelectorAll('.text-success')).toHaveLength(0);
+  });
+
+  it.each([
+    { minimum: 1, maximum: 3 },
+    { minimum: 3, maximum: 3 },
+  ])(
+    'maintains a $minimum–$maximum pileup after TU even when no random arrival occurs',
+    async ({ minimum, maximum }) => {
+      const { random, releaseAudio } = await bootSession();
+      configureValidInputs();
+      selectMode('contest');
+      document.getElementById('minStations').value = String(minimum);
+      document.getElementById('maxStations').value = String(maximum);
+
+      document.getElementById('cqButton').click();
+      expect(document.getElementById('activeStations')).toHaveTextContent(
+        String(minimum)
+      );
+      expect(transcript().slice(1)).toEqual(
+        Array.from({ length: minimum }, () => ['K0A', 'K0A'])
+      );
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+
+      random.mockReturnValueOnce(0.9).mockReturnValue(0);
+      document.getElementById('infoField').value = '01';
+      document.getElementById('tuButton').click();
+
+      expect(resultsRows()).toHaveLength(1);
+      expect(document.getElementById('activeStations')).toHaveTextContent(
+        String(minimum)
+      );
+      expect(transcript().slice(-(minimum + 1))).toEqual([
+        ['N0ME', 'TU N0ME'],
+        ...Array.from({ length: minimum }, () => ['K0A', 'K0A']),
+      ]);
+    }
+  );
+
+  it('keeps Single mode at one caller with a larger pileup minimum', async () => {
+    const { releaseAudio } = await bootSession();
+    configureValidInputs();
+    document.getElementById('minStations').value = '3';
+    document.getElementById('maxStations').value = '3';
+
+    document.getElementById('cqButton').click();
+    expect(transcript()).toEqual([
+      ['N0ME', 'CQ DE N0ME K'],
+      ['K0A', 'K0A'],
+    ]);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+
+    releaseAudio();
+    sendResponse('K0A');
+
+    expect(resultsRows()).toHaveLength(1);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(
+      transcript().filter(([, sentence]) => sentence === 'K0A')
+    ).toHaveLength(3);
   });
 
   it.each([

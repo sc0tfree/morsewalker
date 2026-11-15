@@ -14,6 +14,7 @@ import {
 } from '../../../src/js/settings/storage.js';
 
 const respondingValues = {
+  minStations: 2,
   maxStations: 7,
   minSpeed: 12,
   maxSpeed: 36,
@@ -206,8 +207,69 @@ describe('group persistence', () => {
     expect(readGroupValues('effects')).toEqual(effectsValues);
   });
 
+  it('restores older preferences with no minimum without resetting other values', () => {
+    const legacyValues = { ...respondingValues };
+    delete legacyValues.minStations;
+    const storage = createMemoryStorage({
+      [PREFERENCE_GROUPS.respondingStation.storageKey]: JSON.stringify({
+        values: legacyValues,
+        version: 1,
+      }),
+    });
+    document.getElementById('minStations').value = '5';
+
+    restoreSettingsGroup('respondingStation', storage);
+
+    expect(readGroupValues('respondingStation')).toEqual({
+      ...legacyValues,
+      minStations: 0,
+    });
+    persistSettingsGroup('respondingStation', storage);
+    expect(storedPayload(storage, 'respondingStation')).toEqual({
+      values: { ...legacyValues, minStations: 0 },
+      version: 1,
+    });
+  });
+
+  it.each([-1, 21, 2.5, '2'])(
+    'defaults invalid stored minimum %s while preserving valid preferences',
+    (minStations) => {
+      const storage = createMemoryStorage({
+        [PREFERENCE_GROUPS.respondingStation.storageKey]: JSON.stringify({
+          values: { ...respondingValues, minStations },
+          version: 1,
+        }),
+      });
+
+      restoreSettingsGroup('respondingStation', storage);
+
+      expect(readGroupValues('respondingStation')).toEqual({
+        ...respondingValues,
+        minStations: 0,
+      });
+    }
+  );
+
+  it('repairs a reversed station range without resetting other preferences', () => {
+    const storage = createMemoryStorage({
+      [PREFERENCE_GROUPS.respondingStation.storageKey]: JSON.stringify({
+        values: { ...respondingValues, minStations: 8, maxStations: 7 },
+        version: 1,
+      }),
+    });
+
+    restoreSettingsGroup('respondingStation', storage);
+
+    expect(readGroupValues('respondingStation')).toEqual({
+      ...respondingValues,
+      minStations: 0,
+      maxStations: 3,
+    });
+  });
+
   it('normalizes integer-consumed fields while preserving decimal settings', () => {
     const storage = createMemoryStorage();
+    document.getElementById('minStations').value = '2.9';
     document.getElementById('maxStations').value = '6.8';
     document.getElementById('minVolume').value = '12.5';
     document.getElementById('minWait').value = '0.6';
@@ -217,6 +279,7 @@ describe('group persistence', () => {
     persistSettingsGroup('effects', storage);
 
     expect(storedPayload(storage, 'respondingStation').values).toMatchObject({
+      minStations: 2,
       maxStations: 6,
       minVolume: 12.5,
       minWait: 0.6,
@@ -228,6 +291,7 @@ describe('group persistence', () => {
     const storage = createMemoryStorage();
     applyGroupValues('respondingStation', {
       ...respondingValues,
+      minStations: '2.9e0',
       maxStations: '1e1',
       minSpeed: '1.59e1',
       maxSpeed: '6e1',
@@ -246,6 +310,7 @@ describe('group persistence', () => {
 
     const expectedResponding = {
       ...respondingValues,
+      minStations: 2,
       maxStations: 10,
       minSpeed: 15,
       maxSpeed: 60,
@@ -294,7 +359,7 @@ describe('group persistence', () => {
 
   it('omits blank numeric preferences, including disabled Farnsworth, instead of saving zero', () => {
     const storage = createMemoryStorage();
-    const ids = ['maxStations', 'farnsworthSpeed', 'minWait'];
+    const ids = ['minStations', 'maxStations', 'farnsworthSpeed', 'minWait'];
     ids.forEach((id) => {
       document.getElementById(id).value = '';
     });
@@ -304,6 +369,7 @@ describe('group persistence', () => {
     const values = storedPayload(storage, 'respondingStation').values;
     ids.forEach((id) => expect(values).not.toHaveProperty(id));
     restoreSettingsGroup('respondingStation', storage);
+    expect(document.getElementById('minStations')).toHaveValue(0);
     expect(document.getElementById('maxStations')).toHaveValue(3);
     expect(document.getElementById('farnsworthSpeed')).toHaveValue(10);
     expect(document.getElementById('minWait')).toHaveValue(0.25);
@@ -349,6 +415,7 @@ describe('group persistence', () => {
       yourSpeed: '0.5e2',
       yourSidetone: '7.25e2',
       yourVolume: '3.75e1',
+      minStations: '2.9e0',
       maxStations: '6.8e0',
       minSpeed: '1.59e1',
       maxSpeed: '6e1',
@@ -377,6 +444,7 @@ describe('group persistence', () => {
       yourSpeed: 50,
       yourSidetone: 725,
       yourVolume: 0.375,
+      minStations: 2,
       maxStations: 6,
       minSpeed: 15,
       maxSpeed: 60,
@@ -523,6 +591,10 @@ describe('group persistence', () => {
     persistSettingsGroup('effects', storage);
     const effectsPayload = storage.peek(PREFERENCE_GROUPS.effects.storageKey);
     document.getElementById('minSpeed').classList.add('is-invalid');
+    const speedFeedback =
+      document.getElementById('minSpeed').nextElementSibling;
+    speedFeedback.textContent = 'Must be ≤ Max Speed';
+    speedFeedback.classList.add('d-block');
     document.getElementById('qsb').classList.add('is-invalid');
 
     resetSettingsGroup('respondingStation', storage);
@@ -536,6 +608,7 @@ describe('group persistence', () => {
     expect(storage.peek('mode')).toBe('cwt');
     expect(storage.peek('yourCallsign')).toBe('W1AW');
     expect(readGroupValues('respondingStation')).toEqual({
+      minStations: 0,
       maxStations: 3,
       minSpeed: 18,
       maxSpeed: 25,
@@ -566,6 +639,8 @@ describe('group persistence', () => {
     });
     expect(readGroupValues('effects')).toEqual(effectsValues);
     expect(document.getElementById('minSpeed')).not.toHaveClass('is-invalid');
+    expect(speedFeedback).not.toHaveClass('d-block');
+    expect(speedFeedback).toHaveTextContent('Must be ≤ Max Speed');
     expect(document.getElementById('qsb')).toHaveClass('is-invalid');
 
     resetSettingsGroup('effects', storage);
@@ -577,6 +652,39 @@ describe('group persistence', () => {
       qsbPercentage: 50,
     });
     expect(document.getElementById('qsb')).not.toHaveClass('is-invalid');
+  });
+
+  it('clears visible feedback only in the selected group of an injected document', () => {
+    const minimum = document.getElementById('minStations');
+    minimum.value = '4';
+    minimum.classList.add('is-invalid');
+    minimum.nextElementSibling.textContent = 'Must be ≤ Max Stations';
+    minimum.nextElementSibling.classList.add('d-block');
+    const callsign = document.getElementById('yourCallsign');
+    callsign.classList.add('is-invalid');
+    callsign.nextElementSibling.textContent = 'Your callsign is required.';
+    callsign.nextElementSibling.classList.add('d-block');
+    const root = document.cloneNode(true);
+
+    resetSettingsGroup('respondingStation', createMemoryStorage(), root);
+
+    const resetMinimum = root.getElementById('minStations');
+    expect(resetMinimum.valueAsNumber).toBe(0);
+    expect(resetMinimum.classList.contains('is-invalid')).toBe(false);
+    expect(resetMinimum.nextElementSibling.classList.contains('d-block')).toBe(
+      false
+    );
+    expect(resetMinimum.nextElementSibling.textContent).toBe(
+      'Must be ≤ Max Stations'
+    );
+    const untouchedCallsign = root.getElementById('yourCallsign');
+    expect(untouchedCallsign.classList.contains('is-invalid')).toBe(true);
+    expect(
+      untouchedCallsign.nextElementSibling.classList.contains('d-block')
+    ).toBe(true);
+    expect(minimum).toHaveValue(4);
+    expect(minimum).toHaveClass('is-invalid');
+    expect(minimum.nextElementSibling).toHaveClass('d-block');
   });
 
   it('hydrates on startup and saves subsequent input and change events', () => {

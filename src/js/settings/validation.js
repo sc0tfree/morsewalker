@@ -9,6 +9,7 @@ const NUMERIC_FIELDS = [
   'yourSpeed',
   'yourSidetone',
   'yourVolume',
+  'minStations',
   'maxStations',
   'minSpeed',
   'maxSpeed',
@@ -25,6 +26,7 @@ const NUMERIC_FIELDS = [
  * Field pairs that describe a range, as `[minId, maxId, message]`.
  */
 const ORDERED_PAIRS = [
+  ['minStations', 'maxStations', 'Must be ≤ Max Stations'],
   ['minSpeed', 'maxSpeed', 'Must be ≤ Max Speed'],
   ['minTone', 'maxTone', 'Must be ≤ Max Tone'],
   ['minVolume', 'maxVolume', 'Must be ≤ Max Volume'],
@@ -128,6 +130,8 @@ function rejectField(inputId, errorMessage) {
   const feedback = input.parentElement.querySelector('.invalid-feedback');
   if (feedback) {
     feedback.textContent = errorMessage;
+    // Update feedback directly so Safari lays it out after validation changes.
+    feedback.classList.add('d-block');
   }
 
   openAccordionSection(input.closest('.accordion-collapse'));
@@ -136,28 +140,35 @@ function rejectField(inputId, errorMessage) {
 /**
  * Clears the invalid state from a specific input field.
  *
- * Removes the CSS class for invalid state and resets any associated error message.
+ * Removes the invalid styling and hides any associated error message.
  *
  * @param {string} inputId - The ID of the input field to clear.
  */
 export function clearFieldInvalid(inputId) {
-  const input = document.getElementById(inputId);
+  clearInputInvalid(document.getElementById(inputId));
+}
+
+/**
+ * Clears invalid styling and feedback from a control in any settings document.
+ *
+ * @param {Element|null} input - The control whose invalid state should be cleared.
+ */
+export function clearInputInvalid(input) {
   if (!input) return;
 
   input.classList.remove('is-invalid');
+  input.parentElement
+    ?.querySelector('.invalid-feedback')
+    ?.classList.remove('d-block');
 }
 
 /**
  * Clears the invalid state from all form fields.
  *
- * Targets all elements with the `.is-invalid` class and removes it to reset
- * the visual state of the form.
+ * Clears invalid styling and associated feedback throughout the form.
  */
 export function clearAllInvalidStates() {
-  // Target all elements with the .is-invalid class
-  document
-    .querySelectorAll('.is-invalid')
-    .forEach((el) => el.classList.remove('is-invalid'));
+  document.querySelectorAll('.is-invalid').forEach(clearInputInvalid);
 }
 
 /**

@@ -1,3 +1,5 @@
+import { clearInputInvalid } from './validation.js';
+
 const SETTINGS_STORAGE_VERSION = 1;
 
 const integerControl = (id) => ({ id, key: id, type: 'integer' });
@@ -15,6 +17,7 @@ const radioControl = (name) => ({ key: name, name, type: 'radio' });
 export const PREFERENCE_GROUPS = {
   respondingStation: {
     controls: [
+      integerControl('minStations'),
       integerControl('maxStations'),
       integerControl('minSpeed'),
       integerControl('maxSpeed'),
@@ -44,6 +47,7 @@ export const PREFERENCE_GROUPS = {
       checkboxControl('cutN'),
     ],
     orderedPairs: [
+      ['minStations', 'maxStations'],
       ['minSpeed', 'maxSpeed'],
       ['minTone', 'maxTone'],
       ['minVolume', 'maxVolume'],
@@ -437,9 +441,7 @@ export function resetSettingsGroup(groupId, storage, root = document) {
   group.controls.forEach((control) => {
     const elements = getControlElements(group, control, root);
     applyControlDefault(control, elements);
-    elements.forEach((element) => {
-      element.classList.remove('is-invalid');
-    });
+    elements.forEach(clearInputInvalid);
   });
 }
 

@@ -61,19 +61,25 @@ export function weightedRandom(maxStations) {
 /**
  * Adds new stations if the current count is below the maximum allowed.
  *
- * Uses a weighted random selection to determine how many new stations to add,
- * logs details about each new station, updates the total active station count,
+ * Uses a weighted random selection, adding enough stations to meet the minimum
+ * active count. Logs each new station, updates the total active station count,
  * and returns the updated array.
  *
  * @param {Array<Object>} stations - Current list of stations.
- * @param {Object} inputs - Configuration object containing `maxStations`.
+ * @param {Object} inputs - Configuration containing `minStations` and `maxStations`.
  * @returns {Array<Object>} The updated list of stations.
  */
 export function addStations(stations, inputs) {
-  // If currentStations is empty, then add a weighted random between 1 and inputs.maxStations
   if (stations.length < inputs.maxStations) {
-    // Use weightedRandom to determine the number of stations to add
-    let numStations = weightedRandom(inputs.maxStations - stations.length);
+    const remainingCapacity = inputs.maxStations - stations.length;
+    const minimumAddition = Math.max(
+      0,
+      (inputs.minStations ?? 0) - stations.length
+    );
+    const numStations = Math.min(
+      remainingCapacity,
+      Math.max(weightedRandom(remainingCapacity), minimumAddition)
+    );
     console.log(`+ Adding ${numStations} stations...`);
     for (let i = 0; i < numStations; i++) {
       let callingStation = getCallingStation(inputs);

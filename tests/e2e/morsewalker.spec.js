@@ -74,6 +74,7 @@ const modeInfoLabels = {
 };
 
 const respondingNumberIds = [
+  'minStations',
   'maxStations',
   'minSpeed',
   'maxSpeed',
@@ -107,6 +108,7 @@ const respondingCheckboxIds = [
 ];
 
 const customRespondingPreferences = {
+  minStations: 2,
   maxStations: 7,
   minSpeed: 12,
   maxSpeed: 36,
@@ -137,6 +139,7 @@ const customRespondingPreferences = {
 };
 
 const defaultRespondingPreferences = {
+  minStations: 0,
   maxStations: 3,
   minSpeed: 18,
   maxSpeed: 25,
@@ -364,6 +367,77 @@ test('Your Station settings preserve their responsive information groups', async
     });
 
     expect(rows, `${width}px station rows`).toEqual(expected);
+  }
+});
+
+test('Responding Station controls wrap from six to four to one per row', async ({
+  page,
+}) => {
+  await openApp(page);
+  await page
+    .locator('#headingRespondingStationSettings .accordion-button')
+    .click();
+  await expect(page.locator('#collapseRespondingStationSettings')).toHaveClass(
+    /show/
+  );
+
+  const firstRow = page
+    .locator('#collapseRespondingStationSettings .row')
+    .first();
+  const stationInputs = firstRow.locator('input');
+  const expectedOrder = [
+    'minStations',
+    'maxStations',
+    'minSpeed',
+    'maxSpeed',
+    'enableFarnsworth',
+    'farnsworthSpeed',
+  ];
+  expect(
+    await stationInputs.evaluateAll((inputs) => inputs.map(({ id }) => id))
+  ).toEqual(expectedOrder);
+  await expect(firstRow.locator('label')).toHaveText([
+    'Min Stations',
+    'Max Stations',
+    'Min Speed',
+    'Max Speed',
+    'Farnsworth',
+    'Effective Speed (WPM)',
+  ]);
+  await expect(page.getByLabel('Min Stations', { exact: true })).toHaveValue(
+    '0'
+  );
+
+  const singleColumnRows = expectedOrder.map((id) => [id]);
+  const tabletRows = [expectedOrder.slice(0, 4), expectedOrder.slice(4)];
+  const expectedRows = new Map([
+    [390, singleColumnRows],
+    [767, singleColumnRows],
+    [768, tabletRows],
+    [991, tabletRows],
+    [992, [expectedOrder]],
+    [1280, [expectedOrder]],
+  ]);
+
+  for (const [width, expected] of expectedRows) {
+    await page.setViewportSize({ width, height: 900 });
+    const rows = await stationInputs.evaluateAll((inputs) => {
+      const grouped = new Map();
+
+      for (const input of inputs) {
+        // Columns align at the bottom even when a label wraps above its input.
+        const bottom = Math.round(
+          input.parentElement.getBoundingClientRect().bottom
+        );
+        const row = grouped.get(bottom) ?? [];
+        row.push(input.id);
+        grouped.set(bottom, row);
+      }
+
+      return [...grouped.values()];
+    });
+
+    expect(rows, `${width}px responding station rows`).toEqual(expected);
   }
 });
 
@@ -1471,6 +1545,103 @@ test('invalid CQ is rejected before a station or audio starts', async ({
     scheduledEvents: 0,
   });
 });
+
+for (const { width, initiallyOpen } of [
+  { width: 1280, initiallyOpen: true },
+  { width: 768, initiallyOpen: false },
+  { width: 390, initiallyOpen: false },
+]) {
+  test(`validation feedback is visible and clears correctly at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await openApp(page);
+    await configureValidInputs(page, {
+      minStations: '4',
+      maxStations: '2',
+    });
+    await selectMode(page, 'contest');
+
+    const section = page.locator('#collapseRespondingStationSettings');
+    if (initiallyOpen) {
+      await page
+        .locator('#headingRespondingStationSettings .accordion-button')
+        .click();
+      await expect(section).toHaveClass(/show/);
+    } else {
+      await expect(section).not.toHaveClass(/show/);
+    }
+
+    const minimum = page.locator('#minStations');
+    const minimumFeedback = page.locator('#minStations + .invalid-feedback');
+    const speedFeedback = page.locator('#minSpeed + .invalid-feedback');
+    const expectVisibleFeedback = async (id, message) => {
+      const input = page.locator(`#${id}`);
+      const feedback = page.locator(`#${id} + .invalid-feedback`);
+      await expect(section).toHaveClass(/show/);
+      await expect(input).toHaveClass(/is-invalid/);
+      await expect(feedback).toHaveText(message);
+      await expect(feedback).toBeVisible();
+
+      const inputBox = await input.boundingBox();
+      const feedbackBox = await feedback.boundingBox();
+      expect(inputBox).not.toBeNull();
+      expect(feedbackBox).not.toBeNull();
+      expect(feedbackBox.width).toBeGreaterThan(0);
+      expect(feedbackBox.height).toBeGreaterThan(0);
+      expect(feedbackBox.y).toBeGreaterThanOrEqual(
+        inputBox.y + inputBox.height
+      );
+    };
+
+    // Revalidation must restore the painted feedback after clearing old errors.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await page.locator('#cqButton').click();
+      await expectVisibleFeedback('minStations', 'Must be ≤ Max Stations');
+    }
+
+    await minimum.fill('2');
+    await expect(minimum).not.toHaveClass(/is-invalid/);
+    await expect(minimumFeedback).toBeHidden();
+
+    await minimum.fill('4');
+    await page.locator('#cqButton').click();
+    await expectVisibleFeedback('minStations', 'Must be ≤ Max Stations');
+    await page
+      .getByRole('button', { name: 'Restore Responding Station defaults' })
+      .click();
+    const defaultsModal = page.locator('#settingsDefaultsModal');
+    await expect(defaultsModal).toBeVisible();
+    await defaultsModal
+      .getByRole('button', { name: 'Restore defaults' })
+      .click();
+    await expect(defaultsModal).toBeHidden();
+    await expect(minimum).toHaveValue('0');
+    await expect(page.locator('#maxStations')).toHaveValue('3');
+    await expect(minimum).not.toHaveClass(/is-invalid/);
+    await expect(minimumFeedback).toBeHidden();
+
+    await minimum.fill('4');
+    await page.locator('#maxStations').fill('2');
+    await page.locator('#minSpeed').fill('30');
+    await page.locator('#maxSpeed').fill('20');
+    await page.locator('#cqButton').click();
+    await expectVisibleFeedback('minStations', 'Must be ≤ Max Stations');
+    await expectVisibleFeedback('minSpeed', 'Must be ≤ Max Speed');
+
+    await selectMode(page, 'pota');
+    await expect(minimum).not.toHaveClass(/is-invalid/);
+    await expect(page.locator('#minSpeed')).not.toHaveClass(/is-invalid/);
+    await expect(minimumFeedback).toBeHidden();
+    await expect(speedFeedback).toBeHidden();
+    await expect(page.locator('#activeStations')).toHaveText('0');
+    await expect(page.locator('#resultsTable tbody tr')).toHaveCount(0);
+    expect(await audioSnapshot(page)).toMatchObject({
+      bufferSources: 0,
+      scheduledEvents: 0,
+    });
+  });
+}
 
 test('Stop clears an unselected pileup and immediately starts fresh players with new settings', async ({
   page,

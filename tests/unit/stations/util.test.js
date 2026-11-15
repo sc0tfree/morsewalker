@@ -254,4 +254,46 @@ describe('addStations', () => {
     expect(random).not.toHaveBeenCalled();
     expect(document.getElementById('activeStations')).toHaveTextContent('2');
   });
+
+  it.each([
+    { existingCount: 0, expectedAdditions: 3, minimum: 3, maximum: 4 },
+    { existingCount: 1, expectedAdditions: 2, minimum: 3, maximum: 4 },
+    { existingCount: 1, expectedAdditions: 3, minimum: 4, maximum: 4 },
+    { existingCount: 0, expectedAdditions: 1, minimum: 0, maximum: 4 },
+    { existingCount: 3, expectedAdditions: 1, minimum: 2, maximum: 4 },
+  ])(
+    'adds $expectedAdditions callers with $existingCount existing and a $minimum–$maximum range',
+    ({ existingCount, expectedAdditions, minimum, maximum }) => {
+      const stations = Array.from({ length: existingCount }, () => stationA);
+      vi.spyOn(console, 'log').mockImplementation(() => {});
+      vi.spyOn(Math, 'random').mockReturnValue(0);
+      dependencies.getCallingStation.mockReturnValue(stationB);
+
+      const result = addStations(stations, {
+        minStations: minimum,
+        maxStations: maximum,
+      });
+
+      expect(result).toBe(stations);
+      expect(stations).toHaveLength(existingCount + expectedAdditions);
+      expect(dependencies.getCallingStation).toHaveBeenCalledTimes(
+        expectedAdditions
+      );
+      expect(document.getElementById('activeStations')).toHaveTextContent(
+        String(existingCount + expectedAdditions)
+      );
+    }
+  );
+
+  it('keeps the maximum cap when a minimum exceeds remaining capacity', () => {
+    const stations = [stationA];
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    dependencies.getCallingStation.mockReturnValue(stationB);
+
+    addStations(stations, { minStations: 5, maxStations: 3 });
+
+    expect(stations).toHaveLength(3);
+    expect(dependencies.getCallingStation).toHaveBeenCalledTimes(2);
+  });
 });

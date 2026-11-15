@@ -77,6 +77,13 @@ beforeEach(async () => {
 });
 
 describe('settings form parsing and normalization', () => {
+  it('defaults to no minimum station floor', () => {
+    setCallsign();
+
+    expect(element('minStations')).toHaveValue(0);
+    expect(getInputs()).toMatchObject({ minStations: 0, maxStations: 3 });
+  });
+
   it('uses wait defaults that preserve the existing response timing', () => {
     expect(element('minWait')).toHaveValue(0.25);
     expect(element('maxWait')).toHaveValue(2);
@@ -91,6 +98,7 @@ describe('settings form parsing and normalization', () => {
     element('yourSpeed').value = '27.9';
     element('yourSidetone').value = '725';
     element('yourVolume').value = '37.5';
+    element('minStations').value = '2.9';
     element('maxStations').value = '6.8';
     element('minSpeed').value = '15.9';
     element('maxSpeed').value = '32.2';
@@ -139,6 +147,7 @@ describe('settings form parsing and normalization', () => {
       yourSpeed: 27,
       yourSidetone: 725,
       yourVolume: 0.375,
+      minStations: 2,
       maxStations: 6,
       minSpeed: 15,
       maxSpeed: 32,
@@ -174,6 +183,13 @@ describe('settings form parsing and normalization', () => {
       value: 725,
       decimal: '7.259e2',
       truncated: 725,
+    },
+    {
+      id: 'minStations',
+      whole: '2e0',
+      value: 2,
+      decimal: '2.9e0',
+      truncated: 2,
     },
     {
       id: 'maxStations',
@@ -433,6 +449,13 @@ describe('settings form parsing and normalization', () => {
 describe('settings validation and invalid-state behavior', () => {
   it.each([
     {
+      minId: 'minStations',
+      maxId: 'maxStations',
+      low: '9',
+      high: '1e1',
+      message: 'Must be ≤ Max Stations',
+    },
+    {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
       low: '9',
@@ -461,6 +484,7 @@ describe('settings validation and invalid-state behavior', () => {
 
   it.each([
     'yourSidetone',
+    'minStations',
     'maxStations',
     'minSpeed',
     'maxSpeed',
@@ -479,6 +503,13 @@ describe('settings validation and invalid-state behavior', () => {
   );
 
   it.each([
+    {
+      minId: 'minStations',
+      maxId: 'maxStations',
+      low: '3',
+      high: '4',
+      message: 'Must be ≤ Max Stations',
+    },
     {
       minId: 'minSpeed',
       maxId: 'maxSpeed',
@@ -517,6 +548,7 @@ describe('settings validation and invalid-state behavior', () => {
       expect(getInputs()).toBeNull();
       expect(element(minId)).toHaveClass('is-invalid');
       expect(element(minId).nextElementSibling).toHaveTextContent(message);
+      expect(element(minId).nextElementSibling).toHaveClass('d-block');
       expect(bootstrapMock.show).toHaveBeenCalledWith(
         element('collapseRespondingStationSettings')
       );
@@ -536,6 +568,10 @@ describe('settings validation and invalid-state behavior', () => {
     { id: 'yourSidetone', value: '1.99e2', message: 'Must be ≥ 200' },
     { id: 'yourVolume', value: '-1', message: 'Must be ≥ 0' },
     { id: 'yourVolume', value: '101', message: 'Must be ≤ 100' },
+    { id: 'minStations', value: '-1', message: 'Must be ≥ 0' },
+    { id: 'minStations', value: '-0.1', message: 'Must be ≥ 0' },
+    { id: 'minStations', value: '21', message: 'Must be ≤ 20' },
+    { id: 'minStations', value: '2.09e1', message: 'Must be ≤ 20' },
     { id: 'maxStations', value: '0', message: 'Must be ≥ 1' },
     { id: 'maxStations', value: '21', message: 'Must be ≤ 20' },
     { id: 'maxStations', value: '2.09e1', message: 'Must be ≤ 20' },
@@ -614,14 +650,43 @@ describe('settings validation and invalid-state behavior', () => {
     }
   );
 
-  it('opens invalid sections and clears classes on input without clearing feedback', () => {
+  it('replaces visible station feedback on revalidation and hides it when valid', () => {
+    setCallsign();
+    const minimum = element('minStations');
+    const feedback = minimum.nextElementSibling;
+    minimum.value = '4';
+
+    expect(getInputs()).toBeNull();
+    expect(feedback).toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ Max Stations');
+
+    minimum.value = '3';
+
+    expect(getInputs()).not.toBeNull();
+    expect(minimum).not.toHaveClass('is-invalid');
+    expect(feedback).not.toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ Max Stations');
+
+    minimum.value = '21';
+
+    expect(getInputs()).toBeNull();
+    expect(feedback).toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ 20');
+  });
+
+  it('opens invalid sections and clears visible feedback on input without deleting its text', () => {
     element('collapseYourStationSettings').classList.remove('show');
+    element('minStations').value = '4';
     element('minSpeed').value = '30';
     element('maxSpeed').value = '20';
 
     expect(getInputs()).toBeNull();
     expect(element('yourCallsign')).toHaveClass('is-invalid');
+    expect(element('yourCallsign').nextElementSibling).toHaveClass('d-block');
+    expect(element('minStations')).toHaveClass('is-invalid');
+    expect(element('minStations').nextElementSibling).toHaveClass('d-block');
     expect(element('minSpeed')).toHaveClass('is-invalid');
+    expect(element('minSpeed').nextElementSibling).toHaveClass('d-block');
     expect(bootstrapMock.show).toHaveBeenCalledWith(
       element('collapseYourStationSettings')
     );
@@ -635,13 +700,33 @@ describe('settings validation and invalid-state behavior', () => {
     );
 
     expect(element('yourCallsign')).not.toHaveClass('is-invalid');
+    expect(element('yourCallsign').nextElementSibling).not.toHaveClass(
+      'd-block'
+    );
     expect(element('yourCallsign').nextElementSibling).toHaveTextContent(
       'Your callsign is required.'
     );
+    element('minStations').value = '3';
+    element('minStations').dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(element('minStations')).not.toHaveClass('is-invalid');
+    expect(element('minStations').nextElementSibling).not.toHaveClass(
+      'd-block'
+    );
+    expect(element('minStations').nextElementSibling).toHaveTextContent(
+      'Must be ≤ Max Stations'
+    );
     expect(element('minSpeed')).toHaveClass('is-invalid');
+    expect(element('minSpeed').nextElementSibling).toHaveClass('d-block');
 
     clearAllInvalidStates();
 
     expect(document.querySelectorAll('.is-invalid')).toHaveLength(0);
+    expect(document.querySelectorAll('.invalid-feedback.d-block')).toHaveLength(
+      0
+    );
+    expect(element('minSpeed').nextElementSibling).toHaveTextContent(
+      'Must be ≤ Max Speed'
+    );
   });
 });

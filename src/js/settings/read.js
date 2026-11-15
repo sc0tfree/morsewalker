@@ -34,6 +34,9 @@ export function getDOMInputs() {
     ),
     // convert volume to a float between 0 and 1
     yourVolume: parseFloat(document.getElementById('yourVolume').value) / 100,
+    minStations: Math.trunc(
+      document.getElementById('minStations').valueAsNumber
+    ),
     maxStations: Math.trunc(
       document.getElementById('maxStations').valueAsNumber
     ),
