@@ -940,7 +940,7 @@ function dismissCaller() {
     wpmString,
     currentStationAttempts,
     audioContext.currentTime - currentStationStartTime,
-    ''
+    modeConfig.showTuStep ? '-' : null
   );
 
   if (modeConfig.showTuStep) {

@@ -112,7 +112,15 @@ describe('results CSV snapshots', () => {
   it.each(['single', 'contest'])(
     'exports NIL-only %s results with the revealed call and blank exchange',
     (mode) => {
-      addTableRow('resultsTable', 'NIL', 'W6NYC', '24 / 12', 3, 18.456, '');
+      addTableRow(
+        'resultsTable',
+        'NIL',
+        'W6NYC',
+        '24 / 12',
+        3,
+        18.456,
+        mode === 'single' ? null : '-'
+      );
 
       const result = buildResultsExport(resultTable(), mode, exportDate());
 

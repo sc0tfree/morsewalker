@@ -3176,7 +3176,10 @@ describe('NIL dismisses an unreadable caller', () => {
       expect(
         Array.from(row.cells, (cell) => cell.textContent).slice(0, 4)
       ).toEqual(['NIL', 'K0A', '18 / 12', '1']);
-      expect(row.cells[5]?.textContent ?? '').toBe('');
+      expect(row.cells).toHaveLength(mode === 'single' ? 5 : 6);
+      expect(row.cells[5]?.textContent).toBe(
+        mode === 'single' ? undefined : '-'
+      );
       expect(Number(row.cells[4].textContent)).toBeGreaterThan(0);
       expect(document.getElementById('activeStations')).toHaveTextContent(
         mode === 'single' ? '1' : '0'
@@ -3429,7 +3432,7 @@ describe('NIL dismisses an unreadable caller', () => {
       '20.00',
     ]);
     expect(dataRows()[0].cells[5]).toHaveTextContent('ADAM / 1');
-    expect(dataRows()[1].cells[5]?.textContent ?? '').toBe('');
+    expect(dataRows()[1].cells[5].textContent).toBe('-');
     expect(
       document.getElementById('resultsTable-summary').cells[4]
     ).toHaveTextContent('20.00');

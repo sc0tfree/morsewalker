@@ -84,7 +84,11 @@ export function buildResultsExport(table, modeId, exportedAt = new Date()) {
       protectText(cell(2)),
       cell(3),
       cell(4),
-      protectText(mode.ui.tableExtraColumn ? exchangeText(row.cells[5]) : ''),
+      protectText(
+        mode.ui.tableExtraColumn && cell(0) !== 'NIL'
+          ? exchangeText(row.cells[5])
+          : ''
+      ),
     ];
   });
 
