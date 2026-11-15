@@ -3130,11 +3130,14 @@ describe('NIL dismisses an unreadable caller', () => {
     });
   }
 
-  async function startTwoCallers(mode = 'contest') {
+  async function startTwoCallers(
+    mode = 'contest',
+    stationCallsigns = ['K1AAA', 'N2BBB']
+  ) {
     const session = await bootSession();
     const generator = await import('../../../src/js/stationGenerator.js');
     const original = generator.getCallingStation;
-    const callsigns = ['K1AAA', 'N2BBB'];
+    const callsigns = [...stationCallsigns];
     vi.spyOn(generator, 'getCallingStation').mockImplementation((inputs) => ({
       ...original(inputs),
       callsign: callsigns.shift() ?? 'W3CCC',
@@ -3283,6 +3286,55 @@ describe('NIL dismisses an unreadable caller', () => {
     expect(dataRows()[0].cells[3]).toHaveTextContent('1');
   });
 
+  it.each(['CQ', 'AGN', 'AAA'])(
+    'rejects NIL after %s broadens a selected caller back into a group',
+    async (request) => {
+      const { random, releaseAudio } = await startTwoCallers('contest', [
+        'K1AAA',
+        'N2AAA',
+      ]);
+      sendResponse('K1AAA');
+      releaseAudio();
+      setInfoValue('infoField', '01');
+      if (request === 'CQ') document.getElementById('cqButton').click();
+      else sendResponse(request);
+      expect(transcript().slice(-2)).toEqual([
+        ['K1AAA', 'K1AAA'],
+        ['N2AAA', 'N2AAA'],
+      ]);
+      releaseAudio();
+      const before = transcript();
+      const { audioLockUntil } = await import('../../../src/js/audio.js');
+
+      sendResponse('NIL');
+
+      expect(transcript()).toEqual(before);
+      expect((await import('../../../src/js/audio.js')).audioLockUntil).toBe(
+        audioLockUntil
+      );
+      expect(dataRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('2');
+      expect(document.getElementById('infoField')).toHaveValue('01');
+      expect(document.getElementById('responseFeedback')).toHaveTextContent(
+        'Several callers answered. Send a partial callsign to isolate one, then NIL.'
+      );
+
+      // Rejection leaves the selected exchange and its attempt count intact.
+      random.mockReturnValue(0.9);
+      document.getElementById('tuButton').click();
+      expect(transcript().slice(before.length)).toEqual([
+        ['N0ME', 'TU N0ME'],
+        ['N2AAA', 'N2AAA'],
+      ]);
+      expect(dataRows()).toHaveLength(1);
+      const [row] = dataRows();
+      expect(row.cells[0]).toHaveTextContent('1');
+      expect(row.cells[1]).toHaveTextContent('K1AAA');
+      expect(row.cells[3]).toHaveTextContent(request === 'CQ' ? '1' : '2');
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    }
+  );
+
   it.each(['single', 'contest'])(
     'rejects NIL before CQ in %s and honors the audio lock on double sends',
     async (mode) => {
@@ -3406,6 +3458,77 @@ describe('NIL dismisses an unreadable caller', () => {
       expect(document.getElementById('responseFeedback')).toHaveTextContent(
         'No caller to dismiss. Call CQ first.'
       );
+    }
+  );
+
+  it.each(['infoField', 'infoField2'])(
+    'scores NIL in %s as an ordinary exchange value when Enter completes the contact',
+    async (fieldId) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      const field = setInfoValue(fieldId, 'NIL');
+      random.mockReturnValue(0.9);
+      const before = transcript().length;
+
+      pressEnter(field);
+
+      expect(transcript().slice(before)).toEqual([['N0ME', 'TU N0ME']]);
+      expect(dataRows()).toHaveLength(1);
+      const [row] = dataRows();
+      expect(row.cells[0]).toHaveTextContent('1');
+      expect(row.cells[1]).toHaveTextContent('K0A');
+      expect(row.cells[3]).toHaveTextContent('1');
+      expect(row.cells[5].querySelectorAll('.text-warning')).toHaveLength(1);
+      expect(row.cells[5].querySelectorAll('.text-success')).toHaveLength(1);
+      expect(document.getElementById('activeStations')).toHaveTextContent('0');
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
+    }
+  );
+
+  it.each([
+    {
+      nilField: 'infoField',
+      missingField: 'infoField2',
+      request: 'NR?',
+      reply: '1',
+    },
+    {
+      nilField: 'infoField2',
+      missingField: 'infoField',
+      request: 'NAME?',
+      reply: 'Adam',
+    },
+  ])(
+    'Enter in $nilField containing NIL requests the missing $missingField',
+    async ({ nilField, missingField, request, reply }) => {
+      const { releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      const field = setInfoValue(nilField, 'NIL');
+      setInfoValue(missingField, '');
+      const before = transcript().length;
+
+      pressEnter(field);
+
+      expect(transcript().slice(before)).toEqual([
+        ['N0ME', request],
+        ['K0A', reply],
+      ]);
+      expect(dataRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(field).toHaveValue('NIL');
+      expect(document.getElementById(missingField)).toHaveValue('');
+      expect(document.activeElement).toBe(
+        document.getElementById(missingField)
+      );
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
     }
   );
 
