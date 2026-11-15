@@ -548,6 +548,7 @@ describe('settings validation and invalid-state behavior', () => {
       expect(getInputs()).toBeNull();
       expect(element(minId)).toHaveClass('is-invalid');
       expect(element(minId).nextElementSibling).toHaveTextContent(message);
+      expect(element(minId).nextElementSibling).toHaveClass('d-block');
       expect(bootstrapMock.show).toHaveBeenCalledWith(
         element('collapseRespondingStationSettings')
       );
@@ -649,14 +650,43 @@ describe('settings validation and invalid-state behavior', () => {
     }
   );
 
-  it('opens invalid sections and clears classes on input without clearing feedback', () => {
+  it('replaces visible station feedback on revalidation and hides it when valid', () => {
+    setCallsign();
+    const minimum = element('minStations');
+    const feedback = minimum.nextElementSibling;
+    minimum.value = '4';
+
+    expect(getInputs()).toBeNull();
+    expect(feedback).toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ Max Stations');
+
+    minimum.value = '3';
+
+    expect(getInputs()).not.toBeNull();
+    expect(minimum).not.toHaveClass('is-invalid');
+    expect(feedback).not.toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ Max Stations');
+
+    minimum.value = '21';
+
+    expect(getInputs()).toBeNull();
+    expect(feedback).toHaveClass('d-block');
+    expect(feedback).toHaveTextContent('Must be ≤ 20');
+  });
+
+  it('opens invalid sections and clears visible feedback on input without deleting its text', () => {
     element('collapseYourStationSettings').classList.remove('show');
+    element('minStations').value = '4';
     element('minSpeed').value = '30';
     element('maxSpeed').value = '20';
 
     expect(getInputs()).toBeNull();
     expect(element('yourCallsign')).toHaveClass('is-invalid');
+    expect(element('yourCallsign').nextElementSibling).toHaveClass('d-block');
+    expect(element('minStations')).toHaveClass('is-invalid');
+    expect(element('minStations').nextElementSibling).toHaveClass('d-block');
     expect(element('minSpeed')).toHaveClass('is-invalid');
+    expect(element('minSpeed').nextElementSibling).toHaveClass('d-block');
     expect(bootstrapMock.show).toHaveBeenCalledWith(
       element('collapseYourStationSettings')
     );
@@ -670,13 +700,33 @@ describe('settings validation and invalid-state behavior', () => {
     );
 
     expect(element('yourCallsign')).not.toHaveClass('is-invalid');
+    expect(element('yourCallsign').nextElementSibling).not.toHaveClass(
+      'd-block'
+    );
     expect(element('yourCallsign').nextElementSibling).toHaveTextContent(
       'Your callsign is required.'
     );
+    element('minStations').value = '3';
+    element('minStations').dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(element('minStations')).not.toHaveClass('is-invalid');
+    expect(element('minStations').nextElementSibling).not.toHaveClass(
+      'd-block'
+    );
+    expect(element('minStations').nextElementSibling).toHaveTextContent(
+      'Must be ≤ Max Stations'
+    );
     expect(element('minSpeed')).toHaveClass('is-invalid');
+    expect(element('minSpeed').nextElementSibling).toHaveClass('d-block');
 
     clearAllInvalidStates();
 
     expect(document.querySelectorAll('.is-invalid')).toHaveLength(0);
+    expect(document.querySelectorAll('.invalid-feedback.d-block')).toHaveLength(
+      0
+    );
+    expect(element('minSpeed').nextElementSibling).toHaveTextContent(
+      'Must be ≤ Max Speed'
+    );
   });
 });

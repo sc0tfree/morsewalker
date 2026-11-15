@@ -1,3 +1,5 @@
+import { clearInputInvalid } from './validation.js';
+
 const SETTINGS_STORAGE_VERSION = 1;
 
 const integerControl = (id) => ({ id, key: id, type: 'integer' });
@@ -439,9 +441,7 @@ export function resetSettingsGroup(groupId, storage, root = document) {
   group.controls.forEach((control) => {
     const elements = getControlElements(group, control, root);
     applyControlDefault(control, elements);
-    elements.forEach((element) => {
-      element.classList.remove('is-invalid');
-    });
+    elements.forEach(clearInputInvalid);
   });
 }
 

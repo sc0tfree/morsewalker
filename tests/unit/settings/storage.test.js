@@ -591,6 +591,10 @@ describe('group persistence', () => {
     persistSettingsGroup('effects', storage);
     const effectsPayload = storage.peek(PREFERENCE_GROUPS.effects.storageKey);
     document.getElementById('minSpeed').classList.add('is-invalid');
+    const speedFeedback =
+      document.getElementById('minSpeed').nextElementSibling;
+    speedFeedback.textContent = 'Must be ≤ Max Speed';
+    speedFeedback.classList.add('d-block');
     document.getElementById('qsb').classList.add('is-invalid');
 
     resetSettingsGroup('respondingStation', storage);
@@ -635,6 +639,8 @@ describe('group persistence', () => {
     });
     expect(readGroupValues('effects')).toEqual(effectsValues);
     expect(document.getElementById('minSpeed')).not.toHaveClass('is-invalid');
+    expect(speedFeedback).not.toHaveClass('d-block');
+    expect(speedFeedback).toHaveTextContent('Must be ≤ Max Speed');
     expect(document.getElementById('qsb')).toHaveClass('is-invalid');
 
     resetSettingsGroup('effects', storage);
@@ -646,6 +652,39 @@ describe('group persistence', () => {
       qsbPercentage: 50,
     });
     expect(document.getElementById('qsb')).not.toHaveClass('is-invalid');
+  });
+
+  it('clears visible feedback only in the selected group of an injected document', () => {
+    const minimum = document.getElementById('minStations');
+    minimum.value = '4';
+    minimum.classList.add('is-invalid');
+    minimum.nextElementSibling.textContent = 'Must be ≤ Max Stations';
+    minimum.nextElementSibling.classList.add('d-block');
+    const callsign = document.getElementById('yourCallsign');
+    callsign.classList.add('is-invalid');
+    callsign.nextElementSibling.textContent = 'Your callsign is required.';
+    callsign.nextElementSibling.classList.add('d-block');
+    const root = document.cloneNode(true);
+
+    resetSettingsGroup('respondingStation', createMemoryStorage(), root);
+
+    const resetMinimum = root.getElementById('minStations');
+    expect(resetMinimum.valueAsNumber).toBe(0);
+    expect(resetMinimum.classList.contains('is-invalid')).toBe(false);
+    expect(resetMinimum.nextElementSibling.classList.contains('d-block')).toBe(
+      false
+    );
+    expect(resetMinimum.nextElementSibling.textContent).toBe(
+      'Must be ≤ Max Stations'
+    );
+    const untouchedCallsign = root.getElementById('yourCallsign');
+    expect(untouchedCallsign.classList.contains('is-invalid')).toBe(true);
+    expect(
+      untouchedCallsign.nextElementSibling.classList.contains('d-block')
+    ).toBe(true);
+    expect(minimum).toHaveValue(4);
+    expect(minimum).toHaveClass('is-invalid');
+    expect(minimum.nextElementSibling).toHaveClass('d-block');
   });
 
   it('hydrates on startup and saves subsequent input and change events', () => {
