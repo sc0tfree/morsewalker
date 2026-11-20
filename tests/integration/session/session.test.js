@@ -372,6 +372,7 @@ describe('session initialization and mode UI', () => {
       'Send',
       'Send',
       'Send',
+      'Send',
       'AGN',
       'TU',
       'TU',
@@ -406,6 +407,7 @@ describe('session initialization and mode UI', () => {
       'W6NC',
       'NYC',
       'QRS',
+      'NIL',
       '2A',
       'EWA',
       'DX',
@@ -3116,6 +3118,436 @@ describe('session controls and message flows', () => {
       contextCountBeforeReset + 1
     );
   });
+});
+
+describe('NIL dismisses an unreadable caller', () => {
+  function dataRows() {
+    return resultsRows().filter((row) => row.id !== 'resultsTable-summary');
+  }
+
+  function setAudioTime(time) {
+    RecordingAudioContext.instances.forEach((context) => {
+      if (!context.closed) context.currentTime = time;
+    });
+  }
+
+  async function startTwoCallers(
+    mode = 'contest',
+    stationCallsigns = ['K1AAA', 'N2BBB']
+  ) {
+    const session = await bootSession();
+    const generator = await import('../../../src/js/stationGenerator.js');
+    const original = generator.getCallingStation;
+    const callsigns = [...stationCallsigns];
+    vi.spyOn(generator, 'getCallingStation').mockImplementation((inputs) => ({
+      ...original(inputs),
+      callsign: callsigns.shift() ?? 'W3CCC',
+    }));
+    configureValidInputs();
+    selectMode(mode);
+    document.getElementById('maxStations').value = '2';
+    session.random.mockReturnValueOnce(0.99).mockReturnValue(0);
+    document.getElementById('cqButton').click();
+    session.releaseAudio();
+    return session;
+  }
+
+  it.each(['single', 'contest', 'pota', 'fd', 'cwt', 'sst'])(
+    'dismisses the lone %s caller without counting NIL as an attempt or contact',
+    async (mode) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession(mode);
+      releaseAudio();
+      sendResponse('QRS');
+      releaseAudio();
+      const before = transcript().length;
+      const contexts = [...RecordingAudioContext.instances];
+      random.mockReturnValue(0.9);
+
+      const response = document.getElementById('responseField');
+      response.value = '  nil  ';
+      pressEnter(response);
+
+      expect(transcript().slice(before)[0]).toEqual(['N0ME', 'NIL']);
+      expect(transcript().slice(before)).toHaveLength(
+        mode === 'single' ? 2 : 1
+      );
+      const [row] = dataRows();
+      expect(
+        Array.from(row.cells, (cell) => cell.textContent).slice(0, 4)
+      ).toEqual(['NIL', 'K0A', '18 / 12', '1']);
+      expect(row.cells).toHaveLength(mode === 'single' ? 5 : 6);
+      expect(row.cells[5]?.textContent).toBe(
+        mode === 'single' ? undefined : '-'
+      );
+      expect(Number(row.cells[4].textContent)).toBeGreaterThan(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent(
+        mode === 'single' ? '1' : '0'
+      );
+      expect(document.getElementById('responseField')).toHaveValue('');
+      expect(document.activeElement).toBe(response);
+      expect(RecordingAudioContext.instances).toEqual(contexts);
+      expect(document.getElementById('exportCsvButton')).toBeEnabled();
+    }
+  );
+
+  it.each(['K1', 'K1AAA?', 'K1AAA'])(
+    'targets the lone response to %s and preserves the other caller',
+    async (request) => {
+      const { random, releaseAudio } = await startTwoCallers();
+      sendResponse(request);
+      releaseAudio();
+      random.mockReturnValue(0.9);
+      const before = transcript().length;
+
+      sendResponse('NIL');
+
+      expect(transcript().slice(before)).toEqual([
+        ['N0ME', 'NIL'],
+        ['N2BBB', 'N2BBB'],
+      ]);
+      expect(dataRows()[0].cells[1]).toHaveTextContent('K1AAA');
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(audioProbe.messages.at(-1).start).toBe(
+        audioProbe.messages.at(-2).end
+      );
+      releaseAudio();
+      sendResponse('QRS');
+      expect(transcript().slice(-2)).toEqual([
+        ['N0ME', 'QRS'],
+        ['N2BBB', 'N2BBB'],
+      ]);
+    }
+  );
+
+  it('uses the last caller heard instead of an older selected exchange', async () => {
+    const { random, releaseAudio } = await startTwoCallers();
+    sendResponse('K1AAA');
+    releaseAudio();
+    sendResponse('N2');
+    releaseAudio();
+    random.mockReturnValue(0.9);
+
+    sendResponse('NIL');
+
+    expect(dataRows()[0].cells[1]).toHaveTextContent('N2BBB');
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NIL'],
+      ['K1AAA', 'K1AAA'],
+    ]);
+    expect(document.getElementById('agnButton')).toBeDisabled();
+    releaseAudio();
+    const before = transcript();
+    document.getElementById('tuButton').click();
+    expect(transcript()).toEqual(before);
+    expect(dataRows()).toHaveLength(1);
+  });
+
+  it('tracks an exchange fill as the latest lone response', async () => {
+    const { random, releaseAudio } = await startTwoCallers();
+    sendResponse('K1AAA');
+    releaseAudio();
+    sendResponse('AGN');
+    releaseAudio();
+    document.getElementById('agnButton').click();
+    releaseAudio();
+    random.mockReturnValue(0.9);
+
+    sendResponse('NIL');
+
+    expect(dataRows()[0].cells[1]).toHaveTextContent('K1AAA');
+    expect(dataRows()[0].cells[3]).toHaveTextContent('3');
+    expect(transcript().at(-1)).toEqual(['N2BBB', 'N2BBB']);
+  });
+
+  it('rejects an ambiguous group without audio or attempts and clears the hint on input', async () => {
+    const { random, releaseAudio } = await startTwoCallers();
+    const before = transcript();
+    const { audioLockUntil } = await import('../../../src/js/audio.js');
+
+    sendResponse('NIL');
+
+    expect(transcript()).toEqual(before);
+    expect(dataRows()).toHaveLength(0);
+    expect(document.getElementById('activeStations')).toHaveTextContent('2');
+    const feedback = document.getElementById('responseFeedback');
+    expect(feedback).toHaveTextContent(
+      'Several callers answered. Send a partial callsign to isolate one, then NIL.'
+    );
+    expect(feedback.hidden).toBe(false);
+    expect(document.activeElement).toBe(
+      document.getElementById('responseField')
+    );
+    expect((await import('../../../src/js/audio.js')).audioLockUntil).toBe(
+      audioLockUntil
+    );
+    setInfoValue('responseField', 'K1');
+    expect(feedback.hidden).toBe(true);
+    sendResponse('K1');
+    releaseAudio();
+    random.mockReturnValue(0.9);
+    sendResponse('NIL');
+    expect(dataRows()[0].cells[3]).toHaveTextContent('1');
+  });
+
+  it.each(['CQ', 'AGN', 'AAA'])(
+    'rejects NIL after %s broadens a selected caller back into a group',
+    async (request) => {
+      const { random, releaseAudio } = await startTwoCallers('contest', [
+        'K1AAA',
+        'N2AAA',
+      ]);
+      sendResponse('K1AAA');
+      releaseAudio();
+      setInfoValue('infoField', '01');
+      if (request === 'CQ') document.getElementById('cqButton').click();
+      else sendResponse(request);
+      expect(transcript().slice(-2)).toEqual([
+        ['K1AAA', 'K1AAA'],
+        ['N2AAA', 'N2AAA'],
+      ]);
+      releaseAudio();
+      const before = transcript();
+      const { audioLockUntil } = await import('../../../src/js/audio.js');
+
+      sendResponse('NIL');
+
+      expect(transcript()).toEqual(before);
+      expect((await import('../../../src/js/audio.js')).audioLockUntil).toBe(
+        audioLockUntil
+      );
+      expect(dataRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('2');
+      expect(document.getElementById('infoField')).toHaveValue('01');
+      expect(document.getElementById('responseFeedback')).toHaveTextContent(
+        'Several callers answered. Send a partial callsign to isolate one, then NIL.'
+      );
+
+      // Rejection leaves the selected exchange and its attempt count intact.
+      random.mockReturnValue(0.9);
+      document.getElementById('tuButton').click();
+      expect(transcript().slice(before.length)).toEqual([
+        ['N0ME', 'TU N0ME'],
+        ['N2AAA', 'N2AAA'],
+      ]);
+      expect(dataRows()).toHaveLength(1);
+      const [row] = dataRows();
+      expect(row.cells[0]).toHaveTextContent('1');
+      expect(row.cells[1]).toHaveTextContent('K1AAA');
+      expect(row.cells[3]).toHaveTextContent(request === 'CQ' ? '1' : '2');
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    }
+  );
+
+  it.each(['single', 'contest'])(
+    'rejects NIL before CQ in %s and honors the audio lock on double sends',
+    async (mode) => {
+      const { releaseAudio } = await bootSession();
+      configureValidInputs();
+      selectMode(mode);
+      sendResponse('NIL');
+      expect(transcript()).toEqual([]);
+      expect(document.getElementById('responseFeedback')).toHaveTextContent(
+        'No caller to dismiss. Call CQ first.'
+      );
+      document.getElementById('cqButton').click();
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
+      const before = transcript();
+      sendResponse('NIL');
+      expect(transcript()).toEqual(before);
+      expect(dataRows()).toHaveLength(0);
+      releaseAudio();
+      sendResponse('NIL');
+      const after = transcript();
+      sendResponse('NIL');
+      expect(transcript()).toEqual(after);
+      expect(dataRows()).toHaveLength(1);
+    }
+  );
+
+  it('uses the active settings snapshot and replenishes the minimum after NIL', async () => {
+    const { random, releaseAudio } = await bootSession();
+    configureValidInputs();
+    selectMode('contest');
+    document.getElementById('minStations').value = '1';
+    document.getElementById('maxStations').value = '2';
+    document.getElementById('cqButton').click();
+    releaseAudio();
+    document.getElementById('yourCallsign').value = 'W1AW';
+    document.getElementById('minSpeed').value = '0';
+    document.getElementById('minStations').value = '0';
+    document.getElementById('cqButton').click();
+    random.mockReturnValueOnce(0.9).mockReturnValue(0);
+
+    sendResponse('NIL');
+
+    expect(transcript().slice(-2)).toEqual([
+      ['N0ME', 'NIL'],
+      ['K0A', 'K0A'],
+    ]);
+    expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    expect(audioProbe.players.at(-1).wpm).toBe(18);
+  });
+
+  it('clears exchange state and keeps successful numbering and timing around NIL', async () => {
+    await bootSession();
+    startSession('cwt');
+    setAudioTime(10);
+    sendResponse('K0A');
+    setAudioTime(20);
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    document.getElementById('tuButton').click();
+    setAudioTime(30);
+    sendResponse('K0A');
+    setAudioTime(40);
+    setInfoValue('infoField', '?');
+    setInfoValue('infoField2', '1');
+    document.getElementById('agnButton').click();
+    setAudioTime(50);
+    sendResponse('NIL');
+    expect(document.getElementById('infoField')).toHaveValue('');
+    expect(document.getElementById('infoField2')).toHaveValue('');
+    expect(document.getElementById('agnButton')).toBeDisabled();
+    setAudioTime(60);
+    sendResponse('K0A');
+    setAudioTime(70);
+    setInfoValue('infoField', 'Adam');
+    setInfoValue('infoField2', '1');
+    document.getElementById('tuButton').click();
+
+    expect(dataRows().map((row) => row.cells[0].textContent)).toEqual([
+      '2',
+      'NIL',
+      '1',
+    ]);
+    expect(dataRows().map((row) => row.cells[3].textContent)).toEqual([
+      '1',
+      '2',
+      '1',
+    ]);
+    expect(dataRows().map((row) => row.cells[4].textContent)).toEqual([
+      '20.00',
+      '30.00',
+      '20.00',
+    ]);
+    expect(dataRows()[0].cells[5]).toHaveTextContent('ADAM / 1');
+    expect(dataRows()[1].cells[5].textContent).toBe('-');
+    expect(
+      document.getElementById('resultsTable-summary').cells[4]
+    ).toHaveTextContent('20.00');
+  });
+
+  it.each(['Stop', 'Reset', 'mode change'])(
+    '%s clears feedback and targeting while retaining only the intended results',
+    async (action) => {
+      const { releaseAudio } = await bootSession();
+      startSession('contest');
+      releaseAudio();
+      sendResponse('NIL');
+      releaseAudio();
+      document.getElementById('stopButton').click();
+      sendResponse('NIL');
+      expect(document.getElementById('responseFeedback').hidden).toBe(false);
+      if (action === 'mode change') {
+        selectMode('cwt');
+      } else {
+        document.getElementById(`${action.toLowerCase()}Button`).click();
+      }
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
+      expect(dataRows()).toHaveLength(action === 'Stop' ? 1 : 0);
+      const before = transcript();
+      sendResponse('NIL');
+      expect(transcript()).toEqual(before);
+      expect(document.getElementById('responseFeedback')).toHaveTextContent(
+        'No caller to dismiss. Call CQ first.'
+      );
+    }
+  );
+
+  it.each(['infoField', 'infoField2'])(
+    'scores NIL in %s as an ordinary exchange value when Enter completes the contact',
+    async (fieldId) => {
+      const { random, releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      setInfoValue('infoField', 'Adam');
+      setInfoValue('infoField2', '1');
+      const field = setInfoValue(fieldId, 'NIL');
+      random.mockReturnValue(0.9);
+      const before = transcript().length;
+
+      pressEnter(field);
+
+      expect(transcript().slice(before)).toEqual([['N0ME', 'TU N0ME']]);
+      expect(dataRows()).toHaveLength(1);
+      const [row] = dataRows();
+      expect(row.cells[0]).toHaveTextContent('1');
+      expect(row.cells[1]).toHaveTextContent('K0A');
+      expect(row.cells[3]).toHaveTextContent('1');
+      expect(row.cells[5].querySelectorAll('.text-warning')).toHaveLength(1);
+      expect(row.cells[5].querySelectorAll('.text-success')).toHaveLength(1);
+      expect(document.getElementById('activeStations')).toHaveTextContent('0');
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
+    }
+  );
+
+  it.each([
+    {
+      nilField: 'infoField',
+      missingField: 'infoField2',
+      request: 'NR?',
+      reply: '1',
+    },
+    {
+      nilField: 'infoField2',
+      missingField: 'infoField',
+      request: 'NAME?',
+      reply: 'Adam',
+    },
+  ])(
+    'Enter in $nilField containing NIL requests the missing $missingField',
+    async ({ nilField, missingField, request, reply }) => {
+      const { releaseAudio } = await bootSession();
+      startSession('cwt');
+      releaseAudio();
+      sendResponse('K0A');
+      releaseAudio();
+      const field = setInfoValue(nilField, 'NIL');
+      setInfoValue(missingField, '');
+      const before = transcript().length;
+
+      pressEnter(field);
+
+      expect(transcript().slice(before)).toEqual([
+        ['N0ME', request],
+        ['K0A', reply],
+      ]);
+      expect(dataRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+      expect(field).toHaveValue('NIL');
+      expect(document.getElementById(missingField)).toHaveValue('');
+      expect(document.activeElement).toBe(
+        document.getElementById(missingField)
+      );
+      expect(document.getElementById('responseFeedback').hidden).toBe(true);
+    }
+  );
+
+  it.each(['NIL?', 'NIL K0A'])(
+    'keeps %s as ordinary response text',
+    async (request) => {
+      const { releaseAudio } = await bootSession();
+      startSession('contest');
+      releaseAudio();
+      sendResponse(request);
+      expect(transcript().at(-1)).toEqual(['N0ME', request]);
+      expect(dataRows()).toHaveLength(0);
+      expect(document.getElementById('activeStations')).toHaveTextContent('1');
+    }
+  );
 });
 
 describe('Stop ends unfinished activity', () => {

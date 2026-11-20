@@ -58,7 +58,7 @@ function escapeCell(value) {
 }
 
 /**
- * Build a CSV snapshot of completed contacts, or null when the table is empty.
+ * Build a CSV snapshot of completed and NIL results, or null when empty.
  *
  * @param {HTMLTableElement} table - The current results table.
  * @param {string} modeId - The active mode's registry id.
@@ -84,7 +84,11 @@ export function buildResultsExport(table, modeId, exportedAt = new Date()) {
       protectText(cell(2)),
       cell(3),
       cell(4),
-      protectText(mode.ui.tableExtraColumn ? exchangeText(row.cells[5]) : ''),
+      protectText(
+        mode.ui.tableExtraColumn && cell(0) !== 'NIL'
+          ? exchangeText(row.cells[5])
+          : ''
+      ),
     ];
   });
 

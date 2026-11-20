@@ -929,7 +929,7 @@ test('Mode, AGN controls, and Help retain their responsive layout', async ({
         }
       );
     });
-  expect(helpReferenceStyles).toHaveLength(11);
+  expect(helpReferenceStyles).toHaveLength(12);
   for (const { button, label, reference } of helpReferenceStyles) {
     expect(reference, `${label} reference should match its button`).toEqual(
       button

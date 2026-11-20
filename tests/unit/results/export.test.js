@@ -100,13 +100,66 @@ describe('results CSV snapshots', () => {
     ).toBeNull();
   });
 
-  it('does not count an isolated summary as a completed contact', () => {
+  it('does not count an isolated summary as a result', () => {
     resultTable().tBodies[0].innerHTML =
       '<tr id="resultsTable-summary"><td></td><td>Avg</td></tr>';
 
     expect(
       buildResultsExport(resultTable(), 'single', exportDate())
     ).toBeNull();
+  });
+
+  it.each(['single', 'contest'])(
+    'exports NIL-only %s results with the revealed call and blank exchange',
+    (mode) => {
+      addTableRow(
+        'resultsTable',
+        'NIL',
+        'W6NYC',
+        '24 / 12',
+        3,
+        18.456,
+        mode === 'single' ? null : '-'
+      );
+
+      const result = buildResultsExport(resultTable(), mode, exportDate());
+
+      expect(readCsv(result.csv)).toEqual([
+        headers,
+        [
+          '2026-11-08T14:32:05-05:00',
+          mode === 'single' ? 'Single' : 'Contest',
+          'NIL',
+          'W6NYC',
+          '24 / 12',
+          '3',
+          '18.46',
+          '',
+        ],
+      ]);
+      expect(document.getElementById('exportCsvButton')).toBeEnabled();
+
+      clearTable('resultsTable');
+      expect(document.getElementById('exportCsvButton')).toBeDisabled();
+      expect(buildResultsExport(resultTable(), mode, exportDate())).toBeNull();
+    }
+  );
+
+  it('keeps NIL results between numbered contacts without exporting averages', () => {
+    addTableRow('resultsTable', 1, 'K1AAA', '20', 1, 2);
+    addTableRow('resultsTable', 'NIL', 'W3CCC', '30', 4, 15);
+    addTableRow('resultsTable', 2, 'N2BBB', '24', 2, 3);
+
+    const result = buildResultsExport(resultTable(), 'single', exportDate());
+    const records = readCsv(result.csv);
+
+    expect(records[0]).toEqual(headers);
+    expect(records.slice(1).map((row) => row.slice(2))).toEqual([
+      ['2', 'N2BBB', '24', '2', '3.00', ''],
+      ['NIL', 'W3CCC', '30', '4', '15.00', ''],
+      ['1', 'K1AAA', '20', '1', '2.00', ''],
+    ]);
+    expect(document.getElementById('resultsTable-summary')).toBeInTheDocument();
   });
 
   it.each([

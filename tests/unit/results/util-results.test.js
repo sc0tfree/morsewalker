@@ -113,6 +113,41 @@ describe('result table rows', () => {
     ).toHaveTextContent('25.0 / 20.0');
   });
 
+  it('records dismissed callers without counting them toward completed-contact averages', () => {
+    addTableRow('resultsTable', 'NIL', 'W3CCC', '40 / 5', 9, 120.456);
+    addTableRow('resultsTable', 'NIL', 'N4DDD', '30', 5, 60);
+
+    const dismissedRow = bodyRows()[1];
+    expect(Array.from(dismissedRow.cells, (cell) => cell.textContent)).toEqual([
+      'NIL',
+      'W3CCC',
+      '40 / 5',
+      '9',
+      '120.46',
+    ]);
+    expect(dismissedRow.cells[0]).toHaveAttribute(
+      'aria-label',
+      'NIL: unsuccessful contact'
+    );
+    expect(document.getElementById('exportCsvButton')).toBeEnabled();
+    expect(document.getElementById('resultsTable-summary')).toBeNull();
+
+    addTableRow('resultsTable', 1, 'K1AAA', '18', 1, 1.2);
+    expect(document.getElementById('resultsTable-summary')).toBeNull();
+
+    addTableRow('resultsTable', 2, 'N2BBB', '24', 3, 2.8);
+    const expectedSummary = ['', 'Avg', '21.0', '2.0', '2.00', ''];
+    expect(
+      Array.from(bodyRows().at(-1).cells, (cell) => cell.textContent)
+    ).toEqual(expectedSummary);
+
+    addTableRow('resultsTable', 'NIL', 'W5EEE', '50 / 5', 12, 180);
+    expect(bodyRows().at(-1)).toHaveAttribute('id', 'resultsTable-summary');
+    expect(
+      Array.from(bodyRows().at(-1).cells, (cell) => cell.textContent)
+    ).toEqual(expectedSummary);
+  });
+
   it('replaces the existing summary when another result is inserted', () => {
     addTableRow('resultsTable', 1, 'K1AAA', '20', 1, 1);
     addTableRow('resultsTable', 2, 'N2BBB', '30', 1, 1);

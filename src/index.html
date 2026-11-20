@@ -1025,6 +1025,7 @@
             class="form-control me-2 mb-2"
             style="max-width: 150px"
             placeholder="Response"
+            aria-describedby="responseFeedback"
             autocomplete="off"
             autocapitalize="characters"
             spellcheck="false"
@@ -1082,6 +1083,12 @@
           <button id="stopButton" class="btn btn-danger me-2 mb-2">Stop</button>
           <button id="resetButton" class="btn btn-secondary mb-2">Reset</button>
         </div>
+        <div
+          id="responseFeedback"
+          class="col-12 small text-danger"
+          role="status"
+          hidden
+        ></div>
       </div>
     </div>
 
@@ -1243,10 +1250,15 @@
                           match your partial pattern!</i
                         >
                       </li>
-                      <li>
+                      <li class="mb-3">
                         <kbd class="bg-primary text-white">Send</kbd>
                         <code>QRS</code> to have the last responding stations
                         slow down by adding 6 WPM to their Farnsworth spacing.
+                      </li>
+                      <li>
+                        <kbd class="bg-primary text-white">Send</kbd>
+                        <code>NIL</code> to dismiss the last caller (if they
+                        answered alone) and continue.
                       </li>
                     </ul>
                   </div>
@@ -1348,7 +1360,7 @@
                     <p class="card-text">
                       <kbd class="bg-danger text-white">Stop</kbd>: Halts the
                       audio and discards unfinished callers and copied exchange
-                      fields, keeping completed results. Call CQ to start fresh.
+                      fields, keeping results. Call CQ to start fresh.
                     </p>
                     <p class="card-text">
                       <kbd class="bg-secondary text-body">Reset</kbd>: Clears
@@ -1371,11 +1383,16 @@
                   <strong>Defaults</strong>
                   in either section to restore just that section’s settings.
                 </p>
+                <p class="card-text">
+                  Dismissed callers show <strong>NIL</strong> in the # column.
+                  They do not count as completed contacts or contribute to
+                  averages.
+                </p>
                 <p class="card-text mb-0">
-                  After completing a contact, use <strong>Export</strong> beside
-                  Results to download the current session’s completed contacts
-                  as a CSV file. Export before Reset, changing modes, or leaving
-                  the page if you want to keep those results.
+                  Use <strong>Export</strong> beside Results to download the
+                  current session’s results, including NIL rows, as a CSV file.
+                  Export before Reset, changing modes, or leaving the page if
+                  you want to keep those results.
                 </p>
               </div>
             </div>
@@ -1443,6 +1460,16 @@
               </article>
               <article class="release-feature">
                 <span class="release-feature-icon" aria-hidden="true">
+                  <i class="fa-solid fa-forward-step"></i>
+                </span>
+                <h3>Move on with NIL</h3>
+                <p>
+                  Send NIL to dismiss the last caller who answered alone, reveal
+                  the missed callsign in your results, and keep practicing.
+                </p>
+              </article>
+              <article class="release-feature">
+                <span class="release-feature-icon" aria-hidden="true">
                   <i class="fa-solid fa-sliders"></i>
                 </span>
                 <h3>Settings that stick</h3>
@@ -1458,8 +1485,8 @@
                 </span>
                 <h3>Export your work</h3>
                 <p>
-                  Export completed contacts from your current session as CSV to
-                  review your practice in a spreadsheet.
+                  Export results from your current session as CSV to review your
+                  practice in a spreadsheet.
                 </p>
               </article>
             </div>
@@ -1647,6 +1674,45 @@
                   shared concrete examples of how targeted repeats work on the
                   air. Thank you for helping make it easier to ask for just the
                   details you missed.
+                </p>
+              </section>
+              <section class="release-credit">
+                <h3>Moving on from a missed call</h3>
+                <p>
+                  Thank you to
+                  <a
+                    href="https://github.com/vikingsloth"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@vikingsloth</a
+                  >,
+                  <a
+                    href="https://github.com/ituri"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@ituri</a
+                  >,
+                  <a
+                    href="https://github.com/m1geo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@m1geo</a
+                  >,
+                  <a
+                    href="https://www.qrz.com/db/SM5YRA"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >SM5YRA</a
+                  >, Andrew, and Geoff for helping shape caller dismissal and
+                  callsign reveal, and to
+                  <a
+                    href="https://github.com/johnsonm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >@johnsonm</a
+                  >
+                  for suggesting NIL. Your feedback helped make a difficult call
+                  a chance to learn and continue.
                 </p>
               </section>
               <section class="release-credit">
